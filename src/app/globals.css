@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+@media print {
+  body:has(.candidate-packets-print-root) * {
+    visibility: hidden;
+  }
+
+  body:has(.candidate-packets-print-root) .candidate-packets-print-root,
+  body:has(.candidate-packets-print-root) .candidate-packets-print-root * {
+    visibility: visible;
+  }
+
+  body:has(.candidate-packets-print-root) .candidate-packets-print-root {
+    position: absolute;
+    inset: 0;
+    background: white;
+    color: #172033;
+  }
+
+  body:has(.candidate-packets-print-root) .candidate-packet {
+    break-after: page;
+  }
+
+  body:has(.candidate-packets-print-root) .candidate-packet:last-child {
+    break-after: auto;
+  }
+
+  body:has(.candidate-packets-print-root) .candidate-profile-sheet {
+    break-after: page;
+    border: 0;
+    background: white;
+    color: #172033;
+  }
+
+  body:has(.candidate-packets-print-root) .candidate-profile-sheet * {
+    color: #172033;
+  }
+
+  body:has(.candidate-packets-print-root) .resume-print-root {
+    position: static;
+    min-height: auto;
+    width: 100%;
+    max-width: none;
+    box-shadow: none;
+  }
+
+  body:has(.resume-print-root) * {
+    visibility: hidden;
+  }
+
+  body:has(.resume-print-root) .resume-print-root,
+  body:has(.resume-print-root) .resume-print-root * {
+    visibility: visible;
+  }
+
+  body:has(.resume-print-root) .resume-print-root {
+    position: absolute;
+    inset: 0;
+    min-height: auto;
+    width: 100%;
+    max-width: none;
+    box-shadow: none;
+  }
+
+  body:has(.candidate-packets-print-root) .candidate-packets-print-root,
+  body:has(.candidate-packets-print-root) .candidate-packets-print-root * {
+    visibility: visible;
+  }
+
+  body:has(.candidate-packets-print-root) .resume-print-root {
+    position: static;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+}

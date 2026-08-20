@@ -1,0 +1,40 @@
+# Firebase App Hosting config (Cloud Run-based; this is Google's current
+# first-class Next.js hosting product, not the older static-export "Firebase
+# Hosting"). Written by hand — connecting a real backend needs an
+# interactive `firebase login` + GitHub App install through the Firebase
+# Console, which isn't something a non-interactive session can do. See the
+# README's "Hosting" section for the manual setup steps and the actual
+# risk this config doesn't cover (proxy.ts support is unverified).
+#
+# NEXT_PUBLIC_* values are inlined into the client bundle at `next build`
+# time, so they need BUILD availability, not just RUNTIME.
+
+env:
+  # TODO: fill in from your Supabase project settings, or set these in the
+  # Firebase Console instead (console values there override this file).
+  - variable: NEXT_PUBLIC_SUPABASE_URL
+    value: ""
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
+    value: ""
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: NEXT_PUBLIC_INSTITUTE_SLUG
+    value: "iim-raipur"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  # Server-only, bypasses RLS (src/lib/supabase/service.ts) — must be a
+  # Secret Manager reference, never a plain value, and RUNTIME only (no
+  # reason for it to exist in the build environment/logs at all).
+  # Create it first: firebase apphosting:secrets:set SUPABASE_SERVICE_ROLE_KEY
+  - variable: SUPABASE_SERVICE_ROLE_KEY
+    secret: SUPABASE_SERVICE_ROLE_KEY
+    availability:
+      - RUNTIME
