@@ -10,16 +10,8 @@
 # time, so they need BUILD availability, not just RUNTIME.
 
 env:
-  # TODO: fill in from your Supabase project settings, or set these in the
-  # Firebase Console instead (console values there override this file).
   - variable: NEXT_PUBLIC_SUPABASE_URL
-    value: ""
-    availability:
-      - BUILD
-      - RUNTIME
-
-  - variable: NEXT_PUBLIC_SUPABASE_ANON_KEY
-    value: ""
+    value: "https://styqkekxmyjupanwdxid.supabase.co"
     availability:
       - BUILD
       - RUNTIME
@@ -30,11 +22,6 @@ env:
       - BUILD
       - RUNTIME
 
-  # Server-only, bypasses RLS (src/lib/supabase/service.ts) — must be a
-  # Secret Manager reference, never a plain value, and RUNTIME only (no
-  # reason for it to exist in the build environment/logs at all).
-  # Create it first: firebase apphosting:secrets:set SUPABASE_SERVICE_ROLE_KEY
-  - variable: SUPABASE_SERVICE_ROLE_KEY
-    secret: SUPABASE_SERVICE_ROLE_KEY
-    availability:
-      - RUNTIME
+# Configure NEXT_PUBLIC_SUPABASE_ANON_KEY in the App Hosting backend's
+# Environment settings. Add SUPABASE_SERVICE_ROLE_KEY here as a `secret`
+# reference only after creating that secret with Firebase/Secret Manager.
