@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
+import { queueRoundNotifications } from "@/lib/notifications/workflows";
 
 // FR-5.2: assign interview slots/rooms/links to shortlisted students. Calls
 // append_application_round() (0007_spc_coordination.sql) for an atomic
@@ -15,6 +16,7 @@ export async function assignInterviewRound(jdId: string, applicationId: string, 
 
   const round = String(formData.get("round") ?? "").trim();
   const scheduledAtRaw = String(formData.get("scheduled_at") ?? "");
+  const scheduledAt = scheduledAtRaw ? new Date(scheduledAtRaw).toISOString() : null;
   const location = String(formData.get("location") ?? "").trim();
 
   if (!round) {
@@ -26,7 +28,7 @@ export async function assignInterviewRound(jdId: string, applicationId: string, 
     p_application_id: applicationId,
     p_round_entry: {
       round,
-      scheduled_at: scheduledAtRaw ? new Date(scheduledAtRaw).toISOString() : null,
+      scheduled_at: scheduledAt,
       location: location || null,
       assigned_by_user_id: ctx!.appUser.id,
       assigned_at: new Date().toISOString(),
@@ -37,7 +39,22 @@ export async function assignInterviewRound(jdId: string, applicationId: string, 
     redirect(`/jds/${jdId}/applicants?error=${encodeURIComponent(error.message)}`);
   }
 
+  let notice = "Round scheduled.";
+  try {
+    const summary = await queueRoundNotifications({
+      applicationId,
+      actorUserId: ctx.appUser.id,
+      round,
+      scheduledAt,
+      location: location || null,
+    });
+    notice = `${notice} ${summary.total} notification(s) queued, including eligible 24-hour reminders; ${summary.blocked} awaiting configuration and ${summary.failed} failed.`;
+  } catch (notificationError) {
+    notice = `${notice} Notification queue error: ${notificationError instanceof Error ? notificationError.message : "unknown error"}`;
+  }
+
   revalidatePath(`/jds/${jdId}/applicants`);
+  redirect(`/jds/${jdId}/applicants?notice=${encodeURIComponent(notice)}`);
 }
 
 // FR-5.4 / Section 9 open item ("who can change [staleness]" is explicitly

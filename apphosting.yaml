@@ -22,6 +22,43 @@ env:
       - BUILD
       - RUNTIME
 
+  # Server-side notification controls. Keep sending disabled until CDPO signs
+  # off the wording in src/lib/notifications/templates.ts and Resend verifies
+  # the sending domain. Changing the sender later is configuration-only.
+  - variable: RESEND_FROM_EMAIL
+    value: "PlacementOS Notifications <notifications@mail.iitiimcareers.in>"
+    availability:
+      - RUNTIME
+
+  - variable: NOTIFICATIONS_SEND_ENABLED
+    value: "false"
+    availability:
+      - RUNTIME
+
+  # Admin kill switch for the Resume Maker provider proxy. Provider keys are
+  # Secret Manager values and must never use NEXT_PUBLIC_* names.
+  - variable: RESUME_AI_ENABLED
+    value: "false"
+    availability:
+      - RUNTIME
+
+  - variable: GROQ_MODEL
+    value: "llama-3.3-70b-versatile"
+    availability:
+      - RUNTIME
+
+  - variable: GEMINI_MODEL
+    value: "gemini-2.5-flash"
+    availability:
+      - RUNTIME
+
+  - variable: ANTHROPIC_MODEL
+    value: "claude-sonnet-5"
+    availability:
+      - RUNTIME
+
 # Configure NEXT_PUBLIC_SUPABASE_ANON_KEY in the App Hosting backend's
-# Environment settings. Add SUPABASE_SERVICE_ROLE_KEY here as a `secret`
-# reference only after creating that secret with Firebase/Secret Manager.
+# Environment settings. Add SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY,
+# RESEND_WEBHOOK_SECRET, NOTIFICATION_CRON_SECRET, GROQ_API_KEY,
+# GEMINI_API_KEY, and ANTHROPIC_API_KEY here as `secret`
+# references only after creating them with Firebase/Secret Manager.

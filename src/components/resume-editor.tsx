@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { saveCvDocument, updateCvReviewCommentStatus } from "@/app/actions/resume";
 import { ResumeExportButtons } from "@/components/resume-export-buttons";
+import { ResumeAiAssistant } from "@/components/resume-ai-assistant";
 import { ResumePreview } from "@/components/resume-preview";
 import { normalizeCvContent } from "@/lib/resume";
 import { CV_TEMPLATES, normalizeCvTemplateId } from "@/lib/resume-templates";
@@ -118,6 +119,29 @@ export function ResumeEditor({
       return { ...current, experience };
     });
     setBuilder({ action: "", outcome: "", metric: "" });
+  }
+
+  function addAiBullet(bullet: string) {
+    const value = bullet.trim();
+    if (!value) return;
+    setContent((current) => ({
+      ...current,
+      experience: current.experience.length
+        ? current.experience.map((row, index) =>
+            index === 0
+              ? { ...row, bullets: [...row.bullets, { id: newId("ai-bullet"), text: value }] }
+              : row,
+          )
+        : [
+            {
+              id: newId("experience"),
+              company: "",
+              role: "",
+              period: "",
+              bullets: [{ id: newId("ai-bullet"), text: value }],
+            },
+          ],
+    }));
   }
 
   return (
@@ -363,6 +387,13 @@ export function ResumeEditor({
               Draft achievement bullet
             </button>
           </section>
+
+          <ResumeAiAssistant
+            documentId={documentId}
+            content={content}
+            onApplyBullet={addAiBullet}
+            onApplyImported={setContent}
+          />
 
           <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
             <h2 className="text-sm font-semibold text-white">Skills, certifications &amp; awards</h2>

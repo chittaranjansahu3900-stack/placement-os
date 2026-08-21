@@ -29,6 +29,89 @@ function bullets(value: unknown, prefix: string): CvBullet[] {
   });
 }
 
+function record(value: unknown): Record<string, unknown> {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function firstText(source: Record<string, unknown>, keys: string[], max = 500): string {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) return value.trim().slice(0, max);
+    if (typeof value === "number" && Number.isFinite(value)) return String(value).slice(0, max);
+  }
+  return "";
+}
+
+function profileBullets(source: Record<string, unknown>, prefix: string): CvBullet[] {
+  const raw = source.bullets ?? source.highlights ?? source.details ?? source.description;
+  const values = Array.isArray(raw)
+    ? raw
+    : typeof raw === "string"
+      ? raw.split(/\r?\n|\s*;\s*/).filter(Boolean)
+      : [];
+
+  return values.slice(0, MAX_BULLETS).map((value, index) => {
+    const row = record(value);
+    return {
+      id: firstText(row, ["id"], 100) || `${prefix}-bullet-${index + 1}`,
+      text: typeof value === "string"
+        ? value.trim().slice(0, MAX_TEXT)
+        : firstText(row, ["text", "description", "detail"], MAX_TEXT),
+    };
+  }).filter((item) => item.text);
+}
+
+function schoolAcademic(
+  details: Record<string, unknown>,
+  level: "10" | "12",
+): CvAcademicEntry | null {
+  const aliases = level === "10"
+    ? ["tenth", "class_10", "class10", "10th", "x"]
+    : ["twelfth", "class_12", "class12", "12th", "xii"];
+  const nested = aliases.map((key) => record(details[key])).find((value) => Object.keys(value).length) ?? {};
+  const prefix = level === "10" ? "tenth" : "twelfth";
+  const value = (nestedKey: string[], flatKeys: string[]) =>
+    firstText(nested, nestedKey) || firstText(details, flatKeys);
+  const institute = value(
+    ["school", "institute", "college"],
+    [`${prefix}_school`, `${prefix}_institute`, `${level}th_school`],
+  );
+  const board = value(["board", "course"], [`${prefix}_board`, `${level}th_board`]);
+  const year = value(["year", "passing_year"], [`${prefix}_year`, `${level}th_year`]);
+  const explicitResult = value(
+    ["result", "score"],
+    [`${prefix}_result`, `${prefix}_score`, `${level}th_result`],
+  );
+  const percentage = value(["percentage", "percent"], [`${prefix}_percentage`, `${level}th_percentage`]);
+  const cgpa = value(["cgpa", "gpa"], [`${prefix}_cgpa`, `${level}th_cgpa`]);
+  const result = explicitResult || (percentage ? `${percentage}%` : cgpa ? `${cgpa} CGPA` : "");
+
+  if (![institute, board, year, result].some(Boolean)) return null;
+  return {
+    id: `academic-class-${level}`,
+    institute,
+    course: board ? `Class ${level} — ${board}` : `Class ${level}`,
+    year,
+    result,
+  };
+}
+
+function credentialKind(value: Record<string, unknown>): string {
+  return firstText(value, ["type", "kind", "category"], 100).toLowerCase().replace(/[\s_-]+/g, "");
+}
+
+function structuredCredentialRows(credentials: unknown[]): Record<string, unknown>[] {
+  return credentials.flatMap((item) => {
+    const row = record(item);
+    const nested = ["projects", "positions", "certifications"].flatMap((key) =>
+      Array.isArray(row[key]) ? (row[key] as unknown[]).map((value) => ({ ...record(value), type: key.slice(0, -1) })) : [],
+    );
+    return Object.keys(row).length ? [row, ...nested] : [];
+  });
+}
+
 export function normalizeCvContent(value: unknown): CvContent {
   const source = value && typeof value === "object" ? (value as Record<string, unknown>) : {};
   const personal =
@@ -172,6 +255,12 @@ export function buildInitialCvContent(student: Student): CvContent {
     });
   }
 
+  const schoolDetails = record(student.tenth_twelfth_details);
+  for (const level of ["12", "10"] as const) {
+    const entry = schoolAcademic(schoolDetails, level);
+    if (entry) academics.push(entry);
+  }
+
   const experience: CvExperienceEntry[] = (student.prior_employers ?? []).map((employer, index) => ({
     id: `experience-profile-${index + 1}`,
     company: employer.company ?? "",
@@ -179,6 +268,52 @@ export function buildInitialCvContent(student: Student): CvContent {
     period: employer.duration_months ? `${employer.duration_months} months` : "",
     bullets: [],
   }));
+
+  const credentialRows = structuredCredentialRows(student.credentials ?? []);
+  const projects: CvProjectEntry[] = credentialRows
+    .filter((row) => credentialKind(row).includes("project"))
+    .slice(0, MAX_ITEMS)
+    .map((row, index) => ({
+      id: `project-profile-${index + 1}`,
+      name: firstText(row, ["name", "project_name", "title"], 300),
+      role: firstText(row, ["role", "project_role"], 300),
+      period: firstText(row, ["period", "duration", "year"], 100),
+      link: firstText(row, ["link", "url"], 500),
+      bullets: profileBullets(row, `project-profile-${index + 1}`),
+    }));
+  const positions: CvExperienceEntry[] = credentialRows
+    .filter((row) => {
+      const kind = credentialKind(row);
+      return kind.includes("position") || kind === "por" || kind.includes("responsibility");
+    })
+    .slice(0, MAX_ITEMS)
+    .map((row, index) => ({
+      id: `position-profile-${index + 1}`,
+      company: firstText(row, ["company", "organization", "institution", "club"], 300),
+      role: firstText(row, ["role", "position", "title"], 300),
+      period: firstText(row, ["period", "duration", "year"], 100),
+      bullets: profileBullets(row, `position-profile-${index + 1}`),
+    }));
+
+  const certifications = (student.credentials ?? []).flatMap((credential) => {
+    if (typeof credential === "string") return credential.trim() ? [credential.trim()] : [];
+    const row = record(credential);
+    const kind = credentialKind(row);
+    if (kind.includes("project") || kind.includes("position") || kind === "por" || kind.includes("responsibility")) {
+      return [];
+    }
+    if (Array.isArray(row.certifications)) {
+      return row.certifications.map((value) =>
+        typeof value === "string" ? value.trim() : firstText(record(value), ["value", "name", "title", "credential"]),
+      ).filter(Boolean);
+    }
+    const label = firstText(row, ["value", "credential", "certification", "name", "title"]);
+    return label ? [label] : Object.keys(row).length ? [JSON.stringify(row)] : [];
+  });
+  const otherQualifications = (student.other_qualifications ?? "")
+    .split(/\r?\n|\s*;\s*/)
+    .map((value) => value.trim())
+    .filter(Boolean);
 
   return normalizeCvContent({
     title: "Placement CV",
@@ -192,12 +327,10 @@ export function buildInitialCvContent(student: Student): CvContent {
     },
     academics,
     experience,
-    projects: [],
-    positions: [],
+    projects,
+    positions,
     skills: [],
-    certifications: (student.credentials ?? []).map((credential) =>
-      typeof credential === "string" ? credential : JSON.stringify(credential),
-    ),
+    certifications: [...certifications, ...otherQualifications],
     awards: [],
   });
 }

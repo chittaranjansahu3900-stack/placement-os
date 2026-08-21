@@ -3,6 +3,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { updateStalenessThreshold } from "@/app/actions/spc";
+import { currentRoundByJd } from "@/lib/spc-current-round";
 import type { SpcPipelineRow } from "@/types/domain";
 
 // Section 3.3 "Keeping every pipeline moving" — FR-5.1 (active JDs, round,
@@ -44,7 +45,12 @@ export default async function SpcDashboardPage({
       .single(),
   ]);
 
-  const rows = (pipeline ?? []) as SpcPipelineRow[];
+  const rows = ((pipeline ?? []) as SpcPipelineRow[]).filter((row) => row.jd_status !== "closed");
+  const jdIds = rows.map((row) => row.jd_id);
+  const { data: applicationRounds } = jdIds.length
+    ? await supabase.from("applications").select("jd_id, round_history").in("jd_id", jdIds)
+    : { data: [] };
+  const roundsByJd = currentRoundByJd(applicationRounds ?? []);
   const staleCount = rows.filter((r) => r.is_stale).length;
 
   return (
@@ -86,8 +92,10 @@ export default async function SpcDashboardPage({
       )}
 
       <ul className="mt-6 divide-y divide-neutral-800">
-        {rows.map((r) => (
-          <li key={r.jd_id} className="flex items-center justify-between py-3">
+        {rows.map((r) => {
+          const currentRound = roundsByJd.get(r.jd_id);
+          return (
+          <li key={r.jd_id} className="grid gap-3 py-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
             <div className="flex items-center gap-3">
               {r.is_stale && (
                 <span className="rounded-full bg-red-950 px-2 py-0.5 text-xs text-red-300">
@@ -106,11 +114,18 @@ export default async function SpcDashboardPage({
                 </p>
               </div>
             </div>
-            <span className="text-xs text-neutral-400">
+            <div className="rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-xs">
+              <p className="text-neutral-500">Current round</p>
+              <p className="font-medium text-white">{currentRound?.round ?? "Not scheduled"}</p>
+              {currentRound?.scheduledAt && <p className="text-neutral-400">{new Date(currentRound.scheduledAt).toLocaleString()}</p>}
+              {currentRound?.location && <p className="text-neutral-400">{currentRound.location}</p>}
+              {currentRound && <p className="text-neutral-500">{currentRound.candidateCount} candidate(s) currently in this round</p>}
+            </div>
+            <span className="text-right text-xs text-neutral-400">
               {r.shortlisted_count} shortlisted / {r.total_applications} total
             </span>
           </li>
-        ))}
+        )})}
         {rows.length === 0 && (
           <p className="py-6 text-sm text-neutral-500">No active JDs right now.</p>
         )}

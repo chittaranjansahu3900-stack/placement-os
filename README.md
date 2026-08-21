@@ -249,6 +249,25 @@ Console — not something that could be done from this session):
    GitHub repo, set the live branch. Automatic rollouts deploy on every push to that branch —
    there's no separate manual deploy command once connected.
 
+## Resend notification setup
+
+PlacementOS uses one server-side queue for JD publication, application/shortlist updates,
+SPC round notices and reminders, and outreach mail merge. The copy in
+`src/lib/notifications/templates.ts` is deliberately marked as a draft: obtain CDPO approval
+before changing `NOTIFICATIONS_SEND_ENABLED` to `true`.
+
+1. Verify `mail.iitiimcareers.in` in Resend and configure
+   `PlacementOS Notifications <notifications@mail.iitiimcareers.in>` as `RESEND_FROM_EMAIL`.
+   The later IIM Raipur sender change is an environment-value swap, not a code change.
+2. Create server-only Firebase secrets for `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`,
+   `NOTIFICATION_CRON_SECRET`, and `SUPABASE_SERVICE_ROLE_KEY`. Never prefix these with
+   `NEXT_PUBLIC_`.
+3. Register `https://YOUR_APP_HOST/api/webhooks/resend` in Resend for email lifecycle events.
+4. Invoke `POST /api/notifications/process` on a schedule with
+   `Authorization: Bearer <NOTIFICATION_CRON_SECRET>` so queued retries are processed.
+5. Send a controlled internal pilot, confirm sent/delivered/open/bounce events in the UI, and only
+   then enable real-recipient delivery.
+
 ## Local setup
 
 1. Create a Supabase project (or run one locally — `npm run db:start` needs Docker, which

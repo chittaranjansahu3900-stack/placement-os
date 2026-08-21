@@ -5,7 +5,7 @@ import { assignInterviewRound } from "@/app/actions/spc";
 import { addPrivateNote } from "@/app/actions/private-notes";
 import { CandidatePacket } from "@/components/candidate-packet";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
-import { canViewCandidatePacket, loadCandidatePackets } from "@/lib/candidate-packets";
+import { loadCandidatePackets } from "@/lib/candidate-packets";
 import { createClient } from "@/lib/supabase/server";
 import type { ApplicantDirectoryRow, ApplicationPrivateNote } from "@/types/domain";
 
@@ -17,6 +17,7 @@ type SortKey = (typeof SORTS)[number];
 
 type ApplicantSearchParams = {
   error?: string;
+  notice?: string;
   updated?: string;
   status?: string;
   q?: string;
@@ -141,6 +142,7 @@ export default async function ApplicantsPage({ params, searchParams }: {
       </div>
 
       {search.error && <p className="mt-4 rounded-md border border-red-900 bg-red-950 px-3 py-2 text-sm text-red-300">{search.error}</p>}
+      {search.notice && <p className="mt-4 rounded-md border border-blue-900 bg-blue-950 px-3 py-2 text-sm text-blue-200">{search.notice}</p>}
       {search.updated && <p className="mt-4 rounded-md border border-emerald-900 bg-emerald-950 px-3 py-2 text-sm text-emerald-300">Updated {search.updated} applicant{Number(search.updated) === 1 ? "" : "s"} to {search.status}.</p>}
 
       <form method="get" className="mt-5 rounded-md border border-neutral-800 bg-neutral-900 p-4">
@@ -180,14 +182,13 @@ export default async function ApplicantsPage({ params, searchParams }: {
             {rows.map((row) => {
               const latestRound = row.round_history[row.round_history.length - 1];
               const canSchedule = SCHEDULABLE_STATUSES.includes(row.status);
-              const hasFullCvAccess = canViewCandidatePacket(row.status);
               const cvId = cvByApplication.get(row.application_id);
               const placement = placementByStudent.get(row.student_id);
               const notes = notesByApplication.get(row.application_id) ?? [];
               return (
                 <tr key={row.application_id} className="align-top">
                   <td className="py-2 pr-3"><input type="checkbox" name="application_ids" value={row.application_id} form="bulk-applicant-actions" aria-label={`Select ${row.name}`} className="size-4 accent-blue-600" /></td>
-                  <td className="py-2 pr-4 text-white">{row.roll_no} {row.name}<div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs"><Link href={listHref(id, search, row.application_id)} className="text-blue-400 hover:underline">View packet</Link>{hasFullCvAccess && cvId && <Link href={`/resume/${cvId}`} className="text-blue-400 hover:underline">CV only</Link>}</div></td>
+                  <td className="py-2 pr-4 text-white">{row.roll_no} {row.name}<div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs"><Link href={listHref(id, search, row.application_id)} className="text-blue-400 hover:underline">View packet</Link>{cvId && <a href={`/api/files/application-cv?application=${encodeURIComponent(row.application_id)}`} className="text-blue-400 hover:underline">Original CV file (unredacted)</a>}</div></td>
                   <td className="py-2 pr-4 text-neutral-300">{row.cgpa ?? "—"}</td><td className="py-2 pr-4 text-neutral-300">{row.total_work_ex_months} mo</td><td className="py-2 pr-4 text-neutral-300">{row.branch ?? "—"}</td>
                   <td className="py-2 pr-4 text-neutral-300">{row.phone || row.personal_email ? <span>{row.phone} {row.personal_email}</span> : <span className="text-neutral-600">Masked until shortlisted</span>}</td>
                   <td className="py-2 pr-4"><span className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs capitalize text-neutral-300">{row.status.replaceAll("_", " ")}</span></td>

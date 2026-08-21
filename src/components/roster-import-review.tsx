@@ -30,7 +30,7 @@ export function RosterImportReview({ batches }: { batches: Batch[] }) {
       <div>
         <label htmlFor="csv" className="block text-sm text-neutral-300">Roster CSV</label>
         <p className="mt-1 text-xs text-neutral-500">
-          Columns: <code className="font-mono">{EXPECTED_ROSTER_COLUMNS}</code>. Quoted commas and reordered header columns are supported.
+          Canonical columns: <code className="break-all font-mono">{EXPECTED_ROSTER_COLUMNS}</code>. Quoted commas, common human-readable header aliases, and reordered columns are supported.
         </p>
         <textarea
           id="csv"
@@ -66,18 +66,20 @@ export function RosterImportReview({ batches }: { batches: Batch[] }) {
             <table className="w-full min-w-[760px] text-left text-xs">
               <thead className="sticky top-0 bg-neutral-950 text-neutral-500">
                 <tr>
-                  {['Row', 'Roll no.', 'Name', 'Section', 'Branch / specialization', 'CGPA', 'Email', 'Validation'].map((heading) => <th key={heading} className="p-2 font-normal">{heading}</th>)}
+                  {['Row', 'Seq.', 'Roll no.', 'Name', 'Section', 'Branch / specialization', 'CGPA', 'Profile sections', 'Email', 'Validation'].map((heading) => <th key={heading} className="p-2 font-normal">{heading}</th>)}
                 </tr>
               </thead>
               <tbody className="divide-y divide-neutral-800">
                 {preview.rows.slice(0, 100).map((row) => (
                   <tr key={`${row.row_number}-${row.roll_no}`} className={row.issues.length ? "bg-red-950/20" : ""}>
                     <td className="p-2 text-neutral-600">{row.row_number}</td>
+                    <td className="p-2 text-neutral-500">{row.display_seq ?? "—"}</td>
                     <td className="p-2 text-white">{row.roll_no || "—"}</td>
                     <td className="p-2 text-neutral-300">{row.name || "—"}</td>
                     <td className="p-2 text-neutral-400">{row.section ?? "—"}</td>
                     <td className="p-2 text-neutral-400">{row.graduation_details.branch ?? "—"} / {row.pg_details.specialization ?? "—"}</td>
                     <td className="p-2 text-neutral-400">{row.graduation_details.cgpa ?? "—"}</td>
+                    <td className="p-2 text-neutral-400">{row.prior_employers.length} employer(s) · {row.credentials.length} credential/project/POR item(s)</td>
                     <td className="p-2 text-neutral-400">{row.personal_email ?? "—"}</td>
                     <td className={row.issues.length ? "p-2 text-red-300" : "p-2 text-emerald-400"}>{row.issues.length ? row.issues.join("; ") : "Ready"}</td>
                   </tr>
@@ -108,4 +110,3 @@ export function RosterImportReview({ batches }: { batches: Batch[] }) {
     </section>
   );
 }
-

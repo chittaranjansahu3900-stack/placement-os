@@ -2,4 +2,4 @@
 // export async functions, so this plain constant (used by both the action
 // and the page that renders the format hint) has to live elsewhere.
 export const EXPECTED_ROSTER_COLUMNS =
-  "roll_no,name,section,age,gender,branch,cgpa,specialization,total_work_ex_months,personal_email";
+  "roll_no,name,section,age,gender,branch,cgpa,specialization,total_work_ex_months,personal_email,display_seq,phone,graduation_college,graduation_year,graduation_backlog_count,pg_cgpa,pg_year,class_10_school,class_10_board,class_10_year,class_10_result,class_12_school,class_12_board,class_12_year,class_12_result,employer_1_company,employer_1_role,employer_1_duration_months,employer_2_company,employer_2_role,employer_2_duration_months,employer_3_company,employer_3_role,employer_3_duration_months,project_1_name,project_1_role,project_1_period,project_1_link,project_1_description,project_2_name,project_2_role,project_2_period,project_2_link,project_2_description,position_1_organization,position_1_role,position_1_period,position_1_description,position_2_organization,position_2_role,position_2_period,position_2_description,credentials,other_qualifications";

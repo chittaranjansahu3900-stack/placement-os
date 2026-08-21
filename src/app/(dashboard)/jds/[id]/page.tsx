@@ -1,8 +1,11 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { publishJd, advanceJdStatus } from "@/app/actions/jds";
 import type { Jd, JdStatus } from "@/types/domain";
+import type { NotificationDatabase } from "@/types/notification-database";
 
 type JdWithCompany = Jd & { companies: { name: string } | null };
 
@@ -31,11 +34,13 @@ export default async function JdDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; notice?: string }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
-  const supabase = await createClient();
+  const { error, notice } = await searchParams;
+  const [baseClient, ctx] = await Promise.all([createClient(), getCurrentUserContext()]);
+  const supabase = baseClient as unknown as SupabaseClient<NotificationDatabase>;
+  const canManageEligibility = !!ctx && ctx.permissionNames.has("Student Data - Full");
 
   const { data: jd } = await supabase
     .from("jds")
@@ -50,6 +55,19 @@ export default async function JdDetailPage({
   const { data: eligibleCount } = await supabase.rpc("eligible_student_count_for_jd", {
     p_jd_id: id,
   });
+  const [{ data: deliveryJobs }, { data: jdNotifications }] = await Promise.all([
+    supabase
+      .from("notification_jobs")
+      .select("status")
+      .eq("kind", "jd_published")
+      .contains("tags", { jd_id: id }),
+    supabase.from("jd_notifications").select("opened_at").eq("jd_id", id),
+  ]);
+  const deliveryCounts = (deliveryJobs ?? []).reduce<Record<string, number>>((counts, job) => {
+    counts[job.status] = (counts[job.status] ?? 0) + 1;
+    return counts;
+  }, {});
+  const openedCount = (jdNotifications ?? []).filter((notification) => notification.opened_at).length;
 
   const publishWithId = publishJd.bind(null, id);
   const nextSteps = NEXT_STATUSES[typedJd.status] ?? [];
@@ -64,9 +82,16 @@ export default async function JdDetailPage({
             {typedJd.grade ? ` · ${typedJd.grade}` : ""}
           </p>
         </div>
-        <Link href={`/jds/${id}/applicants`} className="text-sm text-blue-400 hover:underline">
-          View applicants
-        </Link>
+        <div className="flex gap-4">
+          {canManageEligibility && (
+            <Link href={`/jds/${id}/eligibility`} className="text-sm text-blue-400 hover:underline">
+              Manage eligibility
+            </Link>
+          )}
+          <Link href={`/jds/${id}/applicants`} className="text-sm text-blue-400 hover:underline">
+            View applicants
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -74,11 +99,31 @@ export default async function JdDetailPage({
           {error}
         </p>
       )}
+      {notice && (
+        <p className="mt-4 rounded-md border border-blue-900 bg-blue-950 px-3 py-2 text-sm text-blue-200">
+          {notice}
+        </p>
+      )}
 
       <div className="mt-4 rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3">
         <p className="text-sm text-neutral-400">Estimated eligible students</p>
         <p className="text-2xl font-semibold text-white">{eligibleCount ?? "—"}</p>
       </div>
+
+      {deliveryJobs && deliveryJobs.length > 0 && (
+        <div className="mt-4 rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3">
+          <p className="text-sm text-neutral-400">JD email delivery</p>
+          <p className="mt-1 text-sm text-white">
+            {Object.entries(deliveryCounts)
+              .map(([status, count]) => `${status}: ${count}`)
+              .join(" · ")}
+          </p>
+          <p className="mt-1 text-xs text-neutral-500">
+            Opened: {openedCount}. Draft wording remains blocked until CDPO sign-off and the server
+            kill switch is enabled.
+          </p>
+        </div>
+      )}
 
       <dl className="mt-6 grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
         <div>
@@ -129,6 +174,15 @@ export default async function JdDetailPage({
           <dd className="text-white">{typedJd.max_backlog ?? "—"}</dd>
         </div>
       </dl>
+
+      {typedJd.jd_attachment_url && (
+        <a
+          href={`/api/files/download?path=${encodeURIComponent(typedJd.jd_attachment_url)}&name=${encodeURIComponent(`${typedJd.role_title}-JD`)}`}
+          className="mt-6 inline-block text-sm text-blue-400 hover:underline"
+        >
+          Download original JD attachment
+        </a>
+      )}
 
       {typedJd.status === "draft" && (
         <form action={publishWithId} className="mt-6">

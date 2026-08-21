@@ -248,6 +248,20 @@ export default async function NewJdPage({
             />
           </div>
 
+          <div>
+            <label htmlFor="jd_attachment" className="block text-sm text-neutral-300">
+              JD attachment (optional, maximum 15 MB)
+            </label>
+            <input
+              id="jd_attachment"
+              name="jd_attachment"
+              type="file"
+              accept=".pdf,.doc,.docx,.txt"
+              className="mt-1 block w-full text-sm text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-800 file:px-3 file:py-2 file:text-neutral-200"
+            />
+            <p className="mt-1 text-xs text-neutral-500">Stored as the original file; no redacted variant is created.</p>
+          </div>
+
           <button
             type="submit"
             className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"

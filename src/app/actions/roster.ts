@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createServiceClient } from "@/lib/supabase/service";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { previewRosterCsv } from "@/lib/roster-csv";
+import type { Database, Json } from "@/types/database.types";
+
+type StudentInsert = Database["public"]["Tables"]["students"]["Insert"];
 
 // FR-9.1: bulk student roster import. Appendix D asks for real review
 // before an unattended import — RosterImportReview renders the staged
@@ -44,19 +47,26 @@ export async function importRoster(formData: FormData) {
   }
 
   const supabase = await createClient();
-  const { error } = await supabase.from("students").upsert(
-    rows.map((row) => ({
+  const payload: StudentInsert[] = rows.map((row) => ({
       roll_no: row.roll_no,
+      display_seq: row.display_seq,
       name: row.name,
       section: row.section,
       age: row.age,
       gender: row.gender,
-      graduation_details: row.graduation_details,
-      pg_details: row.pg_details,
+      phone: row.phone,
+      graduation_details: row.graduation_details as unknown as Json,
+      pg_details: row.pg_details as unknown as Json,
+      tenth_twelfth_details: row.tenth_twelfth_details as Json,
       total_work_ex_months: row.total_work_ex_months,
+      prior_employers: row.prior_employers as unknown as Json,
+      credentials: row.credentials,
+      other_qualifications: row.other_qualifications,
       personal_email: row.personal_email,
       batch_id: batchId,
-    })),
+    }));
+  const { error } = await supabase.from("students").upsert(
+    payload,
     { onConflict: "batch_id,roll_no" },
   );
 

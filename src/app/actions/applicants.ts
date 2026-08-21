@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { logAudit } from "@/lib/audit";
+import { queueApplicationStatusNotifications } from "@/lib/notifications/workflows";
 import type { ApplicationStatusValue } from "@/types/domain";
 
 // FR-4.3/FR-4.6: recruiter moves a candidate's status. RLS
@@ -15,19 +17,32 @@ export async function updateApplicationStatus(
   applicationId: string,
   status: ApplicationStatusValue,
 ) {
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect("/login");
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("applications")
     .update({ status })
-    .eq("id", applicationId);
+    .eq("id", applicationId)
+    .select("id")
+    .single();
 
-  if (error) {
-    redirect(`/jds/${jdId}/applicants?error=${encodeURIComponent(error.message)}`);
+  if (error || !data) {
+    redirect(`/jds/${jdId}/applicants?error=${encodeURIComponent(error?.message ?? "Application was not updated")}`);
   }
 
   await logAudit("application.status_changed", "application", applicationId, { jd_id: jdId, status });
 
+  let notice = "Application status updated.";
+  try {
+    const summary = await queueApplicationStatusNotifications([applicationId], ctx.appUser.id);
+    notice = `${notice} ${summary.total} notification(s) queued; ${summary.blocked} awaiting configuration and ${summary.failed} failed.`;
+  } catch (notificationError) {
+    notice = `${notice} Notification queue error: ${notificationError instanceof Error ? notificationError.message : "unknown error"}`;
+  }
+
   revalidatePath(`/jds/${jdId}/applicants`);
+  redirect(`/jds/${jdId}/applicants?notice=${encodeURIComponent(notice)}`);
 }
 
 const BULK_STATUSES = new Set<ApplicationStatusValue>([
@@ -39,6 +54,8 @@ const BULK_STATUSES = new Set<ApplicationStatusValue>([
 // FR-4.3: one atomic RLS-gated mutation for a recruiter selection. The RPC is
 // security invoker, so this action does not expand the caller's access.
 export async function bulkUpdateApplicationStatus(jdId: string, formData: FormData) {
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect("/login");
   const applicationIds = [
     ...new Set(
       formData
@@ -79,8 +96,25 @@ export async function bulkUpdateApplicationStatus(jdId: string, formData: FormDa
     affected,
   });
 
+  const { data: updatedRows } = await supabase
+    .from("applications")
+    .select("id")
+    .eq("jd_id", jdId)
+    .in("id", applicationIds)
+    .eq("status", status);
+  let notice = "";
+  try {
+    const summary = await queueApplicationStatusNotifications(
+      (updatedRows ?? []).map((row) => row.id),
+      ctx.appUser.id,
+    );
+    notice = `${summary.total} notification(s) queued; ${summary.blocked} awaiting configuration and ${summary.failed} failed.`;
+  } catch (notificationError) {
+    notice = `Notification queue error: ${notificationError instanceof Error ? notificationError.message : "unknown error"}`;
+  }
+
   revalidatePath(`/jds/${jdId}/applicants`);
   redirect(
-    `/jds/${jdId}/applicants?updated=${affected}&status=${encodeURIComponent(status)}`,
+    `/jds/${jdId}/applicants?updated=${affected}&status=${encodeURIComponent(status)}&notice=${encodeURIComponent(notice)}`,
   );
 }

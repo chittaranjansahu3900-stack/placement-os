@@ -8,6 +8,7 @@ import {
   scoreCvForJd,
   setLatestCvDocument,
 } from "@/app/actions/resume";
+import { uploadCvFile } from "@/app/actions/files";
 import { ResumeEditor } from "@/components/resume-editor";
 import type { CompanyTypePersona, CvDocument, CvReviewComment } from "@/types/domain";
 
@@ -171,6 +172,36 @@ export default async function ResumePage({
               </button>
             </form>
           </section>
+
+          {selected && (
+            <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
+              <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Original CV file</h2>
+              <p className="mt-2 text-xs text-neutral-500">
+                Stored and downloaded in full, without contact-detail redaction or shortlist gating.
+              </p>
+              {selected.file_url && (
+                <a
+                  href={`/api/files/download?path=${encodeURIComponent(selected.file_url)}&name=${encodeURIComponent(`${normalizeCvContent(selected.content).title}.pdf`)}`}
+                  className="mt-2 block text-xs text-blue-400 hover:underline"
+                >
+                  Download uploaded file
+                </a>
+              )}
+              <form action={uploadCvFile} className="mt-3 space-y-2">
+                <input type="hidden" name="cv_document_id" value={selected.id} />
+                <input
+                  type="file"
+                  name="file"
+                  accept=".pdf,.doc,.docx,.txt"
+                  required
+                  className="block w-full text-xs text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-neutral-800 file:px-2 file:py-1 file:text-neutral-200"
+                />
+                <button className="w-full rounded-md border border-neutral-700 px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800">
+                  Upload/replace file reference
+                </button>
+              </form>
+            </section>
+          )}
 
           <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-3">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-neutral-400">Application deadlines</h2>

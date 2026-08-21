@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createCompany } from "@/app/actions/companies";
 import { CompanyImportReview } from "@/components/company-import-review";
+import { outreachFunnel } from "@/lib/outreach-funnel";
 import type { Company, PipelineStage } from "@/types/domain";
 
 const STAGES: { key: PipelineStage; label: string }[] = [
@@ -18,20 +19,53 @@ const STAGES: { key: PipelineStage; label: string }[] = [
 export default async function CompaniesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; imported?: string; skipped?: string }>;
+  searchParams: Promise<{ error?: string; imported?: string; skipped?: string; season?: string }>;
 }) {
-  const { error, imported, skipped } = await searchParams;
+  const { error, imported, skipped, season } = await searchParams;
   const supabase = await createClient();
-  const { data: companies } = await supabase
-    .from("companies")
-    .select("*")
-    .order("created_at", { ascending: false });
+  const [
+    { data: companies },
+    { data: batches },
+    { data: activities },
+    { data: users },
+    { data: userRoles },
+    { data: roles },
+  ] = await Promise.all([
+    supabase.from("companies").select("*").order("created_at", { ascending: false }),
+    supabase.from("batches").select("id, name, is_active, starts_on, ends_on").order("starts_on", { ascending: false }),
+    supabase.from("outreach_activities").select("batch_id, company_id, logged_by_user_id, merge_status"),
+    supabase.from("users").select("id, name"),
+    supabase.from("user_roles").select("user_id, role_id"),
+    supabase.from("roles").select("id, name, cloned_from_role_id"),
+  ]);
 
   const rows = (companies ?? []) as Company[];
   const byStage = new Map<PipelineStage, Company[]>(STAGES.map((s) => [s.key, []]));
   for (const c of rows) {
     byStage.get(c.pipeline_stage)?.push(c);
   }
+  const selectedSeasonId = season && (batches ?? []).some((batch) => batch.id === season)
+    ? season
+    : (batches ?? []).find((batch) => batch.is_active)?.id ?? batches?.[0]?.id ?? "";
+  const roleById = new Map((roles ?? []).map((role) => [role.id, role]));
+  const jpcUserIds = new Set<string>();
+  for (const assignment of userRoles ?? []) {
+    let role = roleById.get(assignment.role_id);
+    const visited = new Set<string>();
+    while (role && !visited.has(role.id)) {
+      if (role.name === "BD" || role.name === "JPC") jpcUserIds.add(assignment.user_id);
+      visited.add(role.id);
+      role = role.cloned_from_role_id ? roleById.get(role.cloned_from_role_id) : undefined;
+    }
+  }
+  const funnelRows = selectedSeasonId
+    ? outreachFunnel(
+        selectedSeasonId,
+        (users ?? []).filter((user) => jpcUserIds.has(user.id)),
+        activities ?? [],
+        rows,
+      )
+    : [];
 
   return (
     <div>
@@ -70,6 +104,37 @@ export default async function CompaniesPage({
       </form>
 
       <CompanyImportReview />
+
+      <section className="mt-6 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h2 className="text-sm font-semibold text-white">JPC outreach funnel</h2>
+            <p className="mt-1 text-xs text-neutral-500">
+              Unique companies contacted → explicitly marked Responded → currently Onboarded, attributed to the JPC and snapshotted season.
+            </p>
+          </div>
+          <form method="get">
+            <label className="text-xs text-neutral-400">
+              Season
+              <select name="season" defaultValue={selectedSeasonId} className="ml-2 rounded-md border border-neutral-700 bg-neutral-950 px-2 py-1.5 text-xs text-white">
+                {(batches ?? []).map((batch) => <option key={batch.id} value={batch.id}>{batch.name}{batch.is_active ? " (active)" : ""}</option>)}
+              </select>
+            </label>
+            <button className="ml-2 rounded-md border border-neutral-700 px-2 py-1.5 text-xs text-neutral-300">View</button>
+          </form>
+        </div>
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-left text-xs">
+            <thead className="text-neutral-500"><tr><th className="pb-2">JPC</th><th className="pb-2">Contacted</th><th className="pb-2">Responded</th><th className="pb-2">Onboarded</th><th className="pb-2">Response rate</th><th className="pb-2">Onboarding rate</th></tr></thead>
+            <tbody className="divide-y divide-neutral-800">
+              {funnelRows.map((row) => (
+                <tr key={row.userId}><td className="py-2 text-neutral-200">{row.name}</td><td>{row.contacted}</td><td>{row.responded}</td><td>{row.onboarded}</td><td>{row.responseRate}%</td><td>{row.onboardingRate}%</td></tr>
+              ))}
+            </tbody>
+          </table>
+          {funnelRows.length === 0 && <p className="py-4 text-xs text-neutral-500">No JPC role assignments are available for this season report.</p>}
+        </div>
+      </section>
 
       <div className="mt-6 grid grid-cols-5 gap-3 overflow-x-auto">
         {STAGES.map((stage) => (
