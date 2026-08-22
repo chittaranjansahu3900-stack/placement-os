@@ -1729,7 +1729,7 @@ export type Database = {
       }
       my_eligibility_for_jd: { Args: { p_jd_id: string }; Returns: Json }
       release_jd_to_batch: {
-        Args: { p_apply_by_deadline?: string | null; p_jd_id: string }
+        Args: { p_apply_by_deadline?: string; p_jd_id: string }
         Returns: undefined
       }
       user_has_role_lineage: {
