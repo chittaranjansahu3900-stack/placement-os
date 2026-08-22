@@ -1,30 +1,284 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Placement Command Desk: six core colors plus contrast neutrals. */
+  --night: #09131f;
+  --command-deck: #14243a;
+  --signal-blue: #5b8def;
+  --clearance-teal: #2dbe9d;
+  --escalation-amber: #efb64b;
+  --breach-coral: #ec6672;
+
+  --canvas-void: var(--night);
+  --canvas-subtle: #0d1928;
+  --surface-panel: #101e30;
+  --surface-card: var(--command-deck);
+  --surface-elevated: #1b2e48;
+  --surface-active: #203a5c;
+
+  --border-subtle: #182b43;
+  --border-tactical: #263b57;
+  --border-highlight: #3a5475;
+
+  --text-primary: #edf3fa;
+  --text-secondary: #9aaec4;
+  --text-muted: #6e849d;
+  --text-dim: #516780;
+
+  --background: var(--night);
+  --foreground: var(--text-primary);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --font-sans: var(--font-plex-sans), "IBM Plex Sans", system-ui, sans-serif;
+  --font-display: var(--font-barlow-condensed), "Arial Narrow", sans-serif;
+  --font-mono: var(--font-plex-mono), "IBM Plex Mono", monospace;
+  --radius-md: 0.25rem;
+  --radius-lg: 0.25rem;
+  --radius-xl: 0.5rem;
+  --radius-2xl: 0.5rem;
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --color-night: var(--night);
+  --color-command: var(--command-deck);
+  --color-signal: var(--signal-blue);
+  --color-clearance: var(--clearance-teal);
+  --color-escalation: var(--escalation-amber);
+  --color-breach: var(--breach-coral);
+
+  /* Existing utilities render from PlacementOS colors, not Tailwind defaults. */
+  --color-slate-950: #09131f;
+  --color-slate-900: #101e30;
+  --color-slate-800: #14243a;
+  --color-slate-700: #263b57;
+  --color-slate-600: #516780;
+  --color-slate-500: #6e849d;
+  --color-slate-400: #9aaec4;
+  --color-slate-300: #c1cfdf;
+  --color-slate-200: #dce5ef;
+  --color-slate-100: #edf3fa;
+  --color-slate-50: #f7f9fc;
+  --color-neutral-950: #09131f;
+  --color-neutral-900: #101e30;
+  --color-neutral-800: #14243a;
+  --color-neutral-700: #263b57;
+  --color-neutral-600: #516780;
+  --color-neutral-500: #6e849d;
+  --color-neutral-400: #9aaec4;
+  --color-neutral-300: #c1cfdf;
+  --color-neutral-200: #dce5ef;
+  --color-neutral-100: #edf3fa;
+  --color-neutral-50: #f7f9fc;
+  --color-blue-950: #0c1c35;
+  --color-blue-900: #142b4f;
+  --color-blue-800: #203f70;
+  --color-blue-700: #315b9d;
+  --color-blue-600: #4678cf;
+  --color-blue-500: #5b8def;
+  --color-blue-400: #82a9f5;
+  --color-blue-300: #adc8f9;
+  --color-blue-200: #d2e0fc;
+  --color-emerald-950: #071f1c;
+  --color-emerald-900: #0d352f;
+  --color-emerald-800: #155448;
+  --color-emerald-700: #1e7967;
+  --color-emerald-600: #249c83;
+  --color-emerald-500: #2dbe9d;
+  --color-emerald-400: #5ad0b5;
+  --color-emerald-300: #8ce0cd;
+  --color-emerald-200: #bceee2;
+  --color-amber-950: #271b08;
+  --color-amber-900: #452f0d;
+  --color-amber-800: #6d4c16;
+  --color-amber-700: #9a6c22;
+  --color-amber-600: #c99035;
+  --color-amber-500: #efb64b;
+  --color-amber-400: #f5c86e;
+  --color-amber-300: #f8da9b;
+  --color-amber-200: #fbe9c5;
+  --color-red-950: #2b1017;
+  --color-red-900: #4a1b25;
+  --color-red-800: #732a38;
+  --color-red-700: #9e3d4b;
+  --color-red-600: #c9505d;
+  --color-red-500: #ec6672;
+  --color-red-400: #f18790;
+  --color-red-300: #f6adb4;
+  --color-red-200: #fad0d4;
+  --color-orange-400: var(--escalation-amber);
+  --color-orange-500: #d99c34;
+  --color-orange-600: #b77a24;
+  --color-orange-700: #89591c;
+  --color-orange-800: #624016;
+  --color-orange-900: #422b10;
+  --color-orange-950: #261907;
+  --color-purple-200: #d2e0fc;
+  --color-purple-300: #adc8f9;
+  --color-purple-400: #82a9f5;
+  --color-purple-500: #5b8def;
+  --color-purple-800: #203f70;
+  --color-purple-900: #142b4f;
+  --color-purple-950: #0c1c35;
+  --color-violet-200: #d2e0fc;
+  --color-violet-300: #adc8f9;
+  --color-violet-400: #82a9f5;
+  --color-violet-500: #5b8def;
+  --color-violet-700: #315b9d;
+  --color-violet-800: #203f70;
+  --color-violet-900: #142b4f;
+  --color-violet-950: #0c1c35;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--canvas-void);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  overflow-x: hidden;
 }
 
+h1,
+h2,
+h3 {
+  font-family: var(--font-display);
+  letter-spacing: 0.01em;
+}
+
+button,
+a,
+input,
+select,
+textarea,
+summary {
+  outline: none;
+}
+
+:where(button, a, input, select, textarea, summary):focus-visible {
+  outline: 2px solid var(--signal-blue);
+  outline-offset: 2px;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--signal-blue) 32%, transparent);
+  color: var(--text-primary);
+}
+
+/* Custom Tactical Scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--night);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-tactical);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-highlight);
+}
+
+.ops-panel {
+  background: var(--surface-panel);
+  border: 1px solid var(--border-tactical);
+  border-radius: 8px;
+}
+
+.ops-card {
+  background: var(--surface-card);
+  border: 1px solid var(--border-tactical);
+  border-radius: 8px;
+  transition: border-color 0.15s ease;
+}
+
+.ops-card:hover {
+  border-color: var(--border-highlight);
+}
+
+/* Tactical Data Table Header */
+.ops-table-header {
+  background: var(--canvas-subtle);
+  border-bottom: 1px solid var(--border-tactical);
+  color: var(--text-muted);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ops-eyebrow {
+  color: var(--text-secondary);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ops-button-primary {
+  align-items: center;
+  background: var(--signal-blue);
+  border: 1px solid color-mix(in srgb, var(--signal-blue) 80%, white);
+  border-radius: 4px;
+  color: #06101d;
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  gap: 0.375rem;
+  min-height: 36px;
+  padding: 0.5rem 0.875rem;
+}
+
+.ops-button-primary:hover {
+  background: color-mix(in srgb, var(--signal-blue) 86%, white);
+}
+
+.ops-button-secondary {
+  align-items: center;
+  background: var(--surface-card);
+  border: 1px solid var(--border-tactical);
+  border-radius: 4px;
+  color: var(--text-primary);
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 600;
+  gap: 0.375rem;
+  min-height: 36px;
+  padding: 0.5rem 0.875rem;
+}
+
+.ops-button-secondary:hover {
+  background: var(--surface-elevated);
+  border-color: var(--border-highlight);
+}
+
+.ops-input {
+  background: var(--night);
+  border: 1px solid var(--border-tactical);
+  border-radius: 4px;
+  color: var(--text-primary);
+  min-height: 36px;
+}
+
+/* The command desk uses opaque hierarchy, even where older markup still requests blur. */
+.backdrop-blur-md,
+.backdrop-blur-xl {
+  backdrop-filter: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styling for candidate packets */
 @media print {
   body:has(.candidate-packets-print-root) * {
     visibility: hidden;

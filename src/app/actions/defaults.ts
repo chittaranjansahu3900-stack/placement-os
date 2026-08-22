@@ -51,13 +51,14 @@ function parseDefaultsCsv(raw: string): { rows: ParsedDefaultRow[]; skipped: num
 }
 
 // FR-6.1/FR-6.3: bulk CSV import of attendance/default data, mapped by
-// roll_no to a student within the chosen batch. Runs on the Admin's own
-// session — RLS (default_records_write, requires Student Data - Full) is
-// the actual gate, not the role check below (that's just so a non-Admin
-// gets a redirect instead of a confusing Postgres error).
+// roll_no to a student within the chosen batch. RLS (default_records_write,
+// requires Student Data - Full) is the actual gate; matched here (not
+// roleNames.includes("Admin")) so the pre-check gives a clean redirect
+// instead of a confusing Postgres error for anyone RLS would actually let
+// through, including SPC (holds Student Data - Full by default).
 export async function importDefaults(formData: FormData) {
   const ctx = await getCurrentUserContext();
-  if (!ctx || !ctx.roleNames.includes("Admin")) redirect("/dashboard");
+  if (!ctx || !ctx.permissionNames.has("Student Data - Full")) redirect("/dashboard");
 
   const batchId = String(formData.get("batch_id") ?? "");
   const csv = String(formData.get("csv") ?? "");

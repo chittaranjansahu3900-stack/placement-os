@@ -39,7 +39,6 @@ export async function createJd(formData: FormData) {
   const maxBacklog = formData.get("max_backlog") ? Number(formData.get("max_backlog")) : null;
   const openPositions = formData.get("open_positions") ? Number(formData.get("open_positions")) : null;
   const unplacedOnly = formData.get("unplaced_only") === "on";
-  const adminApprovalRequired = formData.get("admin_approval_required") === "on";
   let attachment: File | null;
   try {
     attachment = validatePlacementFile(formData.get("jd_attachment"));
@@ -74,7 +73,7 @@ export async function createJd(formData: FormData) {
       max_backlog: maxBacklog,
       open_positions: openPositions,
       unplaced_only: unplacedOnly,
-      admin_approval_required: adminApprovalRequired,
+      admin_approval_required: false,
       locations: splitCsv(formData.get("locations")),
       eligible_branches: splitCsv(formData.get("eligible_branches")),
       eligible_specializations: splitCsv(formData.get("eligible_specializations")),
@@ -110,42 +109,83 @@ export async function createJd(formData: FormData) {
   redirect(`/jds/${data!.id}`);
 }
 
-// FR-1.3: Draft -> Published. If the JD has admin_approval_required set,
-// jds_status_transition_guard (0013) blocks anyone but an Admin from making
-// this specific transition — the trigger's exception message surfaces
-// through `error.message` below, no separate check needed here.
-export async function publishJd(jdId: string) {
+// Product decision (2026-08-22): Recruiters submit an own-company draft for
+// mandatory SPC review. The JD remains draft — and therefore student-hidden —
+// until an SPC releases it through releaseJdToBatch(). jds_update RLS is the
+// company boundary; 0023's column guard prevents post-submission edits.
+export async function submitJdForSpcReview(jdId: string) {
   const ctx = await getCurrentUserContext();
   if (!ctx) redirect("/login");
 
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("jds")
-    .update({ status: "published" })
+    .update({
+      spc_review_submitted_at: new Date().toISOString(),
+      spc_review_submitted_by_user_id: ctx.appUser.id,
+    })
     .eq("id", jdId)
+    .eq("status", "draft")
+    .is("spc_review_submitted_at", null)
     .select("id")
     .single();
   if (error || !data) {
-    redirect(`/jds/${jdId}?error=${encodeURIComponent(error?.message ?? "JD could not be published")}`);
+    redirect(`/jds/${jdId}?error=${encodeURIComponent(error?.message ?? "JD could not be submitted for SPC review")}`);
   }
-  await logAudit("jd.published", "jd", jdId, {});
+  await logAudit("jd.submitted_for_spc_review", "jd", jdId, {});
+  revalidatePath("/jds");
+  revalidatePath("/spc");
+  revalidatePath(`/jds/${jdId}`);
+  redirect(`/jds/${jdId}?notice=${encodeURIComponent("JD submitted to SPC. Students cannot see it until SPC releases it.")}`);
+}
+
+// SPC may keep the recruiter's deadline or move it earlier. The narrowly
+// scoped release_jd_to_batch() RPC (0023) is the authorization boundary: it
+// requires Shortlist Oversight, locks the row, validates tenant/status, and
+// rejects any postponed or past deadline. Publication and notifications only
+// happen after that database-protected transition succeeds.
+export async function releaseJdToBatch(jdId: string, formData: FormData) {
+  const ctx = await getCurrentUserContext();
+  if (!ctx) redirect("/login");
+
+  const deadlineRaw = String(formData.get("apply_by_deadline") ?? "").trim();
+  const deadline = deadlineRaw ? new Date(deadlineRaw) : null;
+  if (deadline && Number.isNaN(deadline.getTime())) {
+    redirect(`/spc?error=${encodeURIComponent("Enter a valid application deadline")}`);
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase.rpc("release_jd_to_batch", {
+    p_jd_id: jdId,
+    p_apply_by_deadline: deadline?.toISOString() ?? null,
+  });
+  if (error) {
+    redirect(`/spc?error=${encodeURIComponent(error.message)}`);
+  }
+
+  await logAudit("jd.released_by_spc", "jd", jdId, {
+    deadline_preponed_to: deadline?.toISOString() ?? null,
+  });
 
   let notice: string;
   try {
     const summary = await queueJdPublishedNotifications(jdId, ctx.appUser.id);
     notice = summary.total === 0
-      ? "JD published. No eligible students with an email address were found."
-      : `JD published. ${summary.total} notification(s) queued: ${summary.sent} sent, ${summary.blocked} awaiting configuration, ${summary.failed} failed.`;
+      ? "JD released to the batch. No eligible students with an email address were found."
+      : `JD released to the batch. ${summary.total} notification(s) queued: ${summary.sent} sent, ${summary.blocked} awaiting configuration, ${summary.failed} failed.`;
   } catch (notificationError) {
-    notice = `JD published, but notifications could not be queued: ${notificationError instanceof Error ? notificationError.message : "unknown error"}`;
+    notice = `JD released to the batch, but notifications could not be queued: ${notificationError instanceof Error ? notificationError.message : "unknown error"}`;
   }
+  revalidatePath("/jobs");
+  revalidatePath("/jds");
+  revalidatePath("/spc");
   revalidatePath(`/jds/${jdId}`);
-  redirect(`/jds/${jdId}?notice=${encodeURIComponent(notice)}`);
+  redirect(`/spc?notice=${encodeURIComponent(notice)}`);
 }
 
 // FR-1.3: the rest of the lifecycle — Published -> Applications Closed ->
 // Shortlisting -> Closed (or Published -> Closed directly). Same
-// enforcement point as publishJd: 0013's trigger is the actual state-machine
+// enforcement point as releaseJdToBatch: the database trigger is the actual state-machine
 // boundary, this just triggers the attempt and surfaces whatever it says.
 export async function advanceJdStatus(jdId: string, nextStatus: JdStatus) {
   const supabase = await createClient();
@@ -199,7 +239,7 @@ export async function cloneJdToSeason(sourceJdId: string, formData: FormData) {
       jd_attachment_url: reuseAttachment ? source.jd_attachment_url : null,
       apply_by_deadline: deadline.toISOString(),
       status: "draft",
-      admin_approval_required: source.admin_approval_required,
+      admin_approval_required: false,
     })
     .select("id")
     .single();

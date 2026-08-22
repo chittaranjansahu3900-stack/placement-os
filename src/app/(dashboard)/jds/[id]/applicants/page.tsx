@@ -7,6 +7,13 @@ import { CandidatePacket } from "@/components/candidate-packet";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { loadCandidatePackets } from "@/lib/candidate-packets";
 import { createClient } from "@/lib/supabase/server";
+import { OpsIcon } from "@/components/ops-icon";
+import { StatusBadge } from "@/components/status-badge";
+import { BulkApplicantActions } from "@/components/bulk-applicant-actions";
+import {
+  EligibilitySignalRail,
+  type EligibilitySignalItem,
+} from "@/components/eligibility-signal-rail";
 import type { ApplicantDirectoryRow, ApplicationPrivateNote } from "@/types/domain";
 
 const ACTIONS = ["shortlisted", "interview", "selected", "waitlisted", "rejected"] as const;
@@ -14,6 +21,54 @@ const SCHEDULABLE_STATUSES = ["shortlisted", "interview", "waitlisted"];
 const FILTER_STATUSES = ["applied", "under_review", "shortlisted", "interview", "selected", "waitlisted", "rejected"] as const;
 const SORTS = ["cgpa", "name", "work_ex", "applied_at", "status"] as const;
 type SortKey = (typeof SORTS)[number];
+
+type ApplicantJdSummary = {
+  role_title: string;
+  company_id: string;
+  min_cgpa: number | null;
+  eligible_branches: string[];
+  eligible_specializations: string[];
+  companies: { name: string } | null;
+};
+
+function matchesAllowed(allowed: string[], value: string | null): EligibilitySignalItem["state"] {
+  if (allowed.length === 0) return "pass";
+  if (!value) return "unknown";
+  return allowed.some((item) => item.localeCompare(value, undefined, { sensitivity: "base" }) === 0)
+    ? "pass"
+    : "fail";
+}
+
+function eligibilitySignals(row: ApplicantDirectoryRow, jd: ApplicantJdSummary): EligibilitySignalItem[] {
+  const cgpaState =
+    jd.min_cgpa == null ? "pass" : row.cgpa == null ? "unknown" : row.cgpa >= jd.min_cgpa ? "pass" : "fail";
+
+  return [
+    {
+      label: "CGPA",
+      state: cgpaState,
+      detail:
+        jd.min_cgpa == null
+          ? "No cutoff configured"
+          : row.cgpa == null
+            ? `Missing value; requires ${jd.min_cgpa}`
+            : `${row.cgpa.toFixed(2)} against ${jd.min_cgpa}`,
+    },
+    {
+      label: "Branch",
+      state: matchesAllowed(jd.eligible_branches, row.branch),
+      detail: jd.eligible_branches.length === 0 ? "All branches accepted" : row.branch ?? "Missing branch",
+    },
+    {
+      label: "Spec",
+      state: matchesAllowed(jd.eligible_specializations, row.specialization),
+      detail:
+        jd.eligible_specializations.length === 0
+          ? "All specializations accepted"
+          : row.specialization ?? "Missing specialization",
+    },
+  ];
+}
 
 type ApplicantSearchParams = {
   error?: string;
@@ -66,27 +121,32 @@ function listHref(id: string, search: ApplicantSearchParams, packet?: string): s
   return `/jds/${id}/applicants${suffix ? `?${suffix}` : ""}${packet ? "#candidate-packet" : ""}`;
 }
 
-// Applicant lists always come from applicant_directory, where contact fields
-// are masked pre-shortlist. Full student/CV packet queries are separately
-// guarded by loadCandidatePackets and by database RLS.
-export default async function ApplicantsPage({ params, searchParams }: {
+export default async function ApplicantsPage({
+  params,
+  searchParams,
+}: {
   params: Promise<{ id: string }>;
   searchParams: Promise<ApplicantSearchParams>;
 }) {
   const { id } = await params;
   const search = await searchParams;
   const [ctx, supabase] = await Promise.all([getCurrentUserContext(), createClient()]);
-  // placement_records_write RLS gates on has_permission('Student Data - Full'),
-  // not role name — a custom role (e.g. Senior SPC) holding that permission
-  // must see this control too, not just users literally named Admin/SPC.
   const canConfirmPlacement = !!ctx && ctx.permissionNames.has("Student Data - Full");
-  const canSeePrivateNotes = !!ctx && (ctx.permissionNames.has("Shortlisting (recruiter-scoped)") || ctx.permissionNames.has("Shortlist Oversight") || ctx.permissionNames.has("Student Data - Full"));
+  const canSeePrivateNotes =
+    !!ctx &&
+    (ctx.permissionNames.has("Shortlisting (recruiter-scoped)") ||
+      ctx.permissionNames.has("Shortlist Oversight") ||
+      ctx.permissionNames.has("Student Data - Full"));
 
   const [{ data: jd }, { data: applicants }] = await Promise.all([
-    supabase.from("jds").select("role_title, company_id, companies(name)").eq("id", id).single(),
+    supabase
+      .from("jds")
+      .select("role_title, company_id, min_cgpa, eligible_branches, eligible_specializations, companies(name)")
+      .eq("id", id)
+      .single(),
     supabase.from("applicant_directory").select("*").eq("jd_id", id),
   ]);
-  const typedJd = jd as unknown as { role_title: string; company_id: string; companies: { name: string } | null } | null;
+  const typedJd = jd as unknown as ApplicantJdSummary | null;
   const allRows = (applicants ?? []) as ApplicantDirectoryRow[];
   const branches = [...new Set(allRows.map((row) => row.branch).filter((branch): branch is string => Boolean(branch)))].sort();
   const specializations = [...new Set(allRows.map((row) => row.specialization).filter((value): value is string => Boolean(value)))].sort();
@@ -96,15 +156,19 @@ export default async function ApplicantsPage({ params, searchParams }: {
   const sort = SORTS.includes(search.sort as SortKey) ? (search.sort as SortKey) : "cgpa";
   const direction = search.direction === "asc" ? "asc" : "desc";
 
-  const rows = sortApplicants(allRows.filter((row) => {
-    if (query && !`${row.name} ${row.roll_no}`.toLocaleLowerCase().includes(query)) return false;
-    if (search.application_status && row.status !== search.application_status) return false;
-    if (search.branch && row.branch !== search.branch) return false;
-    if (search.specialization && row.specialization !== search.specialization) return false;
-    if (minCgpa != null && (row.cgpa == null || row.cgpa < minCgpa)) return false;
-    if (minWorkEx != null && row.total_work_ex_months < minWorkEx) return false;
-    return true;
-  }), sort, direction);
+  const rows = sortApplicants(
+    allRows.filter((row) => {
+      if (query && !`${row.name} ${row.roll_no}`.toLocaleLowerCase().includes(query)) return false;
+      if (search.application_status && row.status !== search.application_status) return false;
+      if (search.branch && row.branch !== search.branch) return false;
+      if (search.specialization && row.specialization !== search.specialization) return false;
+      if (minCgpa != null && (row.cgpa == null || row.cgpa < minCgpa)) return false;
+      if (minWorkEx != null && row.total_work_ex_months < minWorkEx) return false;
+      return true;
+    }),
+    sort,
+    direction
+  );
 
   const applicationIds = allRows.map((row) => row.application_id);
   const studentIds = allRows.map((row) => row.student_id);
@@ -115,9 +179,6 @@ export default async function ApplicantsPage({ params, searchParams }: {
   const cvByApplication = new Map((applicationCvRows ?? []).map((application) => [application.id, application.cv_document_id]));
   const placementByStudent = new Map((existingPlacements ?? []).map((placement) => [placement.student_id, placement]));
 
-  // application_private_notes has no student-visible SELECT branch at all
-  // (0012_codex_audit_fixes.sql) — this query simply returns nothing for a
-  // student caller rather than needing an app-side filter.
   const { data: noteRows } = canSeePrivateNotes && applicationIds.length
     ? await supabase.from("application_private_notes").select("*").in("application_id", applicationIds).order("created_at", { ascending: false })
     : { data: [] };
@@ -132,87 +193,459 @@ export default async function ApplicantsPage({ params, searchParams }: {
   const packetEligibleCount = allRows.length;
 
   return (
-    <div className="max-w-full">
-      <div className="flex flex-wrap items-start justify-between gap-4">
+    <div className="space-y-6">
+      {/* Header Matrix Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
-          <h1 className="text-lg font-semibold text-white">{typedJd?.companies?.name ?? "Unknown company"} — {typedJd?.role_title ?? "JD"}</h1>
-          <p className="mt-1 text-sm text-neutral-400">Showing {rows.length} of {allRows.length} applicants. Contact fields unmask after shortlisting.</p>
+          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+            <Link href="/jds" className="hover:text-amber-400 transition-colors">JDs</Link>
+            <span>/</span>
+            <span className="text-slate-200">{typedJd?.companies?.name ?? "Company"}</span>
+          </div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+            <span>{typedJd?.role_title ?? "Job Description"}</span>
+            <span className="rounded-md bg-blue-950/80 border border-blue-800/60 px-2 py-0.5 font-mono text-xs font-semibold text-blue-300">
+              {rows.length} Candidates
+            </span>
+          </h1>
+          <p className="mt-1 text-xs text-slate-400 flex items-center gap-2">
+            <OpsIcon name="shield" size={13} className="text-amber-400" />
+            <span>Section 7.4 Compliance: Contact telemetry automatically unlocks upon Shortlisting.</span>
+          </p>
         </div>
-        {packetEligibleCount > 0 && <Link href={`/jds/${id}/applicants/packets`} className="rounded-md border border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-200 hover:border-neutral-500">Merged candidate packets ({packetEligibleCount})</Link>}
+
+        <div className="flex items-center gap-3">
+          {packetEligibleCount > 0 && (
+            <Link
+              href={`/jds/${id}/applicants/packets`}
+              className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-slate-600 hover:bg-slate-700 hover:text-white transition-all shadow-sm"
+            >
+              <OpsIcon name="download" size={14} />
+              <span>Merged Candidate Packets ({packetEligibleCount})</span>
+            </Link>
+          )}
+        </div>
       </div>
 
-      {search.error && <p className="mt-4 rounded-md border border-red-900 bg-red-950 px-3 py-2 text-sm text-red-300">{search.error}</p>}
-      {search.notice && <p className="mt-4 rounded-md border border-blue-900 bg-blue-950 px-3 py-2 text-sm text-blue-200">{search.notice}</p>}
-      {search.updated && <p className="mt-4 rounded-md border border-emerald-900 bg-emerald-950 px-3 py-2 text-sm text-emerald-300">Updated {search.updated} applicant{Number(search.updated) === 1 ? "" : "s"} to {search.status}.</p>}
-
-      <form method="get" className="mt-5 rounded-md border border-neutral-800 bg-neutral-900 p-4">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-          <label className="text-xs text-neutral-400 xl:col-span-2">Search name or roll number<input name="q" defaultValue={search.q} placeholder="Candidate / roll number" className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white" /></label>
-          <label className="text-xs text-neutral-400">Status<select name="application_status" defaultValue={search.application_status ?? ""} className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm capitalize text-white"><option value="">All statuses</option>{FILTER_STATUSES.map((value) => <option key={value} value={value}>{value.replaceAll("_", " ")}</option>)}</select></label>
-          <label className="text-xs text-neutral-400">Branch<select name="branch" defaultValue={search.branch ?? ""} className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"><option value="">All branches</option>{branches.map((branch) => <option key={branch} value={branch}>{branch}</option>)}</select></label>
-          <label className="text-xs text-neutral-400">Specialization<select name="specialization" defaultValue={search.specialization ?? ""} className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"><option value="">All specializations</option>{specializations.map((value) => <option key={value} value={value}>{value}</option>)}</select></label>
-          <label className="text-xs text-neutral-400">Minimum CGPA<input name="min_cgpa" type="number" min="0" max="10" step="0.01" defaultValue={search.min_cgpa} className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white" /></label>
-          <label className="text-xs text-neutral-400">Minimum work-ex (months)<input name="min_work_ex" type="number" min="0" step="1" defaultValue={search.min_work_ex} className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white" /></label>
-          <label className="text-xs text-neutral-400">Sort by<select name="sort" defaultValue={sort} className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"><option value="cgpa">CGPA</option><option value="name">Name</option><option value="work_ex">Work experience</option><option value="applied_at">Applied date</option><option value="status">Status</option></select></label>
-          <label className="text-xs text-neutral-400">Direction<select name="direction" defaultValue={direction} className="mt-1 block w-full rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"><option value="desc">Descending</option><option value="asc">Ascending</option></select></label>
+      {/* Notifications */}
+      {search.error && (
+        <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3.5 text-xs text-red-200">
+          <OpsIcon name="alert-triangle" size={16} className="text-red-400 shrink-0" />
+          <span>{search.error}</span>
         </div>
-        <div className="mt-3 flex gap-2"><button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">Apply filters</button><Link href={`/jds/${id}/applicants`} className="rounded-md border border-neutral-700 px-4 py-2 text-sm text-neutral-300 hover:border-neutral-500">Reset</Link></div>
+      )}
+      {search.updated && (
+        <div className="flex items-center gap-2 rounded-xl border border-emerald-800/60 bg-emerald-950/50 p-3.5 text-xs text-emerald-200">
+          <OpsIcon name="check" size={16} className="text-emerald-400 shrink-0" />
+          <span>
+            Updated <strong className="font-mono">{search.updated}</strong> candidate{Number(search.updated) === 1 ? "" : "s"} to{" "}
+            <StatusBadge status={search.status || ""} size="sm" />
+          </span>
+        </div>
+      )}
+
+      {/* Tactical Multi-Criteria Filter Bar */}
+      <form method="get" className="rounded-xl border border-slate-800/90 bg-slate-900/70 p-4 backdrop-blur-md">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 xl:col-span-2">
+            Search Candidate / Roll
+            <div className="relative mt-1">
+              <OpsIcon name="search" size={14} className="absolute left-3 top-2.5 text-slate-500" />
+              <input
+                name="q"
+                defaultValue={search.q}
+                placeholder="Name / Roll No..."
+                className="w-full rounded-lg border border-slate-700/80 bg-slate-950/90 pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+              />
+            </div>
+          </label>
+
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Status
+            <select
+              name="application_status"
+              defaultValue={search.application_status ?? ""}
+              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 text-xs capitalize text-white outline-none focus:border-blue-500"
+            >
+              <option value="">All Statuses</option>
+              {FILTER_STATUSES.map((value) => (
+                <option key={value} value={value}>{value.replaceAll("_", " ")}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Branch
+            <select
+              name="branch"
+              defaultValue={search.branch ?? ""}
+              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+            >
+              <option value="">All Branches</option>
+              {branches.map((branch) => (
+                <option key={branch} value={branch}>{branch}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Specialization
+            <select
+              name="specialization"
+              defaultValue={search.specialization ?? ""}
+              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+            >
+              <option value="">All Specializations</option>
+              {specializations.map((value) => (
+                <option key={value} value={value}>{value}</option>
+              ))}
+            </select>
+          </label>
+
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Min CGPA
+            <input
+              name="min_cgpa"
+              type="number"
+              min="0"
+              max="10"
+              step="0.01"
+              defaultValue={search.min_cgpa}
+              placeholder="e.g. 8.0"
+              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 font-mono text-xs text-white outline-none focus:border-blue-500"
+            />
+          </label>
+
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Min Work-Ex
+            <input
+              name="min_work_ex"
+              type="number"
+              min="0"
+              step="1"
+              defaultValue={search.min_work_ex}
+              placeholder="Months"
+              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 font-mono text-xs text-white outline-none focus:border-blue-500"
+            />
+          </label>
+
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Sort
+            <select
+              name="sort"
+              defaultValue={sort}
+              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+            >
+              <option value="cgpa">CGPA</option>
+              <option value="name">Name</option>
+              <option value="work_ex">Work Experience</option>
+              <option value="applied_at">Applied Date</option>
+              <option value="status">Status</option>
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-3.5 flex items-center justify-between border-t border-slate-800/80 pt-3">
+          <div className="flex gap-2">
+            <button
+              type="submit"
+              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors"
+            >
+              <OpsIcon name="filter" size={13} />
+              <span>Apply Filters</span>
+            </button>
+            <Link
+              href={`/jds/${id}/applicants`}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+            >
+              <OpsIcon name="refresh" size={13} />
+              <span>Reset</span>
+            </Link>
+          </div>
+          <span className="font-mono text-xs text-slate-400">
+            Showing {rows.length} of {allRows.length} candidates
+          </span>
+        </div>
       </form>
 
+      {/* Candidate Packet Drawer */}
       {selectedPackets[0] && (
-        <section id="candidate-packet" className="mt-6 scroll-mt-6 rounded-lg border border-blue-900 bg-blue-950/20 p-4">
-          <div className="mb-4 flex items-center justify-between gap-3"><div><h2 className="font-semibold text-white">Candidate packet preview</h2><p className="text-xs text-neutral-400">Full profile plus the immutable CV attached when this application was submitted.</p></div><Link href={listHref(id, search)} className="text-xs text-neutral-400 hover:text-white">Close</Link></div>
+        <section id="candidate-packet" className="scroll-mt-6 rounded-lg border border-blue-800 bg-blue-950/20 p-5">
+          <div className="mb-4 flex items-center justify-between gap-3 border-b border-blue-900/60 pb-3">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-7 items-center justify-center rounded-lg bg-blue-900/60 text-blue-300">
+                <OpsIcon name="file-text" size={16} />
+              </div>
+              <div>
+                <h2 className="font-bold text-white text-sm">Verified Candidate Profile Sheet &amp; CV Packet</h2>
+                <p className="text-[11px] text-slate-400">Immutable profile verified by CDPO and applicant at submission.</p>
+              </div>
+            </div>
+            <Link href={listHref(id, search)} className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+              Close Preview ×
+            </Link>
+          </div>
           <CandidatePacket packet={selectedPackets[0]} />
         </section>
       )}
 
       {allRows.length > 0 && (
-        <form id="bulk-applicant-actions" action={bulkUpdateApplicationStatus.bind(null, id)} className="mt-5 flex flex-wrap items-end gap-3 rounded-md border border-neutral-800 bg-neutral-900 p-3">
-          <label className="text-xs text-neutral-400">Bulk action<select name="status" required className="mt-1 block rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white"><option value="shortlisted">Shortlist selected</option><option value="waitlisted">Waitlist selected</option><option value="rejected">Reject selected</option></select></label>
-          <label className="text-xs text-neutral-400">Round label (optional)<input name="round_label" maxLength={100} placeholder="Round 1 / GD / PI / Final" className="mt-1 block rounded-md border border-neutral-700 bg-neutral-950 px-3 py-2 text-sm text-white" /></label>
-          <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">Apply to selected</button>
-          <p className="basis-full text-xs text-neutral-600">Only currently visible, checked candidates are submitted. Status and round label are committed atomically.</p>
-        </form>
+        <BulkApplicantActions action={bulkUpdateApplicationStatus.bind(null, id)} />
       )}
 
-      <div className="mt-6 overflow-x-auto">
-        <table className="w-full text-left text-sm">
-          <thead><tr className="text-xs text-neutral-500"><th className="pb-2 pr-3 font-normal">Select</th><th className="pb-2 pr-4 font-normal">Name</th><th className="pb-2 pr-4 font-normal">CGPA</th><th className="pb-2 pr-4 font-normal">Work-ex</th><th className="pb-2 pr-4 font-normal">Branch</th><th className="pb-2 pr-4 font-normal">Contact</th><th className="pb-2 pr-4 font-normal">Status</th><th className="pb-2 pr-4 font-normal">Next round</th><th className="pb-2 pr-4 font-normal">Placement</th>{canSeePrivateNotes && <th className="pb-2 pr-4 font-normal">Private notes</th>}<th className="pb-2 font-normal">Actions</th></tr></thead>
-          <tbody className="divide-y divide-neutral-800">
+      {/* Core Tabular Matrix */}
+      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#0a0f1b]">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-[#0e1626] text-[11px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+            <tr>
+              <th className="py-3 pl-4 pr-2 font-medium w-10">
+                <span className="sr-only">Select</span>
+              </th>
+              <th className="py-3 pr-4 font-medium">Candidate Profile</th>
+              <th className="py-3 pr-3 font-medium font-mono text-center">CGPA</th>
+              <th className="py-3 pr-3 font-medium font-mono text-center">Work-Ex</th>
+              <th className="py-3 pr-4 font-medium">Branch / Specialization</th>
+              <th className="py-3 pr-4 font-medium">Eligibility Signal</th>
+              <th className="py-3 pr-4 font-medium">Contact Telemetry</th>
+              <th className="py-3 pr-4 font-medium">Stage Status</th>
+              <th className="py-3 pr-4 font-medium">Interview Round</th>
+              <th className="py-3 pr-4 font-medium">Placement Status</th>
+              {canSeePrivateNotes && <th className="py-3 pr-3 font-medium">Recruiter Notes</th>}
+              <th className="py-3 pr-4 font-medium text-right">Actions</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-slate-800/70 font-sans">
             {rows.map((row) => {
               const latestRound = row.round_history[row.round_history.length - 1];
               const canSchedule = SCHEDULABLE_STATUSES.includes(row.status);
               const cvId = cvByApplication.get(row.application_id);
               const placement = placementByStudent.get(row.student_id);
               const notes = notesByApplication.get(row.application_id) ?? [];
+              const isShortlistedOrAbove = row.status !== "applied" && row.status !== "under_review";
+
               return (
-                <tr key={row.application_id} className="align-top">
-                  <td className="py-2 pr-3"><input type="checkbox" name="application_ids" value={row.application_id} form="bulk-applicant-actions" aria-label={`Select ${row.name}`} className="size-4 accent-blue-600" /></td>
-                  <td className="py-2 pr-4 text-white">{row.roll_no} {row.name}<div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-xs"><Link href={listHref(id, search, row.application_id)} className="text-blue-400 hover:underline">View packet</Link>{cvId && <a href={`/api/files/application-cv?application=${encodeURIComponent(row.application_id)}`} className="text-blue-400 hover:underline">Original CV file (unredacted)</a>}</div></td>
-                  <td className="py-2 pr-4 text-neutral-300">{row.cgpa ?? "—"}</td><td className="py-2 pr-4 text-neutral-300">{row.total_work_ex_months} mo</td><td className="py-2 pr-4 text-neutral-300">{row.branch ?? "—"}</td>
-                  <td className="py-2 pr-4 text-neutral-300">{row.phone || row.personal_email ? <span>{row.phone} {row.personal_email}</span> : <span className="text-neutral-600">Masked until shortlisted</span>}</td>
-                  <td className="py-2 pr-4"><span className="rounded-full border border-neutral-700 px-2 py-0.5 text-xs capitalize text-neutral-300">{row.status.replaceAll("_", " ")}</span></td>
-                  <td className="py-2 pr-4 text-xs text-neutral-400">{latestRound ? <div><p className="text-neutral-200">{latestRound.round}</p>{latestRound.scheduled_at && <p>{new Date(latestRound.scheduled_at).toLocaleString()}</p>}{latestRound.location && <p>{latestRound.location}</p>}</div> : canSchedule ? <form action={assignInterviewRound.bind(null, id, row.application_id)} className="space-y-1"><input name="round" placeholder="Round (GD/PI/Final)" required className="w-full rounded border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 text-white outline-none focus:border-blue-600" /><input name="scheduled_at" type="datetime-local" className="w-full rounded border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 text-white outline-none focus:border-blue-600" /><input name="location" placeholder="Room/link" className="w-full rounded border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 text-white outline-none focus:border-blue-600" /><button type="submit" className="rounded border border-neutral-700 px-1.5 py-0.5 text-neutral-300 hover:border-neutral-500">Schedule</button></form> : "—"}</td>
-                  <td className="py-2 pr-4 text-xs">{placement ? <span className="text-emerald-400">Placed{placement.final_ctc != null ? ` — ${placement.final_ctc} LPA` : ""}</span> : row.status === "selected" && canConfirmPlacement && typedJd ? <form action={confirmPlacement.bind(null, id, row.student_id, typedJd.company_id)} className="space-y-1"><input name="final_ctc" type="number" step="0.01" placeholder="Final CTC" className="w-full rounded border border-neutral-800 bg-neutral-900 px-1.5 py-0.5 text-white outline-none focus:border-blue-600" /><button type="submit" className="rounded border border-neutral-700 px-1.5 py-0.5 text-neutral-300 hover:border-neutral-500">Confirm Placement</button></form> : <span className="text-neutral-600">—</span>}</td>
+                <tr
+                  key={row.application_id}
+                  className={`hover:bg-slate-800/40 transition-colors ${
+                    isShortlistedOrAbove ? "bg-emerald-950/10" : ""
+                  }`}
+                >
+                  {/* Checkbox */}
+                  <td className="py-3 pl-4 pr-2 align-middle">
+                    <input
+                      type="checkbox"
+                      name="application_ids"
+                      value={row.application_id}
+                      form="bulk-applicant-actions"
+                      aria-label={`Select ${row.name}`}
+                      className="size-4 rounded border-slate-700 bg-slate-900 text-blue-600 accent-blue-600 focus:ring-blue-500/20"
+                    />
+                  </td>
+
+                  {/* Candidate Identity */}
+                  <td className="py-3 pr-4 align-top">
+                    <div className="flex items-start gap-2.5">
+                      <div className="mt-0.5 flex size-7 items-center justify-center rounded-md bg-slate-800 text-[11px] font-bold text-amber-400 font-mono border border-slate-700">
+                        {row.name.charAt(0)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-white text-xs">{row.name}</span>
+                          <span className="font-mono text-[11px] text-slate-400">({row.roll_no})</span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
+                          <Link
+                            href={listHref(id, search, row.application_id)}
+                            className="text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 font-medium"
+                          >
+                            <OpsIcon name="file-text" size={11} />
+                            <span>View Packet</span>
+                          </Link>
+                          {cvId && (
+                            <a
+                              href={`/api/files/application-cv?application=${encodeURIComponent(row.application_id)}`}
+                              className="text-slate-400 hover:text-white hover:underline flex items-center gap-1"
+                            >
+                              <OpsIcon name="download" size={11} />
+                              <span>Original CV</span>
+                            </a>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </td>
+
+                  {/* CGPA */}
+                  <td className="py-3 pr-3 text-center align-top font-mono font-bold text-amber-300">
+                    {row.cgpa ? row.cgpa.toFixed(2) : "—"}
+                  </td>
+
+                  {/* Work-Ex */}
+                  <td className="py-3 pr-3 text-center align-top font-mono text-slate-300">
+                    {row.total_work_ex_months} mo
+                  </td>
+
+                  {/* Branch & Specialization */}
+                  <td className="py-3 pr-4 align-top">
+                    <p className="text-slate-200 font-medium">{row.branch ?? "—"}</p>
+                    <p className="text-[11px] text-slate-500">{row.specialization ?? "General Management"}</p>
+                  </td>
+
+                  <td className="py-3 pr-4 align-top">
+                    {typedJd ? (
+                      <EligibilitySignalRail items={eligibilitySignals(row, typedJd)} compact />
+                    ) : (
+                      <span className="font-mono text-slate-500">—</span>
+                    )}
+                  </td>
+
+                  {/* Contact Telemetry — Signature Fair Hiring Unmasking */}
+                  <td className="py-3 pr-4 align-top">
+                    {row.phone || row.personal_email ? (
+                      <div className="inline-flex flex-col gap-0.5 rounded-lg border border-emerald-800/60 bg-emerald-950/40 p-1.5 font-mono text-[11px] text-emerald-200">
+                        <div className="flex items-center gap-1.5">
+                          <OpsIcon name="unlock" size={12} className="text-emerald-400" />
+                          <span>{row.phone}</span>
+                        </div>
+                        {row.personal_email && (
+                          <span className="text-[10px] text-emerald-300/80 truncate max-w-[160px]">{row.personal_email}</span>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1 font-mono text-[11px] text-slate-500">
+                        <OpsIcon name="lock" size={12} className="text-slate-500" />
+                        <span className="tracking-widest">••••••••••</span>
+                      </div>
+                    )}
+                  </td>
+
+                  {/* Stage Status */}
+                  <td className="py-3 pr-4 align-top">
+                    <StatusBadge status={row.status} size="sm" />
+                  </td>
+
+                  {/* Next Round Telemetry */}
+                  <td className="py-3 pr-4 align-top">
+                    {latestRound ? (
+                      <div className="rounded-lg border border-blue-900/50 bg-blue-950/30 p-2 font-mono text-[11px] text-blue-200">
+                        <p className="font-semibold text-white">{latestRound.round}</p>
+                        {latestRound.scheduled_at && (
+                          <p className="text-[10px] text-blue-300/80 mt-0.5">
+                            {new Date(latestRound.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        )}
+                        {latestRound.location && (
+                          <p className="text-[10px] text-slate-400 truncate">{latestRound.location}</p>
+                        )}
+                      </div>
+                    ) : canSchedule ? (
+                      <form action={assignInterviewRound.bind(null, id, row.application_id)} className="space-y-1 w-36">
+                        <input
+                          name="round"
+                          placeholder="Round (GD/PI/Final)"
+                          required
+                          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-white outline-none focus:border-blue-500"
+                        />
+                        <button type="submit" className="w-full rounded border border-blue-700 bg-blue-950/80 px-2 py-0.5 text-[10px] font-semibold text-blue-300 hover:bg-blue-900 transition-colors">
+                          + Schedule
+                        </button>
+                      </form>
+                    ) : (
+                      <span className="text-slate-600 font-mono">—</span>
+                    )}
+                  </td>
+
+                  {/* Placement Final CTC */}
+                  <td className="py-3 pr-4 align-top font-mono text-xs">
+                    {placement ? (
+                      <span className="inline-flex items-center gap-1 font-bold text-amber-300">
+                        <OpsIcon name="award" size={13} className="text-amber-400" />
+                        <span>Placed · {placement.final_ctc} LPA</span>
+                      </span>
+                    ) : row.status === "selected" && canConfirmPlacement && typedJd ? (
+                      <form action={confirmPlacement.bind(null, id, row.student_id, typedJd.company_id)} className="space-y-1">
+                        <input
+                          name="final_ctc"
+                          type="number"
+                          step="0.01"
+                          placeholder="CTC LPA"
+                          required
+                          className="w-24 rounded border border-amber-800 bg-slate-950 px-2 py-1 text-[11px] text-white outline-none focus:border-amber-500"
+                        />
+                        <button type="submit" className="rounded bg-amber-600 px-2 py-0.5 text-[10px] font-bold text-slate-950 hover:bg-amber-500">
+                          Confirm
+                        </button>
+                      </form>
+                    ) : (
+                      <span className="text-slate-600">—</span>
+                    )}
+                  </td>
+
+                  {/* Private Notes */}
                   {canSeePrivateNotes && (
-                    <td className="py-2 pr-4 text-xs">
-                      <details>
-                        <summary className="cursor-pointer text-neutral-400 hover:text-neutral-200">{notes.length} note{notes.length === 1 ? "" : "s"}</summary>
-                        <div className="mt-1 max-w-[220px] space-y-1">
-                          {notes.map((note) => <p key={note.id} className="rounded border border-neutral-800 bg-neutral-950 p-1.5 text-neutral-300">{note.note_text}</p>)}
-                          <form action={addPrivateNote.bind(null, id, row.application_id)} className="space-y-1">
-                            <textarea name="note_text" rows={2} placeholder="Recruiter-only note" className="w-full rounded border border-neutral-800 bg-neutral-900 px-1.5 py-1 text-white outline-none focus:border-blue-600" />
-                            <button type="submit" className="rounded border border-neutral-700 px-1.5 py-0.5 text-neutral-300 hover:border-neutral-500">Add note</button>
+                    <td className="py-3 pr-3 align-top">
+                      <details className="group">
+                        <summary className="cursor-pointer font-mono text-[11px] text-slate-400 hover:text-amber-300 transition-colors">
+                          {notes.length} note{notes.length === 1 ? "" : "s"}
+                        </summary>
+                        <div className="mt-1.5 max-w-[200px] space-y-1.5 rounded-lg border border-slate-800 bg-slate-950 p-2 text-[11px]">
+                          {notes.map((note) => (
+                            <p key={note.id} className="text-slate-300 border-b border-slate-850 pb-1 last:border-0">
+                              {note.note_text}
+                            </p>
+                          ))}
+                          <form action={addPrivateNote.bind(null, id, row.application_id)} className="space-y-1 pt-1">
+                            <textarea
+                              name="note_text"
+                              rows={2}
+                              placeholder="Add private note..."
+                              required
+                              className="w-full rounded border border-slate-700 bg-slate-900 p-1 text-[10px] text-white outline-none focus:border-blue-500"
+                            />
+                            <button type="submit" className="rounded bg-slate-800 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-700">
+                              Save
+                            </button>
                           </form>
                         </div>
                       </details>
                     </td>
                   )}
-                  <td className="py-2"><div className="flex flex-wrap gap-2">{ACTIONS.map((nextStatus) => <form key={nextStatus} action={updateApplicationStatus.bind(null, id, row.application_id, nextStatus)}><button type="submit" disabled={row.status === nextStatus} className="rounded-md border border-neutral-700 px-2 py-1 text-xs capitalize text-neutral-300 hover:border-neutral-500 disabled:opacity-40">{nextStatus}</button></form>)}</div></td>
+
+                  {/* Actions Column */}
+                  <td className="py-3 pr-4 align-top text-right">
+                    <div className="flex flex-wrap justify-end gap-1.5">
+                      {ACTIONS.map((nextStatus) => (
+                        <form key={nextStatus} action={updateApplicationStatus.bind(null, id, row.application_id, nextStatus)}>
+                          <button
+                            type="submit"
+                            disabled={row.status === nextStatus}
+                            className={`rounded-md border px-2 py-0.5 text-[10px] font-medium capitalize transition-all disabled:opacity-30 ${
+                              nextStatus === "shortlisted"
+                                ? "border-emerald-800 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60"
+                                : nextStatus === "interview"
+                                ? "border-blue-800 bg-blue-950/40 text-blue-300 hover:bg-blue-900/60"
+                                : nextStatus === "selected"
+                                ? "border-amber-800 bg-amber-950/40 text-amber-300 hover:bg-amber-900/60"
+                                : "border-slate-700 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
+                            }`}
+                          >
+                            {nextStatus}
+                          </button>
+                        </form>
+                      ))}
+                    </div>
+                  </td>
                 </tr>
               );
             })}
-            {rows.length === 0 && <tr><td colSpan={canSeePrivateNotes ? 11 : 10} className="py-6 text-sm text-neutral-500">{allRows.length ? "No applicants match these filters." : "No applicants yet."}</td></tr>}
+            {rows.length === 0 && (
+              <tr>
+                <td colSpan={canSeePrivateNotes ? 12 : 11} className="py-12 text-center text-slate-500">
+                  <OpsIcon name="search" size={24} className="mx-auto mb-2 opacity-50" />
+                  <p className="text-sm font-medium text-slate-400">No applicants match active filters.</p>
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>

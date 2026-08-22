@@ -4,8 +4,8 @@
 against real Postgres on 21 August 2026 — see Section 6.
 **Requirements source:** `docs/PlacementOS_BRD_v3.pdf`  
 **Code assessed:** current PlacementOS workspace through migration
-`0022_outreach_activity_season.sql` (`0019`–`0022` applied to hosted Supabase 21 August 2026 — see
-below); **all
+`0023_spc_jd_release_gate.sql` (`0019`–`0022` applied to hosted Supabase 21 August 2026;
+`0023` is implemented in the workspace and still needs hosted application — see below); **all
 original release-blocking findings below were
 independently re-verified against the actual policies/functions, then fixed, in
 `0011_students_self_update_guard.sql` (already in place before this audit landed) and
@@ -156,7 +156,7 @@ intact and adds the resolution.
 |---|---|---|---|
 | FR-1.1 | Partial | Recruiter self-signup creates a Pending user; Admin approve/reject UI exists. | Enforce work-email policy, real verification/activation email, and Active status in every authorization path. Close the self-activation RLS issue above. |
 | FR-1.2 | Partial | JD creation captures all listed structured fields and now accepts an original attachment into the private `placement-files` bucket, storing the object path in the existing `jds.jd_attachment_url` and exposing a short-lived download. | Apply `0020_plain_file_storage.sql` and validate upload/download with recruiter and student roles; retention/replacement cleanup still needs an institute decision. |
-| FR-1.3 | Implemented | Full lifecycle (Draft → Published → Applications Closed → Shortlisting → Closed) with `jds_status_transition_guard` (`0013_jd_lifecycle.sql`) enforcing valid transitions at the database level, wired through `src/app/actions/jds.ts`. | Verify the guard trigger's transition matrix against real Postgres (now possible — see Section 6). |
+| FR-1.3 | Implemented | The 22 August workflow decision is enforced in code and migration `0023`: Recruiter sets the deadline and submits a student-hidden draft → SPC reviews and may keep or prepone (never postpone) the deadline → SPC releases to the assigned batch → Published → Applications Closed → Shortlisting → Closed. The database locks the submitted payload and blocks direct Recruiter publication. | Apply `0023` to hosted Supabase and run `002_spc_jd_release_gate.test.sql` against it before the pilot. A return-for-revision path was deliberately not invented because its behavior has not been specified. |
 | FR-1.4 | Implemented | JD detail calls `eligible_student_count_for_jd()` before publish. | Validate against at least three real historical JDs. |
 | FR-1.5 | Implemented | `/jds` now separates active-season work from an inactive-season historical template library. Any RLS-visible JD can be cloned to an active batch as a fresh Draft with a new deadline; structured fields copy, while applications, status, timestamps, notifications, and the attachment (unless explicitly selected) do not. The clone is audit-logged. | Validate cloning with a recruiter-owned company and at least two real seasons; confirm whether template naming/favourites are needed beyond the historical library. |
 | FR-1.6 | Implemented | Multiple users can reference one company; JD RLS scopes recruiters to their own company. | Validate with two recruiter accounts in real Postgres. |
@@ -168,7 +168,7 @@ intact and adds the resolution.
 | FR-2.1 | Implemented | SQL eligibility engine evaluates batch, branch, specialization, CGPA, backlog, placement status, and defaults. | Execute and reconcile against real roster data. |
 | FR-2.2 | Implemented | `unplaced_only` excludes students whose placement status is Placed. | Replay against the 337 historical placed records. |
 | FR-2.3 | Implemented | Configurable defaults threshold feeds eligibility; student self-check returns a specific defaults reason. | Validate the source tracker totals for the full batch. |
-| FR-2.4 | Partial | JD publish now resolves the final override-adjusted eligible list and queues a shared Resend template per student through `src/lib/notifications/`; sender identity is runtime configuration and sending defaults off. | Apply migration `0019`, configure/verify Resend and `APP_BASE_URL`, obtain CDPO wording sign-off, then enable and pilot live delivery. |
+| FR-2.4 | Partial | SPC release—not Recruiter submission—now resolves the final override-adjusted eligible list and queues a shared Resend template per student through `src/lib/notifications/`; sender identity is runtime configuration and sending defaults off. | Apply migration `0023`, configure/verify Resend and `APP_BASE_URL`, obtain CDPO wording sign-off, then enable and pilot live delivery. |
 | FR-2.5 | Implemented | `jd_eligibility_overrides` (`0018_eligibility_overrides.sql`) plus an include/exclude review UI (`src/app/(dashboard)/jds/[id]/eligibility/page.tsx`, `src/app/actions/eligibility.ts`) let Admin force-include/exclude specific students per JD, batch-scope-guarded at the trigger level. | Confirm the notification-send path actually honors overrides (not just the eligibility display), and validate against real Postgres. |
 | FR-2.6 | Partial | Signed raw-body Resend webhooks idempotently update the generic delivery ledger, create/update `jd_notifications` only after actual send events, and the JD detail page exposes delivery/open counts. | Apply `0019`, register the production webhook, and validate sent/delivered/open/bounce events in an internal pilot. |
 
@@ -242,8 +242,8 @@ intact and adds the resolution.
 | ID | Status | What exists | Remaining work |
 |---|---|---|---|
 | FR-9.1 | Partial | Admin can create/archive/reactivate dated seasons and use staged, server-revalidated batch upsert. The canonical CSV contract now maps every non-system Student profile field: display sequence, section, age, gender, phone/email, graduation and PG details, Class 10/12, three prior employers, two projects, two positions of responsibility, credentials, and other qualifications. Common human-readable headers and reordered/quoted fields are supported; the generated database type defines the upsert payload. | Reconcile the canonical aliases and repeated-column limits against the unavailable real Profile Sheet, then run a full-batch dry run before marking Implemented. |
-| FR-9.2 | Partial | Five base roles, 14 Permission Sets, multi-role joins, direct-user Permission Set assignment/removal, custom-role clone and bundle editing, user deactivate/reactivate, masking views, and all 9 Section 3 security findings are implemented. `0016` also tenant-scopes every activated assignment path and database-locks base-role bundles. | Complete the systematic permission-vs-role-name UI gate audit, add auto-expiry, and verify the full CRUD/RLS matrix against real Postgres. |
-| FR-9.3 | Partial | Append-only audit table/viewer logs publish, status, placement, user, role, and reassignment events. | Add missing JD approval events, explicit Admin shortlist-override semantics, permission-set edits, and audit coverage for other high-risk actions. |
+| FR-9.2 | Partial | Five base roles, 14 Permission Sets, multi-role joins, direct-user Permission Set assignment/removal, custom-role clone and bundle editing, user deactivate/reactivate, masking views, and all 9 Section 3 security findings are implemented. `0016` also tenant-scopes every activated assignment path and database-locks base-role bundles. The systematic permission-vs-role-name UI gate audit (Section 6, P0 #2) is also done — seven real mismatches fixed. | Add user auto-expiry (season-end/graduation) and verify the full CRUD/RLS matrix against real Postgres. |
+| FR-9.3 | Partial | Append-only audit table/viewer logs JD submission for SPC review, SPC release, lifecycle status, placement, user, role, and reassignment events. | Add explicit Admin shortlist-override semantics, permission-set edits, and audit coverage for other high-risk actions. |
 | FR-9.4 | Missing | Supabase email/password and temporary student passwords are the current stand-ins. | Select and integrate institute SSO; map identity, domain, activation, and logout/session behavior. |
 
 ### 4.10 Resume Maker for Students
@@ -269,7 +269,7 @@ these items is signed off.
 
 | Acceptance criterion | Current assessment |
 |---|---|
-| Recruiter self-registers, is Admin-approved, and publishes without CDPO editing | **Not accepted.** UI path exists, but Pending/Active enforcement has authorization gaps. |
+| Recruiter self-registers, is Admin-approved, submits a deadline-bearing JD, and SPC releases it to the batch | **Implemented in code; not accepted yet.** Migration `0023` and its pgTAP workflow test must pass on hosted Supabase, then the flow needs a real-role pilot. |
 | Eligible count matches three real 2024–25 JDs | **Not tested.** |
 | Unplaced-only excludes all 337 historical placed students | **Not tested.** |
 | Notification email matches the real CDPO circular | **Missing.** |
@@ -301,9 +301,21 @@ these items is signed off.
    enforcement, student-column self-update, Permission-Set-based UI/export gates, raw student-field
    masking bypass, application private-note exposure, and company reassignment scope.~~ **Done —
    `0011_students_self_update_guard.sql` and `0012_codex_audit_fixes.sql`, all re-verified against the
-   actual policy definitions before being marked fixed (see Section 3).** A systematic re-audit of every
-   *other* permission-vs-role-name UI gate beyond `/reports/export` is still worth doing — only the one
-   Codex specifically flagged was checked here.
+   actual policy definitions before being marked fixed (see Section 3).**
+   ~~A systematic re-audit of every *other* permission-vs-role-name UI gate beyond `/reports/export`
+   is still worth doing~~ **— done, 21 August 2026.** All 12 remaining `roleNames.some/.includes`
+   sites checked against the real `pg_policy` behind each one (not assumed from the BRD text). Seven
+   real mismatches fixed: `importRoster`/`createStudentLogin`/`importDefaults` and the page-level
+   gates on `/admin/users`, `/admin/roles`, `/admin/audit-log`, `/admin/roster`, `/admin/defaults`,
+   plus `layout.tsx`'s `canManageCompanies` nav check — all were checking `roleNames.includes("Admin")`
+   while the actual RLS/action behind them accepted a specific Permission Set instead (mostly
+   `Student Data - Full`, which SPC holds by default too), so a custom role granted that Permission
+   Set directly was being redirected away from a page whose buttons would have worked for it. Five
+   sites checked out as already correct and left unchanged — `createBatch`/`setBatchActive`,
+   `updateStalenessThreshold`, `updateDefaultsThreshold`, and two `isAdmin`/persona-identity checks —
+   because their RLS is genuinely `has_role('Admin')`-hardcoded with no covering Permission Set, or
+   (for `isStudent`/`isRecruiter`) they gate persona-identity nav sections by design, not a specific
+   grant. Full writeup in `docs/HANDOVER-CODEX.md`, Claude's track item 1.
 3. Add automated tests for RLS, cross-tenant isolation, recruiter-company scoping, masking, student
    column guards, application CV snapshots, bulk shortlist, and reporting calculations. **Still the best
    way to make sure fix #6 above stays fixed** — this class of bug (row-level RLS with no column guard,

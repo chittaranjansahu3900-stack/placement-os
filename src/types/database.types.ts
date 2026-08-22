@@ -772,6 +772,10 @@ export type Database = {
           min_cgpa: number | null
           open_positions: number | null
           role_title: string
+          spc_released_at: string | null
+          spc_released_by_user_id: string | null
+          spc_review_submitted_at: string | null
+          spc_review_submitted_by_user_id: string | null
           status: Database["public"]["Enums"]["jd_status"]
           unplaced_only: boolean
           updated_at: string
@@ -796,6 +800,10 @@ export type Database = {
           min_cgpa?: number | null
           open_positions?: number | null
           role_title: string
+          spc_released_at?: string | null
+          spc_released_by_user_id?: string | null
+          spc_review_submitted_at?: string | null
+          spc_review_submitted_by_user_id?: string | null
           status?: Database["public"]["Enums"]["jd_status"]
           unplaced_only?: boolean
           updated_at?: string
@@ -820,6 +828,10 @@ export type Database = {
           min_cgpa?: number | null
           open_positions?: number | null
           role_title?: string
+          spc_released_at?: string | null
+          spc_released_by_user_id?: string | null
+          spc_review_submitted_at?: string | null
+          spc_review_submitted_by_user_id?: string | null
           status?: Database["public"]["Enums"]["jd_status"]
           unplaced_only?: boolean
           updated_at?: string
@@ -849,6 +861,20 @@ export type Database = {
           {
             foreignKeyName: "jds_created_by_user_id_fkey"
             columns: ["created_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jds_spc_released_by_user_id_fkey"
+            columns: ["spc_released_by_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "jds_spc_review_submitted_by_user_id_fkey"
+            columns: ["spc_review_submitted_by_user_id"]
             isOneToOne: false
             referencedRelation: "users"
             referencedColumns: ["id"]
@@ -1702,6 +1728,10 @@ export type Database = {
         Returns: undefined
       }
       my_eligibility_for_jd: { Args: { p_jd_id: string }; Returns: Json }
+      release_jd_to_batch: {
+        Args: { p_apply_by_deadline?: string | null; p_jd_id: string }
+        Returns: undefined
+      }
       user_has_role_lineage: {
         Args: { p_role_names: string[]; p_user_id: string }
         Returns: boolean

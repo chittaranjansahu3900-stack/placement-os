@@ -1,10 +1,12 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
-import type { Batch } from "@/types/domain";
-import type { Database } from "@/types/database.types";
 import { ACCREDITATION_FIELDS, REPORT_TEMPLATES } from "@/lib/placement-export";
 import { metricDelta, placementBatchMetrics } from "@/lib/placement-comparison";
+import { OpsIcon } from "@/components/ops-icon";
+import { StatCard } from "@/components/stat-card";
+import type { Batch } from "@/types/domain";
+import type { Database } from "@/types/database.types";
 
 type PlacementRow = Pick<
   Database["public"]["Tables"]["placement_records"]["Row"],
@@ -17,12 +19,6 @@ function signed(value: number | null, digits = 1, suffix = ""): string {
   return `${prefix}${value.toFixed(digits)}${suffix}`;
 }
 
-// FR-7.1: live dashboard — placed/unplaced, company-wise breakdown,
-// average/median/highest CTC. Gated to whoever actually holds a
-// report-viewing Permission Set (Reports & Export or Reports - View Only,
-// Section 7.2/7.3) — not role name, so a custom role built on either
-// permission sees this too. placement_records RLS would 403 anyone else's
-// queries anyway; this is just a friendlier redirect.
 export default async function ReportsPage({
   searchParams,
 }: {
@@ -42,9 +38,9 @@ export default async function ReportsPage({
 
   if (!activeBatch) {
     return (
-      <div>
-        <h1 className="text-lg font-semibold text-white">Placement Report</h1>
-        <p className="mt-2 text-sm text-neutral-500">No batch exists yet.</p>
+      <div className="space-y-4">
+        <h1 className="text-xl font-bold text-white">Placement Reports &amp; Analytics</h1>
+        <p className="text-sm text-slate-500">No batch records found in the database.</p>
       </div>
     );
   }
@@ -89,138 +85,208 @@ export default async function ReportsPage({
   const canExport = ctx.permissionNames.has("Reports & Export");
 
   return (
-    <div className="max-w-5xl">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-lg font-semibold text-white">Placement Report</h1>
+    <div className="space-y-8">
+      {/* Header Banner */}
+      <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800/80 pb-5">
+        <div>
+          <div className="flex items-center gap-2 text-xs font-mono text-blue-400">
+            <OpsIcon name="chart" size={14} />
+            <span>Audited Institutional Telemetry</span>
+          </div>
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+            <span>Placement Analytics &amp; Reports</span>
+            <span className="rounded-md bg-emerald-950 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-400 border border-emerald-800/60">
+              {activeBatch.name}
+            </span>
+          </h1>
+          <p className="mt-1 text-xs text-slate-400">
+            Section 4.10: Live CTC telemetry, audited accreditation export templates, and batch delta analysis.
+          </p>
+        </div>
       </div>
 
+      {/* Primary Metric Gauges */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard
+          label="Placement Rate"
+          value={`${activeMetrics.placementRate.toFixed(1)}%`}
+          secondary={`${activeMetrics.placed} of ${activeMetrics.total} candidates placed`}
+          icon="award"
+          highlight="emerald"
+        />
+        <StatCard
+          label="Average CTC"
+          value={activeMetrics.averageCtc != null ? `${activeMetrics.averageCtc.toFixed(1)} LPA` : "—"}
+          secondary={`Median: ${activeMetrics.medianCtc != null ? `${activeMetrics.medianCtc.toFixed(1)} LPA` : "—"}`}
+          icon="chart"
+          highlight="gold"
+        />
+        <StatCard
+          label="Highest CTC"
+          value={activeMetrics.highestCtc != null ? `${activeMetrics.highestCtc.toFixed(1)} LPA` : "—"}
+          secondary="Top offer of the season"
+          icon="star"
+          highlight="amber"
+        />
+        <StatCard
+          label="Hiring Partners"
+          value={activeMetrics.hiringCompanies}
+          secondary="Companies with confirmed offers"
+          icon="building"
+          highlight="cobalt"
+        />
+      </div>
+
+      {/* Export Accordion */}
       {canExport && (
-        <details className="mt-4 rounded-lg border border-neutral-800 bg-neutral-900 p-4" open>
-          <summary className="cursor-pointer text-sm font-medium text-white">Export template</summary>
-          <form action="/reports/export" method="get" className="mt-4 space-y-4">
+        <details className="group rounded-lg border border-blue-900 bg-slate-900 p-5" open>
+          <summary className="cursor-pointer font-bold text-white text-sm flex items-center justify-between list-none">
+            <span className="flex items-center gap-2 font-mono">
+              <OpsIcon name="download" size={16} className="text-blue-400" />
+              <span>Audited Report Template Exporter</span>
+            </span>
+            <span className="font-mono text-xs text-blue-400">Section 4.10 Standard</span>
+          </summary>
+
+          <form action="/reports/export" method="get" className="mt-5 space-y-4 border-t border-slate-800/80 pt-4">
             <input type="hidden" name="batch_id" value={activeBatch.id} />
-            <div className="grid gap-2 sm:grid-cols-3">
+            <div className="grid gap-3 sm:grid-cols-3">
               {REPORT_TEMPLATES.map((template, index) => (
-                <label key={template.id} className="rounded-md border border-neutral-800 bg-neutral-950 p-3 text-sm text-neutral-300">
-                  <input type="radio" name="template" value={template.id} defaultChecked={index === 0} className="mr-2 accent-blue-600" />
-                  <strong className="text-white">{template.name}</strong>
-                  <span className="mt-1 block text-xs text-neutral-500">{template.description}</span>
+                <label
+                  key={template.id}
+                  className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 text-xs text-slate-300 hover:border-slate-700 cursor-pointer block"
+                >
+                  <div className="flex items-center gap-2">
+                    <input type="radio" name="template" value={template.id} defaultChecked={index === 0} className="accent-blue-600 size-3.5" />
+                    <strong className="text-white text-xs">{template.name}</strong>
+                  </div>
+                  <span className="mt-1.5 block text-[11px] text-slate-400 leading-relaxed">{template.description}</span>
                 </label>
               ))}
             </div>
+
             <div>
-              <p className="text-xs font-medium text-neutral-300">Accreditation detail fields</p>
-              <div className="mt-2 flex flex-wrap gap-x-4 gap-y-2">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">
+                Accreditation Detail Fields (NIRF / AACSB / EQUIS)
+              </p>
+              <div className="mt-2.5 flex flex-wrap gap-2">
                 {ACCREDITATION_FIELDS.map(([field, label]) => (
-                  <label key={field} className="text-xs text-neutral-400"><input type="checkbox" name="fields" value={field} defaultChecked className="mr-1.5 accent-blue-600" />{label}</label>
+                  <label key={field} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-xs text-slate-300">
+                    <input type="checkbox" name="fields" value={field} defaultChecked className="accent-blue-600 size-3.5" />
+                    <span>{label}</span>
+                  </label>
                 ))}
               </div>
-              <p className="mt-1 text-[11px] text-neutral-600">Field choices apply to Accreditation Detail; official and public templates use their fixed audited layouts.</p>
             </div>
-            <label className="block text-xs text-neutral-400"><input type="checkbox" name="include_unplaced" value="1" defaultChecked className="mr-1.5 accent-blue-600" />Include unplaced students where the selected template supports student rows</label>
-            <button type="submit" className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">Download CSV</button>
+
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-800">
+              <label className="inline-flex items-center gap-2 text-xs text-slate-400">
+                <input type="checkbox" name="include_unplaced" value="1" defaultChecked className="accent-blue-600 size-3.5" />
+                <span>Include unplaced student rows in applicable breakdown tables</span>
+              </label>
+              <button
+                type="submit"
+                className="ops-button-primary"
+              >
+                <OpsIcon name="download" size={14} />
+                <span>Download Audited CSV</span>
+              </button>
+            </div>
           </form>
         </details>
       )}
-      {!canExport && <p className="mt-4 rounded-md border border-neutral-800 bg-neutral-900 p-3 text-xs text-neutral-400">Your Reports permission is view-only. Export requires the Reports &amp; Export Permission Set.</p>}
 
-      {batchRows.length > 1 && (
-        <form method="get" className="mt-4 flex flex-wrap items-end gap-3 rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-          <label className="text-xs text-neutral-400">Current season
-            <select name="batch_id" defaultValue={activeBatch.id} className="mt-1 block rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-600">
-              {batchRows.map((batch) => <option key={batch.id} value={batch.id}>{batch.name}</option>)}
-            </select>
-          </label>
-          <label className="text-xs text-neutral-400">Compare with
-            <select name="compare_batch_id" defaultValue={comparisonBatch?.id} className="mt-1 block rounded-md border border-neutral-800 bg-neutral-950 px-3 py-2 text-sm text-white outline-none focus:border-blue-600">
-              {batchRows.filter((batch) => batch.id !== activeBatch.id).map((batch) => <option key={batch.id} value={batch.id}>{batch.name}</option>)}
-            </select>
-          </label>
-          <button
-            type="submit"
-            className="rounded-md border border-neutral-700 px-3 py-2 text-sm text-neutral-200 hover:border-neutral-500"
-          >
-            Compare
-          </button>
-        </form>
-      )}
-
-      {batchRows.length < 2 && (
-        <p className="mt-4 rounded-md border border-neutral-800 bg-neutral-900 p-3 text-sm text-neutral-400">
-          Batch-over-batch comparison becomes available after a second season is created.
-        </p>
-      )}
-
-      <div className="mt-6 grid grid-cols-3 gap-4">
-        <div className="rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3">
-          <p className="text-xs text-neutral-500">Placed</p>
-          <p className="text-2xl font-semibold text-white">
-            {activeMetrics.placed} / {activeMetrics.total}
-          </p>
-        </div>
-        <div className="rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3">
-          <p className="text-xs text-neutral-500">Avg / Median CTC</p>
-          <p className="text-2xl font-semibold text-white">
-            {activeMetrics.averageCtc != null ? activeMetrics.averageCtc.toFixed(1) : "—"} / {activeMetrics.medianCtc != null ? activeMetrics.medianCtc.toFixed(1) : "—"}
-          </p>
-        </div>
-        <div className="rounded-md border border-neutral-800 bg-neutral-900 px-4 py-3">
-          <p className="text-xs text-neutral-500">Highest CTC</p>
-          <p className="text-2xl font-semibold text-white">{activeMetrics.highestCtc != null ? activeMetrics.highestCtc.toFixed(1) : "—"}</p>
-        </div>
-      </div>
-
+      {/* Season Comparison Table */}
       {comparisonBatch && comparisonMetrics && (
-        <section className="mt-8">
-          <h2 className="text-sm font-semibold text-white">Season comparison</h2>
-          <p className="mt-1 text-xs text-neutral-500">Delta is {activeBatch.name} minus {comparisonBatch.name}; CTC values use the stored report unit.</p>
-          <div className="mt-3 overflow-x-auto rounded-lg border border-neutral-800">
-            <table className="w-full min-w-[640px] text-left text-sm">
-              <thead className="bg-neutral-900 text-xs text-neutral-500">
-                <tr><th className="p-3 font-normal">Metric</th><th className="p-3 font-normal">{activeBatch.name}</th><th className="p-3 font-normal">{comparisonBatch.name}</th><th className="p-3 font-normal">Delta</th></tr>
+        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+            <div>
+              <h2 className="text-sm font-bold text-white flex items-center gap-2 font-mono">
+                <OpsIcon name="trending-up" size={16} className="text-amber-400" />
+                <span>Season-over-Season Delta Analysis</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Variance between <strong className="text-white">{activeBatch.name}</strong> vs <strong className="text-slate-300">{comparisonBatch.name}</strong>.
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-4 overflow-x-auto">
+            <table className="w-full text-left text-xs font-mono">
+              <thead className="bg-slate-950/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-800">
+                <tr>
+                  <th className="py-2.5 px-3">Performance Metric</th>
+                  <th className="py-2.5 px-3 text-right">{activeBatch.name}</th>
+                  <th className="py-2.5 px-3 text-right">{comparisonBatch.name}</th>
+                  <th className="py-2.5 px-3 text-right">Variance Delta</th>
+                </tr>
               </thead>
-              <tbody className="divide-y divide-neutral-800">
-                <tr><td className="p-3 text-white">Placement rate</td><td className="p-3 text-neutral-300">{activeMetrics.placementRate.toFixed(1)}%</td><td className="p-3 text-neutral-300">{comparisonMetrics.placementRate.toFixed(1)}%</td><td className="p-3 text-neutral-300">{signed(metricDelta(activeMetrics.placementRate, comparisonMetrics.placementRate), 1, " pp")}</td></tr>
-                <tr><td className="p-3 text-white">Placed students</td><td className="p-3 text-neutral-300">{activeMetrics.placed}</td><td className="p-3 text-neutral-300">{comparisonMetrics.placed}</td><td className="p-3 text-neutral-300">{signed(metricDelta(activeMetrics.placed, comparisonMetrics.placed), 0)}</td></tr>
-                <tr><td className="p-3 text-white">Cohort size</td><td className="p-3 text-neutral-300">{activeMetrics.total}</td><td className="p-3 text-neutral-300">{comparisonMetrics.total}</td><td className="p-3 text-neutral-300">{signed(metricDelta(activeMetrics.total, comparisonMetrics.total), 0)}</td></tr>
-                <tr><td className="p-3 text-white">Average CTC</td><td className="p-3 text-neutral-300">{activeMetrics.averageCtc?.toFixed(1) ?? "—"}</td><td className="p-3 text-neutral-300">{comparisonMetrics.averageCtc?.toFixed(1) ?? "—"}</td><td className="p-3 text-neutral-300">{signed(metricDelta(activeMetrics.averageCtc, comparisonMetrics.averageCtc))}</td></tr>
-                <tr><td className="p-3 text-white">Median CTC</td><td className="p-3 text-neutral-300">{activeMetrics.medianCtc?.toFixed(1) ?? "—"}</td><td className="p-3 text-neutral-300">{comparisonMetrics.medianCtc?.toFixed(1) ?? "—"}</td><td className="p-3 text-neutral-300">{signed(metricDelta(activeMetrics.medianCtc, comparisonMetrics.medianCtc))}</td></tr>
-                <tr><td className="p-3 text-white">Highest CTC</td><td className="p-3 text-neutral-300">{activeMetrics.highestCtc?.toFixed(1) ?? "—"}</td><td className="p-3 text-neutral-300">{comparisonMetrics.highestCtc?.toFixed(1) ?? "—"}</td><td className="p-3 text-neutral-300">{signed(metricDelta(activeMetrics.highestCtc, comparisonMetrics.highestCtc))}</td></tr>
-                <tr><td className="p-3 text-white">Hiring companies</td><td className="p-3 text-neutral-300">{activeMetrics.hiringCompanies}</td><td className="p-3 text-neutral-300">{comparisonMetrics.hiringCompanies}</td><td className="p-3 text-neutral-300">{signed(metricDelta(activeMetrics.hiringCompanies, comparisonMetrics.hiringCompanies), 0)}</td></tr>
+              <tbody className="divide-y divide-slate-800/60">
+                <tr className="hover:bg-slate-800/30">
+                  <td className="py-2.5 px-3 font-sans font-medium text-white">Placement Rate</td>
+                  <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">{activeMetrics.placementRate.toFixed(1)}%</td>
+                  <td className="py-2.5 px-3 text-right text-slate-400">{comparisonMetrics.placementRate.toFixed(1)}%</td>
+                  <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">{signed(metricDelta(activeMetrics.placementRate, comparisonMetrics.placementRate), 1, " pp")}</td>
+                </tr>
+                <tr className="hover:bg-slate-800/30">
+                  <td className="py-2.5 px-3 font-sans font-medium text-white">Average CTC</td>
+                  <td className="py-2.5 px-3 text-right text-amber-300 font-bold">{activeMetrics.averageCtc?.toFixed(1) ?? "—"} LPA</td>
+                  <td className="py-2.5 px-3 text-right text-slate-400">{comparisonMetrics.averageCtc?.toFixed(1) ?? "—"} LPA</td>
+                  <td className="py-2.5 px-3 text-right text-amber-400 font-bold">{signed(metricDelta(activeMetrics.averageCtc, comparisonMetrics.averageCtc))}</td>
+                </tr>
+                <tr className="hover:bg-slate-800/30">
+                  <td className="py-2.5 px-3 font-sans font-medium text-white">Highest CTC</td>
+                  <td className="py-2.5 px-3 text-right text-white font-bold">{activeMetrics.highestCtc?.toFixed(1) ?? "—"} LPA</td>
+                  <td className="py-2.5 px-3 text-right text-slate-400">{comparisonMetrics.highestCtc?.toFixed(1) ?? "—"} LPA</td>
+                  <td className="py-2.5 px-3 text-right text-emerald-400">{signed(metricDelta(activeMetrics.highestCtc, comparisonMetrics.highestCtc))}</td>
+                </tr>
+                <tr className="hover:bg-slate-800/30">
+                  <td className="py-2.5 px-3 font-sans font-medium text-white">Hiring Partner Companies</td>
+                  <td className="py-2.5 px-3 text-right text-blue-300">{activeMetrics.hiringCompanies}</td>
+                  <td className="py-2.5 px-3 text-right text-slate-400">{comparisonMetrics.hiringCompanies}</td>
+                  <td className="py-2.5 px-3 text-right text-blue-300">{signed(metricDelta(activeMetrics.hiringCompanies, comparisonMetrics.hiringCompanies), 0)}</td>
+                </tr>
               </tbody>
             </table>
           </div>
         </section>
       )}
 
-      <h2 className="mt-8 text-sm font-semibold text-white">Company-wise breakdown</h2>
-      <table className="mt-3 w-full text-left text-sm">
-        <thead>
-          <tr className="text-xs text-neutral-500">
-            <th className="pb-2 font-normal">Company</th>
-            <th className="pb-2 font-normal">Students placed</th>
-            <th className="pb-2 font-normal">Avg CTC</th>
-          </tr>
-        </thead>
-        <tbody className="divide-y divide-neutral-800">
-          {companyRows.map((c) => (
-            <tr key={c.name}>
-              <td className="py-2 text-white">{c.name}</td>
-              <td className="py-2 text-neutral-300">{c.count}</td>
-              <td className="py-2 text-neutral-300">
-                {c.ctcCount > 0 ? (c.totalCtc / c.ctcCount).toFixed(1) : "—"}
-              </td>
-            </tr>
-          ))}
-          {companyRows.length === 0 && (
-            <tr>
-              <td colSpan={3} className="py-6 text-sm text-neutral-500">
-                No placements recorded yet for this batch.
-              </td>
-            </tr>
-          )}
-        </tbody>
-      </table>
+      {/* Company Breakdown Table */}
+      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2 font-mono">
+          <OpsIcon name="building" size={16} className="text-blue-400" />
+          <span>Company-Wise Offer Breakdown</span>
+        </h2>
+
+        <div className="mt-4 overflow-x-auto">
+          <table className="w-full text-left text-xs font-mono">
+            <thead className="bg-slate-950/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-800">
+              <tr>
+                <th className="py-2.5 px-3">Recruiting Partner</th>
+                <th className="py-2.5 px-3 text-center">Offers Accepted</th>
+                <th className="py-2.5 px-3 text-right">Average Offered CTC</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-800/60">
+              {companyRows.map((c) => (
+                <tr key={c.name} className="hover:bg-slate-800/30">
+                  <td className="py-2.5 px-3 font-sans font-semibold text-white">{c.name}</td>
+                  <td className="py-2.5 px-3 text-center font-bold text-emerald-400">{c.count}</td>
+                  <td className="py-2.5 px-3 text-right font-bold text-amber-300">
+                    {c.ctcCount > 0 ? `${(c.totalCtc / c.ctcCount).toFixed(1)} LPA` : "—"}
+                  </td>
+                </tr>
+              ))}
+              {companyRows.length === 0 && (
+                <tr>
+                  <td colSpan={3} className="py-8 text-center text-slate-500">No placements confirmed yet for this season.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }

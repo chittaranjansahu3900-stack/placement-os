@@ -34,6 +34,11 @@ reference. Everything below reflects actual current state as of 2026-08-21.
    `users.batch_id` at report time would rewrite old-season attribution whenever a JPC moves to a
    new batch. The migration snapshots the actor's same-tenant batch on insert and backfills what can
    be derived for existing rows.
+   **Codex used `0023_spc_jd_release_gate.sql` for the 22 August 2026 JD-release decision:** keeping
+   an awaiting-review JD as an ordinary draft without protected submission/release metadata would
+   let a Recruiter publish through the direct Supabase API. The migration records the review handoff,
+   locks the submitted payload, requires `Shortlist Oversight` for release, and permits SPC to keep
+   or prepone—but never postpone—the recruiter deadline before publication.
 2. **UI/workflow completion on modules you already own is yours** — Resume Maker, Outreach CRM,
    bulk shortlisting, candidate packets, roster import, reporting/export. You built these; you're
    not starting cold on any of them.
@@ -53,10 +58,32 @@ feature/security work, not more waiting on infrastructure or decisions.
 
 ## Claude's track
 
-1. **Systematic permission-vs-role-name UI gate audit** (`BRD-IMPLEMENTATION-STATUS.md` Section 6,
-   P0 #2 residual). 11 files still use `roleNames.some/.includes` instead of `hasPermission()` —
-   only `/reports/export` (Codex's Finding #4) has been fixed so far. Check each against the actual
-   Section 7.2/7.3 Permission Set catalog, not just role name.
+1. ~~Systematic permission-vs-role-name UI gate audit~~ — **done, 21 August 2026.** Checked all 12
+   files against the real RLS policy behind each action (queried `pg_policy` directly rather than
+   assuming from the BRD text). Findings:
+   - **Real bugs, fixed:** `importRoster`/`createStudentLogin` (`roster.ts`), `importDefaults`
+     (`defaults.ts`), and the page-level gates on `/admin/users`, `/admin/roles`,
+     `/admin/audit-log`, `/admin/roster`, `/admin/defaults` all checked `roleNames.includes("Admin")`
+     while the actions/RLS behind them actually accept a specific Permission Set (`Student Data -
+     Full`, `User Management`, `Role & Permission Management`, `Audit Log View`) — a custom role
+     holding that grant without being literally named "Admin" was getting redirected away from a
+     page whose own buttons would have worked for them. `layout.tsx`'s `canManageCompanies` nav
+     check had the same issue (hardcoded role-name list vs. no real page-level gate on `/companies`
+     at all). All now check `permissionNames`, matching the pattern already correct elsewhere in
+     this file (`canPostJd`, `canSeeSpcDashboard`, etc.). Two pages (`/admin/roster`,
+     `/admin/defaults`) mix a genuinely Admin-only section (RLS hardcodes `has_role('Admin')`, no
+     Permission Set covers it — batch create/archive, defaults threshold) with a
+     permission-scoped one on the same page; both are now gated section-by-section instead of one
+     blanket top-level check, and `layout.tsx`'s admin nav links were split to match each
+     destination's specific gate instead of one shared `isAdmin`.
+   - **Already correct, left unchanged:** `createBatch`/`setBatchActive` (`admin.ts`),
+     `updateStalenessThreshold` (`spc.ts`), `updateDefaultsThreshold` (`defaults.ts`), and
+     `spc/page.tsx`'s `isAdmin` check — all mirror a genuinely role-hardcoded RLS policy
+     (`has_role('Admin')`, no Permission Set exists for these), so a role-name check is the correct
+     boundary, not a bug. `layout.tsx`'s `isStudent`/`isRecruiter`/`isAdmin` persona-identity checks
+     are also correct by design (Section 7.2 ties those personas to a fixed page set, not a single
+     permission) and were left as-is.
+   - Verified clean after: `npm run build`, `npx tsc --noEmit`, `npm run lint`, `npm test` (58/58).
 2. **pgTAP RLS test suite — started 2026-08-21.**
    `supabase/tests/database/001_applicant_directory_masking.test.sql` is written and **verified
    passing (7/7)** against the real hosted project — covers Finding #7 (`students_select` vs

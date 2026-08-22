@@ -20,10 +20,12 @@ type StudentInsert = Database["public"]["Tables"]["students"]["Insert"];
 //
 // Runs on the Admin's own session, not service role: RLS (students_write)
 // already requires Student Data - Full, which is exactly the right check —
-// no separate authorization logic needed here.
+// matched here (not roleNames.includes("Admin")) so a custom role granted
+// Student Data - Full, or SPC (which holds it by default per Section 7.2),
+// isn't redirected away from a write RLS would actually allow.
 export async function importRoster(formData: FormData) {
   const ctx = await getCurrentUserContext();
-  if (!ctx || !ctx.roleNames.includes("Admin")) redirect("/dashboard");
+  if (!ctx || !ctx.permissionNames.has("Student Data - Full")) redirect("/dashboard");
 
   const batchId = String(formData.get("batch_id") ?? "");
   const csv = String(formData.get("csv") ?? "");
@@ -96,13 +98,17 @@ export interface CreateLoginState {
 // provision a direct login and hand the one-time password to the student
 // out of band. Always goes through the service-role client: `users` has no
 // client-insert RLS policy at all, by design (0002_rls_policies.sql), even
-// for Admins acting on their own session.
+// for Admins acting on their own session — which means this function's own
+// check IS the entire authorization boundary, with no RLS backstop. Gated
+// on User Management (not roleNames.includes("Admin")): provisioning a
+// login is an account-activation action, squarely that Permission Set's
+// domain per Section 7.3, and Admin holds it by default anyway.
 export async function createStudentLogin(
   _prevState: CreateLoginState | undefined,
   formData: FormData,
 ): Promise<CreateLoginState> {
   const ctx = await getCurrentUserContext();
-  if (!ctx || !ctx.roleNames.includes("Admin")) {
+  if (!ctx || !ctx.permissionNames.has("User Management")) {
     return { error: "Not authorized" };
   }
 

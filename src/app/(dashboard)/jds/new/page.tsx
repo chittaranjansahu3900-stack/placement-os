@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createJd } from "@/app/actions/jds";
+import { OpsIcon } from "@/components/ops-icon";
 import type { Company, Batch } from "@/types/domain";
 
-// Wireframe reference: BRD Section 6.1 "Recruiter — JD Creation".
 export default async function NewJdPage({
   searchParams,
 }: {
@@ -21,253 +21,310 @@ export default async function NewJdPage({
   const batchRows = (batches ?? []) as Batch[];
 
   return (
-    <div className="max-w-xl">
-      <h1 className="text-lg font-semibold text-white">New Job Description</h1>
-      <p className="mt-1 text-sm text-neutral-400">
-        Saved as a draft first (FR-1.3) — publish from the JD page once it looks right.
-      </p>
+    <div className="max-w-3xl space-y-8">
+      {/* Header */}
+      <div className="border-b border-slate-800/80 pb-5">
+        <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+          <Link href="/jds" className="hover:text-amber-400 flex items-center gap-1 transition-colors">
+            <OpsIcon name="briefcase" size={13} />
+            <span>Job Descriptions</span>
+          </Link>
+          <span>/</span>
+          <span className="text-slate-200">Post New JD</span>
+        </div>
+        <h1 className="mt-2 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+          <span>Create Job Description</span>
+          <span className="rounded-md bg-amber-950 px-2 py-0.5 font-mono text-xs font-semibold text-amber-300 border border-amber-800/60">
+            Draft Mode
+          </span>
+        </h1>
+        <p className="mt-1 text-xs text-slate-400">
+          BRD Section 6.1: Define role scope, compensation brackets, batch eligibility filters, and approval workflows.
+        </p>
+      </div>
 
       {error && (
-        <p className="mt-4 rounded-md border border-red-900 bg-red-950 px-3 py-2 text-sm text-red-300">
-          {error}
-        </p>
+        <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3.5 text-xs text-red-200">
+          <OpsIcon name="alert-triangle" size={16} className="text-red-400" />
+          <span>{error}</span>
+        </div>
       )}
 
       {companyRows.length === 0 ? (
-        <p className="mt-6 text-sm text-neutral-500">
-          No company on file yet — add one on the{" "}
-          <Link href="/companies" className="text-blue-400 hover:underline">
-            Companies
-          </Link>{" "}
-          page first.
-        </p>
-      ) : (
-        <form action={createJd} className="mt-6 space-y-4">
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="company_id" className="block text-sm text-neutral-300">
-                Company
-              </label>
-              <select
-                id="company_id"
-                name="company_id"
-                required
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              >
-                {companyRows.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="batch_id" className="block text-sm text-neutral-300">
-                Eligible batch
-              </label>
-              <select
-                id="batch_id"
-                name="batch_id"
-                required
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              >
-                {batchRows.map((b) => (
-                  <option key={b.id} value={b.id}>
-                    {b.name}
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="role_title" className="block text-sm text-neutral-300">
-                Role title
-              </label>
-              <input
-                id="role_title"
-                name="role_title"
-                required
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label htmlFor="grade" className="block text-sm text-neutral-300">
-                Grade / band (optional)
-              </label>
-              <input
-                id="grade"
-                name="grade"
-                placeholder="F3 / F4"
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="ctc_fixed" className="block text-sm text-neutral-300">
-                CTC (Fixed, LPA)
-              </label>
-              <input
-                id="ctc_fixed"
-                name="ctc_fixed"
-                type="number"
-                step="0.01"
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label htmlFor="ctc_variable" className="block text-sm text-neutral-300">
-                CTC (Variable, LPA)
-              </label>
-              <input
-                id="ctc_variable"
-                name="ctc_variable"
-                type="number"
-                step="0.01"
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label htmlFor="ctc_total" className="block text-sm text-neutral-300">
-                CTC (Total, optional)
-              </label>
-              <input
-                id="ctc_total"
-                name="ctc_total"
-                type="number"
-                step="0.01"
-                placeholder="Fixed + Variable if blank"
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label htmlFor="locations" className="block text-sm text-neutral-300">
-              Locations (comma-separated)
-            </label>
-            <input
-              id="locations"
-              name="locations"
-              placeholder="Chennai, Bangalore"
-              className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="eligible_branches" className="block text-sm text-neutral-300">
-                Eligible branches (comma-separated, blank = all)
-              </label>
-              <input
-                id="eligible_branches"
-                name="eligible_branches"
-                placeholder="Finance, Marketing"
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label htmlFor="eligible_specializations" className="block text-sm text-neutral-300">
-                Eligible specializations (comma-separated, blank = all)
-              </label>
-              <input
-                id="eligible_specializations"
-                name="eligible_specializations"
-                placeholder="Consulting, Product"
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-3 gap-4">
-            <div>
-              <label htmlFor="min_cgpa" className="block text-sm text-neutral-300">
-                Minimum CGPA (optional)
-              </label>
-              <input
-                id="min_cgpa"
-                name="min_cgpa"
-                type="number"
-                step="0.01"
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label htmlFor="max_backlog" className="block text-sm text-neutral-300">
-                Max backlogs (optional)
-              </label>
-              <input
-                id="max_backlog"
-                name="max_backlog"
-                type="number"
-                min={0}
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-            <div>
-              <label htmlFor="open_positions" className="block text-sm text-neutral-300">
-                Open positions (optional)
-              </label>
-              <input
-                id="open_positions"
-                name="open_positions"
-                type="number"
-                min={0}
-                className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-              />
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input id="unplaced_only" name="unplaced_only" type="checkbox" defaultChecked />
-            <label htmlFor="unplaced_only" className="text-sm text-neutral-300">
-              Unplaced students only
-            </label>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <input id="admin_approval_required" name="admin_approval_required" type="checkbox" />
-            <label htmlFor="admin_approval_required" className="text-sm text-neutral-300">
-              Requires Admin approval before publishing
-            </label>
-          </div>
-
-          <div>
-            <label htmlFor="apply_by_deadline" className="block text-sm text-neutral-300">
-              Apply-by deadline
-            </label>
-            <input
-              id="apply_by_deadline"
-              name="apply_by_deadline"
-              type="datetime-local"
-              required
-              className="mt-1 w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-            />
-          </div>
-
-          <div>
-            <label htmlFor="jd_attachment" className="block text-sm text-neutral-300">
-              JD attachment (optional, maximum 15 MB)
-            </label>
-            <input
-              id="jd_attachment"
-              name="jd_attachment"
-              type="file"
-              accept=".pdf,.doc,.docx,.txt"
-              className="mt-1 block w-full text-sm text-neutral-300 file:mr-3 file:rounded-md file:border-0 file:bg-neutral-800 file:px-3 file:py-2 file:text-neutral-200"
-            />
-            <p className="mt-1 text-xs text-neutral-500">Stored as the original file; no redacted variant is created.</p>
-          </div>
-
-          <button
-            type="submit"
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 text-center">
+          <p className="text-sm text-slate-400">
+            No corporate partners registered on file yet.
+          </p>
+          <Link
+            href="/companies"
+            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white"
           >
-            Save Draft
-          </button>
+            <OpsIcon name="plus" size={13} />
+            <span>Add Company to CRM</span>
+          </Link>
+        </div>
+      ) : (
+        <form action={createJd} className="space-y-6">
+          {/* Section 1: Partner & Season */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 backdrop-blur-md">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              <OpsIcon name="building" size={14} className="text-blue-400" />
+              <span>Partner &amp; Batch Alignment</span>
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="company_id" className="block text-xs font-medium text-slate-300">
+                  Recruiting Partner *
+                </label>
+                <select
+                  id="company_id"
+                  name="company_id"
+                  required
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                >
+                  {companyRows.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="batch_id" className="block text-xs font-medium text-slate-300">
+                  Target Academic Batch *
+                </label>
+                <select
+                  id="batch_id"
+                  name="batch_id"
+                  required
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                >
+                  {batchRows.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name} (Active Season)</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 2: Role Details & Compensation */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 backdrop-blur-md">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              <OpsIcon name="briefcase" size={14} className="text-amber-400" />
+              <span>Role Title &amp; CTC Structure</span>
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="role_title" className="block text-xs font-medium text-slate-300">
+                  Role Title *
+                </label>
+                <input
+                  id="role_title"
+                  name="role_title"
+                  required
+                  placeholder="e.g. Management Trainee / Product Manager"
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="grade" className="block text-xs font-medium text-slate-300">
+                  Band / Grade (optional)
+                </label>
+                <input
+                  id="grade"
+                  name="grade"
+                  placeholder="e.g. Associate Director / Band 4"
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-4 pt-2">
+              <div>
+                <label htmlFor="ctc_fixed" className="block text-xs font-medium text-slate-300 font-mono">
+                  Fixed CTC (LPA)
+                </label>
+                <input
+                  id="ctc_fixed"
+                  name="ctc_fixed"
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 26.0"
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="ctc_variable" className="block text-xs font-medium text-slate-300 font-mono">
+                  Variable CTC (LPA)
+                </label>
+                <input
+                  id="ctc_variable"
+                  name="ctc_variable"
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 8.0"
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="ctc_total" className="block text-xs font-medium text-slate-300 font-mono">
+                  Total CTC (LPA)
+                </label>
+                <input
+                  id="ctc_total"
+                  name="ctc_total"
+                  type="number"
+                  step="0.01"
+                  placeholder="Auto-calculated if blank"
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label htmlFor="locations" className="block text-xs font-medium text-slate-300">
+                Job Locations (comma-separated)
+              </label>
+              <input
+                id="locations"
+                name="locations"
+                placeholder="e.g. Mumbai, Bangalore, Gurgaon"
+                className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+              />
+            </div>
+          </div>
+
+          {/* Section 3: Batch Eligibility Criteria */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 backdrop-blur-md">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              <OpsIcon name="shield" size={14} className="text-emerald-400" />
+              <span>Eligibility Engine Criteria</span>
+            </h2>
+            <div className="grid sm:grid-cols-2 gap-4">
+              <div>
+                <label htmlFor="eligible_branches" className="block text-xs font-medium text-slate-300">
+                  Allowed Branches (comma-separated, blank = all)
+                </label>
+                <input
+                  id="eligible_branches"
+                  name="eligible_branches"
+                  placeholder="e.g. Finance, Marketing, Operations"
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="eligible_specializations" className="block text-xs font-medium text-slate-300">
+                  Allowed Specializations (comma-separated, blank = all)
+                </label>
+                <input
+                  id="eligible_specializations"
+                  name="eligible_specializations"
+                  placeholder="e.g. Consulting, Product Management"
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="grid sm:grid-cols-3 gap-4 pt-2">
+              <div>
+                <label htmlFor="min_cgpa" className="block text-xs font-medium text-slate-300 font-mono">
+                  Minimum CGPA Cutoff
+                </label>
+                <input
+                  id="min_cgpa"
+                  name="min_cgpa"
+                  type="number"
+                  step="0.01"
+                  placeholder="e.g. 7.50"
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="max_backlog" className="block text-xs font-medium text-slate-300 font-mono">
+                  Maximum Active Backlogs
+                </label>
+                <input
+                  id="max_backlog"
+                  name="max_backlog"
+                  type="number"
+                  min={0}
+                  defaultValue={0}
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+              <div>
+                <label htmlFor="open_positions" className="block text-xs font-medium text-slate-300 font-mono">
+                  Expected Open Positions
+                </label>
+                <input
+                  id="open_positions"
+                  name="open_positions"
+                  type="number"
+                  min={1}
+                  placeholder="e.g. 4"
+                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                />
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-6 pt-2">
+              <label className="inline-flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                <input id="unplaced_only" name="unplaced_only" type="checkbox" defaultChecked className="size-4 rounded accent-blue-600" />
+                <span>Unplaced Candidates Only (One-Offer Policy)</span>
+              </label>
+              <span className="inline-flex items-center gap-2 text-xs text-amber-300">
+                <OpsIcon name="check-shield" size={14} />
+                <span>SPC review and release is mandatory before students can view this JD.</span>
+              </span>
+            </div>
+          </div>
+
+          {/* Section 4: Governance Deadline & Document */}
+          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 backdrop-blur-md">
+            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+              <OpsIcon name="clock" size={14} className="text-purple-400" />
+              <span>Application Timeline &amp; Original PDF</span>
+            </h2>
+            <div>
+              <label htmlFor="apply_by_deadline" className="block text-xs font-medium text-slate-300">
+                Application Deadline *
+              </label>
+              <input
+                id="apply_by_deadline"
+                name="apply_by_deadline"
+                type="datetime-local"
+                required
+                className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+              />
+            </div>
+            <div>
+              <label htmlFor="jd_attachment" className="block text-xs font-medium text-slate-300">
+                Official JD Attachment (PDF / DOCX)
+              </label>
+              <input
+                id="jd_attachment"
+                name="jd_attachment"
+                type="file"
+                accept=".pdf,.doc,.docx,.txt"
+                className="mt-1.5 block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:text-slate-200"
+              />
+            </div>
+          </div>
+
+          {/* Submit */}
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <Link
+              href="/jds"
+              className="rounded-lg border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+            >
+              Cancel
+            </Link>
+            <button
+              type="submit"
+              className="ops-button-primary px-6"
+            >
+              <OpsIcon name="check" size={14} />
+              <span>Save &amp; Create Draft JD</span>
+            </button>
+          </div>
         </form>
       )}
     </div>

@@ -5,6 +5,7 @@ import { ResumePreview } from "@/components/resume-preview";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { normalizeCvContent } from "@/lib/resume";
 import { createClient } from "@/lib/supabase/server";
+import { OpsIcon } from "@/components/ops-icon";
 import type { CvDocument, CvReviewComment } from "@/types/domain";
 
 type ReviewDocument = CvDocument & {
@@ -20,14 +21,12 @@ export default async function CvReviewPage({
   const { cv: requestedCv, error, saved } = await searchParams;
   const ctx = await getCurrentUserContext();
   if (!ctx) redirect("/login");
-  // cv_review_comments_insert RLS gates on has_permission('Student Data - Full'),
-  // not role name — see the applicants-page fix for the same reasoning.
   if (!ctx.permissionNames.has("Student Data - Full")) redirect("/dashboard");
 
   const supabase = await createClient();
   const { data: documents } = await supabase
     .from("cv_documents")
-    .select("*, students(name, roll_no), company_type_personas(category_name)")
+    .select("*, students!cv_documents_student_id_fkey(name, roll_no), company_type_personas(category_name)")
     .order("updated_at", { ascending: false })
     .limit(100);
   const rows = (documents ?? []) as unknown as ReviewDocument[];
@@ -42,70 +41,140 @@ export default async function CvReviewPage({
     : { data: [] };
 
   return (
-    <div>
-      <div className="print:hidden">
-        <h1 className="text-xl font-semibold text-white">SPC CV Review</h1>
-        <p className="mt-1 text-sm text-neutral-400">Leave comments anchored to a section or exact bullet ID; students action each comment individually.</p>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="border-b border-slate-800/80 pb-5 print:hidden">
+        <div className="flex items-center gap-2 text-xs font-mono text-purple-400">
+          <OpsIcon name="sparkles" size={14} />
+          <span>Placement Committee Quality Gate</span>
+        </div>
+        <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+          <span>SPC CV Review &amp; Feedback Workbench</span>
+          <span className="rounded-md bg-slate-800 px-2 py-0.5 font-mono text-xs font-semibold text-slate-300 border border-slate-700">
+            {rows.length} Submitted CVs
+          </span>
+        </h1>
+        <p className="mt-1 text-xs text-slate-400">
+          Anchor line-by-line bullet suggestions to verify academic and achievement claims.
+        </p>
       </div>
 
       {(error || saved) && (
-        <p className={`mt-4 rounded-md border px-3 py-2 text-sm print:hidden ${error ? "border-red-900 bg-red-950 text-red-300" : "border-emerald-900 bg-emerald-950 text-emerald-300"}`}>
-          {error ?? saved}
-        </p>
+        <div
+          className={`flex items-center gap-2 rounded-xl border p-3.5 text-xs print:hidden ${
+            error
+              ? "border-red-800/60 bg-red-950/50 text-red-200"
+              : "border-emerald-800/60 bg-emerald-950/50 text-emerald-200"
+          }`}
+        >
+          <OpsIcon name={error ? "alert-triangle" : "check"} size={16} className={error ? "text-red-400" : "text-emerald-400"} />
+          <span>{error ?? saved}</span>
+        </div>
       )}
 
-      <div className="mt-6 grid items-start gap-6 xl:grid-cols-[260px_minmax(500px,794px)_300px]">
-        <aside className="max-h-[80vh] space-y-2 overflow-y-auto rounded-lg border border-neutral-800 bg-neutral-900 p-3 print:hidden">
+      {/* 3-Column Review Dock */}
+      <div className="grid items-start gap-6 xl:grid-cols-[260px_minmax(500px,780px)_320px]">
+        {/* Left: Queue List */}
+        <aside className="max-h-[82vh] space-y-2 overflow-y-auto rounded-2xl border border-slate-800 bg-slate-900/60 p-3 print:hidden backdrop-blur-md">
+          <p className="px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-wider text-slate-500">Candidate Queue</p>
           {rows.map((document) => (
             <Link
               key={document.id}
               href={`/resume/review?cv=${document.id}`}
-              className={`block rounded-md border p-3 text-xs ${selected?.id === document.id ? "border-blue-700 bg-blue-950" : "border-neutral-800 hover:bg-neutral-800"}`}
+              className={`block rounded-xl border p-3 text-xs transition-all ${
+                selected?.id === document.id
+                  ? "border-blue-600 bg-blue-950/30 text-blue-200"
+                  : "border-slate-800/90 bg-slate-950/80 hover:border-slate-700 text-slate-300"
+              }`}
             >
-              <span className="block font-medium text-neutral-100">{document.students?.name ?? "Student"}</span>
-              <span className="mt-1 block text-neutral-500">{document.students?.roll_no} · {document.company_type_personas?.category_name ?? "General"} · v{document.version_no}</span>
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-white text-xs">{document.students?.name ?? "Student"}</span>
+                <span className="font-mono text-[10px] text-amber-300 font-semibold">{document.students?.roll_no}</span>
+              </div>
+              <p className="mt-1 font-mono text-[10px] text-slate-400">
+                {document.company_type_personas?.category_name ?? "General"} · v{document.version_no}
+              </p>
             </Link>
           ))}
-          {rows.length === 0 && <p className="p-3 text-sm text-neutral-500">No CVs are ready for review.</p>}
+          {rows.length === 0 && <p className="p-4 text-center text-xs text-slate-500 font-mono">No CVs queued.</p>}
         </aside>
 
-        {selected ? <ResumePreview content={normalizeCvContent(selected.content)} templateId={selected.template_id} /> : <div />}
+        {/* Center: CV Preview */}
+        <div className="overflow-hidden rounded-2xl border border-slate-800 bg-[#0a0f1b] p-6">
+          {selected ? (
+            <ResumePreview content={normalizeCvContent(selected.content)} templateId={selected.template_id} />
+          ) : (
+            <div />
+          )}
+        </div>
 
+        {/* Right: Feedback & History Dock */}
         {selected && (
           <aside className="space-y-4 print:hidden">
-            <form action={addCvReviewComment} className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
+            <form action={addCvReviewComment} className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4.5 backdrop-blur-md space-y-3">
               <input type="hidden" name="cv_document_id" value={selected.id} />
-              <h2 className="text-sm font-semibold text-white">Add inline comment</h2>
-              <label className="mt-3 block text-xs text-neutral-400">
-                Section
-                <select name="anchor_section" required className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm text-white">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+                <OpsIcon name="plus" size={14} className="text-purple-400" />
+                <span>Add Inline Bullet Remark</span>
+              </h2>
+
+              <div>
+                <label className="block font-mono text-[11px] text-slate-400">Anchor Section</label>
+                <select
+                  name="anchor_section"
+                  required
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white capitalize outline-none focus:border-purple-500"
+                >
                   {['summary', 'academics', 'projects', 'positions', 'experience', 'skills', 'certifications', 'awards'].map((section) => (
                     <option key={section} value={section}>{section}</option>
                   ))}
                 </select>
-              </label>
-              <label className="mt-3 block text-xs text-neutral-400">
-                Bullet ID (optional)
-                <input name="anchor_bullet_id" placeholder="Shown in the CV preview markup" className="mt-1 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm text-white" />
-              </label>
-              <label className="mt-3 block text-xs text-neutral-400">
-                Comment
-                <textarea name="comment_text" required className="mt-1 min-h-28 w-full rounded-md border border-neutral-700 bg-neutral-950 px-2 py-2 text-sm text-white" />
-              </label>
-              <button className="mt-3 w-full rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500">Add comment</button>
+              </div>
+
+              <div>
+                <label className="block font-mono text-[11px] text-slate-400">Bullet Key ID (optional)</label>
+                <input
+                  name="anchor_bullet_id"
+                  placeholder="e.g. b1, exp-1"
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 font-mono text-xs text-white placeholder-slate-500 outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <div>
+                <label className="block font-mono text-[11px] text-slate-400">SPC Committee Feedback</label>
+                <textarea
+                  name="comment_text"
+                  required
+                  rows={4}
+                  placeholder="Provide constructive bullet improvement, metric verification, or formatting fix..."
+                  className="mt-1 w-full rounded-lg border border-slate-700 bg-slate-950 p-2.5 text-xs text-white placeholder-slate-500 outline-none focus:border-purple-500"
+                />
+              </div>
+
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-purple-600 hover:bg-purple-500 px-4 py-2 text-xs font-bold text-white shadow-sm transition-colors"
+              >
+                Submit Feedback Point
+              </button>
             </form>
 
-            <section className="rounded-lg border border-neutral-800 bg-neutral-900 p-4">
-              <h2 className="text-sm font-semibold text-white">Review history</h2>
-              <div className="mt-3 space-y-3">
+            <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4.5 backdrop-blur-md">
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+                <OpsIcon name="clock" size={14} className="text-amber-400" />
+                <span>Feedback History ({comments?.length ?? 0})</span>
+              </h2>
+              <div className="mt-3 space-y-2.5 font-mono text-xs">
                 {((comments ?? []) as CvReviewComment[]).map((comment) => (
-                  <div key={comment.id} className="rounded-md border border-neutral-800 bg-neutral-950 p-3">
-                    <p className="text-xs font-medium text-blue-300">{comment.anchor_section}{comment.anchor_bullet_id ? ` · ${comment.anchor_bullet_id}` : ""}</p>
-                    <p className="mt-1 text-sm text-neutral-200">{comment.comment_text}</p>
-                    <p className="mt-1 text-[10px] uppercase text-neutral-600">{comment.status}</p>
+                  <div key={comment.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3">
+                    <div className="flex items-center justify-between text-[10px] text-purple-300 font-bold uppercase">
+                      <span>{comment.anchor_section}{comment.anchor_bullet_id ? ` · ${comment.anchor_bullet_id}` : ""}</span>
+                      <span className="text-slate-500">{comment.status}</span>
+                    </div>
+                    <p className="mt-1 text-slate-200 font-sans text-xs">{comment.comment_text}</p>
                   </div>
                 ))}
-                {!comments?.length && <p className="text-sm text-neutral-500">No comments yet.</p>}
+                {!comments?.length && <p className="text-slate-500 font-mono text-xs text-center py-4">No comments logged yet.</p>}
               </div>
             </section>
           </aside>

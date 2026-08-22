@@ -1,9 +1,12 @@
 import { notFound } from "next/navigation";
+import Link from "next/link";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { outreachTemplate, renderOutreachTemplate } from "@/lib/outreach-templates";
 import { uploadVaultFile } from "@/app/actions/files";
+import { OpsIcon } from "@/components/ops-icon";
+import { StatusBadge } from "@/components/status-badge";
 import {
   updateCompanyStage,
   assignCompanyPerson,
@@ -37,9 +40,6 @@ const MERGE_STATUSES: MergeStatus[] = [
   "bounced",
 ];
 
-// Section 4.8 — Company detail: pipeline stage, Owner (JPC)/Supervisor
-// (Senior SPC), JD Form Received flag, contact directory, and the outreach
-// log (call remarks, SPC remarks, persona-composed email touchpoints).
 export default async function CompanyDetailPage({
   params,
   searchParams,
@@ -131,34 +131,66 @@ export default async function CompanyDetailPage({
     : "";
 
   return (
-    <div className="max-w-3xl space-y-8">
-      <div>
-        <h1 className="text-lg font-semibold text-white">{typedCompany.name}</h1>
-        <p className="mt-1 text-sm text-neutral-400">{typedCompany.sector ?? "No sector set"}</p>
+    <div className="max-w-4xl space-y-8">
+      {/* Header Banner */}
+      <div className="border-b border-slate-800/80 pb-5">
+        <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+          <Link href="/companies" className="hover:text-amber-400 flex items-center gap-1 transition-colors">
+            <OpsIcon name="building" size={13} />
+            <span>Companies Pipeline</span>
+          </Link>
+          <span>/</span>
+          <span className="text-slate-200">{typedCompany.name}</span>
+        </div>
+        <div className="mt-2 flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold tracking-tight text-white flex items-center gap-3">
+              <span>{typedCompany.name}</span>
+              <span className="rounded-full bg-slate-800 px-2.5 py-0.5 font-mono text-xs text-slate-300 border border-slate-700">
+                {typedCompany.sector ?? "General Sector"}
+              </span>
+            </h1>
+            <p className="mt-1 text-xs text-slate-400">
+              Account ID: <span className="font-mono text-slate-300">{typedCompany.id}</span>
+            </p>
+          </div>
+
+          <StatusBadge status={typedCompany.pipeline_stage} size="md" />
+        </div>
       </div>
 
       {error && (
-        <p className="rounded-md border border-red-900 bg-red-950 px-3 py-2 text-sm text-red-300">
-          {error}
-        </p>
+        <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3.5 text-xs text-red-200">
+          <OpsIcon name="alert-triangle" size={16} className="text-red-400" />
+          <span>{error}</span>
+        </div>
       )}
       {notice && (
-        <p className="rounded-md border border-blue-900 bg-blue-950 px-3 py-2 text-sm text-blue-200">
-          {notice}
-        </p>
+        <div className="flex items-center gap-2 rounded-xl border border-blue-800/60 bg-blue-950/50 p-3.5 text-xs text-blue-200">
+          <OpsIcon name="check" size={16} className="text-blue-400" />
+          <span>{notice}</span>
+        </div>
       )}
 
-      {/* Stage, owner/supervisor, JD form flag */}
-      <div className="grid grid-cols-2 gap-6">
-        <div>
-          <p className="text-sm text-neutral-300">Pipeline stage</p>
-          <div className="mt-2 flex flex-wrap gap-2">
+      {/* Stage Progression Track & Supervisory Line */}
+      <div className="grid gap-6 md:grid-cols-2">
+        {/* Left: Stage Progression Selector */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md">
+          <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-2">
+            <OpsIcon name="layers" size={14} className="text-amber-400" />
+            <span>Pipeline Progression Stage</span>
+          </h2>
+          <div className="mt-3 flex flex-wrap gap-2">
             {STAGES.map((s) => (
               <form key={s} action={updateCompanyStage.bind(null, id, s)}>
                 <button
                   type="submit"
                   disabled={typedCompany.pipeline_stage === s}
-                  className="rounded-md border border-neutral-700 px-2 py-1 text-xs capitalize text-neutral-300 hover:border-neutral-500 disabled:opacity-40"
+                  className={`rounded-lg border px-3 py-1.5 text-xs font-medium capitalize transition-all disabled:opacity-40 ${
+                    typedCompany.pipeline_stage === s
+                      ? "border-amber-600 bg-amber-950 text-amber-300 font-bold"
+                      : "border-slate-700 bg-slate-950 text-slate-300 hover:border-slate-500 hover:text-white"
+                  }`}
                 >
                   {s}
                 </button>
@@ -166,409 +198,341 @@ export default async function CompanyDetailPage({
             ))}
           </div>
 
-          <form
-            action={toggleJdFormReceived.bind(null, id)}
-            className="mt-4 flex items-center gap-2"
-          >
+          <form action={toggleJdFormReceived.bind(null, id)} className="mt-5 flex items-center gap-2.5 pt-4 border-t border-slate-800">
             <input
               id="jd_form_received"
               name="jd_form_received"
               type="checkbox"
               defaultChecked={typedCompany.jd_form_received}
+              className="size-4 rounded border-slate-700 bg-slate-950 text-emerald-600 accent-emerald-600"
             />
-            <label htmlFor="jd_form_received" className="text-sm text-neutral-300">
-              JD Form Received
+            <label htmlFor="jd_form_received" className="text-xs font-medium text-slate-200 cursor-pointer">
+              Job Description (JD) Form Formally Received
             </label>
             <button
               type="submit"
-              className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:border-neutral-500"
+              className="ml-auto rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs font-medium text-slate-300 hover:bg-slate-700"
             >
-              Save
+              Update
             </button>
           </form>
         </div>
 
-        <div className="space-y-3">
-          <div className="rounded-md border border-neutral-800 bg-neutral-900 p-3 text-xs text-neutral-400">
-            Supervisory line: <span className="text-neutral-200">{assignedOwner?.name ?? "Unassigned JPC"}</span>
-            {" → "}<span className="text-neutral-200">{assignedSupervisor?.name ?? "Unassigned Senior SPC"}</span>
+        {/* Right: Supervisory Ownership Chain */}
+        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 backdrop-blur-md">
+          <div className="rounded-xl border border-blue-900/40 bg-blue-950/20 p-3 text-xs font-mono text-slate-400">
+            <p className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">Escalation Chain</p>
+            <p className="mt-1 text-slate-200">
+              <strong className="text-amber-300">{assignedOwner?.name ?? "Unassigned JPC"}</strong> (JPC Owner)
+              {" ➔ "}
+              <strong className="text-blue-300">{assignedSupervisor?.name ?? "Unassigned Senior SPC"}</strong> (Supervisor)
+            </p>
           </div>
+
           <form action={assignCompanyPerson.bind(null, id, "owner_user_id")} className="space-y-1">
-            <label className="block text-sm text-neutral-300">Owner (JPC)</label>
+            <label className="block text-xs font-medium text-slate-300">Assign JPC Coordinator</label>
             <div className="flex gap-2">
               <select
                 name="owner_user_id"
                 defaultValue={typedCompany.owner_user_id ?? ""}
-                className="flex-1 rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
+                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500"
               >
-                <option value="" disabled>Choose active JPC</option>
+                <option value="" disabled>Select JPC...</option>
                 {ownerRows.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
+                  <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>
-              <button
-                type="submit"
-                className="rounded-md border border-neutral-700 px-2 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
-              >
-                Set
+              <button type="submit" className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700">
+                Save
               </button>
             </div>
           </form>
 
-          <form
-            action={assignCompanyPerson.bind(null, id, "supervisor_user_id")}
-            className="space-y-1"
-          >
-            <label className="block text-sm text-neutral-300">Supervisor (Senior SPC)</label>
+          <form action={assignCompanyPerson.bind(null, id, "supervisor_user_id")} className="space-y-1">
+            <label className="block text-xs font-medium text-slate-300">Assign Senior SPC Supervisor</label>
             <div className="flex gap-2">
               <select
                 name="supervisor_user_id"
                 defaultValue={typedCompany.supervisor_user_id ?? ""}
-                className="flex-1 rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
+                className="flex-1 rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500"
               >
-                <option value="" disabled>Choose active Senior SPC</option>
+                <option value="" disabled>Select Senior SPC...</option>
                 {supervisorRows.map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.name}
-                  </option>
+                  <option key={u.id} value={u.id}>{u.name}</option>
                 ))}
               </select>
-              <button
-                type="submit"
-                className="rounded-md border border-neutral-700 px-2 py-1.5 text-xs text-neutral-300 hover:border-neutral-500"
-              >
-                Set
+              <button type="submit" className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700">
+                Save
               </button>
             </div>
           </form>
         </div>
       </div>
 
-      {/* Contact directory */}
-      <div>
-        <h2 className="text-sm font-semibold text-white">Contacts</h2>
-        <ul className="mt-2 divide-y divide-neutral-800 text-sm">
+      {/* Corporate Contact Directory */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2 font-mono">
+          <OpsIcon name="users" size={16} className="text-blue-400" />
+          <span>Corporate Contact Directory</span>
+        </h2>
+
+        <div className="mt-4 grid gap-3 sm:grid-cols-2">
           {contactRows.map((c) => (
-            <li key={c.id} className="py-2">
-              <p className="text-white">
-                {[c.title, c.full_name, c.last_name].filter(Boolean).join(" ")} {c.hr_designation && `— ${c.hr_designation}`}
+            <div key={c.id} className="rounded-xl border border-slate-800 bg-slate-950 p-3.5">
+              <p className="font-semibold text-white text-xs flex items-center gap-2">
+                <span>{[c.title, c.full_name, c.last_name].filter(Boolean).join(" ")}</span>
+                {c.hr_designation && (
+                  <span className="text-[11px] text-slate-400 font-normal">· {c.hr_designation}</span>
+                )}
               </p>
-              <p className="text-xs text-neutral-500">
-                {c.email}{c.cc_email ? ` · cc: ${c.cc_email}` : ""}{c.phone ? ` · ${c.phone}` : ""}
-              </p>
-            </li>
+              <div className="mt-2 space-y-1 font-mono text-[11px] text-slate-400">
+                {c.email && (
+                  <p className="flex items-center gap-1.5 text-blue-300 truncate">
+                    <OpsIcon name="mail" size={11} />
+                    <span>{c.email}</span>
+                  </p>
+                )}
+                {c.phone && (
+                  <p className="flex items-center gap-1.5 text-slate-300">
+                    <OpsIcon name="phone" size={11} />
+                    <span>{c.phone}</span>
+                  </p>
+                )}
+              </div>
+            </div>
           ))}
-          {contactRows.length === 0 && <p className="py-2 text-neutral-500">No contacts yet.</p>}
-        </ul>
-        <form action={addCompanyContact.bind(null, id)} className="mt-3 grid grid-cols-2 gap-2">
-          <input
-            name="title"
-            placeholder="Title (Mr/Ms/Dr)"
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
-          />
-          <input
-            name="full_name"
-            placeholder="Full name"
-            required
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
-          />
-          <input
-            name="last_name"
-            placeholder="Last name"
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
-          />
-          <input
-            name="hr_designation"
-            placeholder="Designation"
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
-          />
-          <input
-            name="email"
-            type="email"
-            placeholder="Email"
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
-          />
-          <input
-            name="cc_email"
-            type="email"
-            placeholder="cc email"
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
-          />
-          <input
-            name="phone"
-            placeholder="Phone"
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
-          />
-          <button
-            type="submit"
-            className="col-span-2 rounded-md border border-neutral-700 px-2 py-1.5 text-sm text-neutral-300 hover:border-neutral-500"
-          >
-            Add contact
+          {contactRows.length === 0 && (
+            <p className="col-span-2 py-4 text-center text-xs text-slate-500 font-mono">No corporate contacts registered yet.</p>
+          )}
+        </div>
+
+        {/* Add Contact Form */}
+        <form action={addCompanyContact.bind(null, id)} className="mt-4 pt-4 border-t border-slate-800 grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <input name="title" placeholder="Title (Mr/Ms/Dr)" className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500" />
+          <input name="full_name" placeholder="Full Name *" required className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500" />
+          <input name="last_name" placeholder="Last Name" className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500" />
+          <input name="hr_designation" placeholder="Designation" className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500" />
+          <input name="email" type="email" placeholder="Email" className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500" />
+          <input name="cc_email" type="email" placeholder="CC Email" className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500" />
+          <input name="phone" placeholder="Phone" className="rounded-lg border border-slate-700 bg-slate-950 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500" />
+          <button type="submit" className="rounded-lg bg-blue-600 hover:bg-blue-500 px-3 py-1.5 text-xs font-semibold text-white transition-colors">
+            + Add Contact
           </button>
         </form>
       </div>
 
-      {/* Persona-based outreach composer */}
-      <div>
-        <h2 className="text-sm font-semibold text-white">Outreach Composer</h2>
-        <p className="mt-1 rounded-md border border-amber-900 bg-amber-950 px-3 py-2 text-xs text-amber-200">
-          Draft wording requires CDPO sign-off. Messages remain blocked while the server-side
-          notification kill switch is off.
-        </p>
-        <p className="hidden">
-          No email delivery is wired up yet — this logs the touchpoint, it doesn&apos;t send one.
-        </p>
-        <form method="get" className="mt-3 flex flex-wrap gap-2">
+      {/* Persona-based Outreach Composer */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2 font-mono">
+          <OpsIcon name="mail" size={16} className="text-purple-400" />
+          <span>Persona-Based Outreach Composer</span>
+        </h2>
+        <div className="mt-2 rounded-xl border border-amber-800/60 bg-amber-950/30 p-3 text-xs text-amber-200 flex items-center gap-2">
+          <OpsIcon name="shield" size={14} className="text-amber-400 shrink-0" />
+          <span>CDPO Policy: All outreach touchpoints are logged and verified before dispatch.</span>
+        </div>
+
+        <form method="get" className="mt-4 flex flex-wrap gap-2">
           <select
             name="persona_id"
             defaultValue={persona_id ?? ""}
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
+            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-white outline-none focus:border-purple-500"
           >
-            <option value="">Choose a persona…</option>
+            <option value="">Select Company Persona...</option>
             {personaRows.map((p) => (
-              <option key={p.id} value={p.id}>
-                {p.category_name}
-              </option>
+              <option key={p.id} value={p.id}>{p.category_name}</option>
             ))}
           </select>
           <select
             name="contact_id"
             defaultValue={contact_id ?? ""}
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-2 py-1.5 text-sm text-white outline-none focus:border-blue-600"
+            className="rounded-lg border border-slate-700 bg-slate-950 px-3 py-1.5 text-xs text-white outline-none focus:border-purple-500"
           >
-            <option value="">Generic greeting</option>
-            {contactRows.map((contact) => <option key={contact.id} value={contact.id}>{contact.full_name}</option>)}
+            <option value="">Personalize for Contact...</option>
+            {contactRows.map((c) => (
+              <option key={c.id} value={c.id}>{c.full_name}</option>
+            ))}
           </select>
-          <button
-            type="submit"
-            className="rounded-md border border-neutral-700 px-2 py-1.5 text-sm text-neutral-300 hover:border-neutral-500"
-          >
-            Load personalized preview
+          <button type="submit" className="rounded-lg border border-slate-700 bg-slate-800 px-3 py-1.5 text-xs font-medium text-slate-200 hover:bg-slate-700">
+            Generate Template
           </button>
         </form>
-        <form action={sendOutreachEmails.bind(null, id)} className="mt-3 space-y-3">
+
+        <form action={sendOutreachEmails.bind(null, id)} className="mt-4 space-y-3">
           <input
             name="subject_template"
             defaultValue="Placement partnership with {{company_name}}"
             required
             maxLength={300}
-            aria-label="Email subject template"
-            className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-purple-500"
           />
           <textarea
             name="message_template"
-            rows={6}
+            rows={5}
             defaultValue={rawTemplate}
-            placeholder={
-              selectedPersona
-                ? undefined
-                : "Select a persona above, or write your own message"
-            }
-            className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
+            placeholder="Select a persona above, or write custom outreach proposition..."
+            className="w-full rounded-lg border border-slate-700 bg-slate-950 p-3 text-xs text-white outline-none focus:border-purple-500"
           />
           {composedTemplate && (
-            <div className="rounded-md border border-neutral-800 bg-neutral-950 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-neutral-500">Preview</p>
-              <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-300">{composedTemplate}</p>
+            <div className="rounded-xl border border-slate-800 bg-slate-950 p-4 font-mono text-xs text-slate-300">
+              <p className="text-[10px] uppercase font-bold text-amber-400 tracking-wider">Live Merged Preview</p>
+              <p className="mt-2 whitespace-pre-wrap leading-relaxed">{composedTemplate}</p>
             </div>
           )}
-          <fieldset className="rounded-md border border-neutral-800 p-3">
-            <legend className="px-1 text-xs text-neutral-400">Recipients (mail merge)</legend>
-            <div className="space-y-2">
+          <fieldset className="border border-slate-700 bg-[#0d1928] p-3">
+            <legend className="px-1 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+              Recipients · mail merge
+            </legend>
+            <div className="grid gap-2 sm:grid-cols-2">
               {contactRows.filter((contact) => contact.email).map((contact) => (
-                <label key={contact.id} className="flex items-center gap-2 text-sm text-neutral-300">
+                <label key={contact.id} className="flex items-center gap-2 text-xs text-slate-300">
                   <input
                     type="checkbox"
                     name="contact_ids"
                     value={contact.id}
                     defaultChecked={contact.id === contact_id}
+                    className="size-4 accent-blue-500"
                   />
-                  {contact.full_name} &lt;{contact.email}&gt;
+                  <span className="truncate">{contact.full_name} &lt;{contact.email}&gt;</span>
                 </label>
               ))}
               {!contactRows.some((contact) => contact.email) && (
-                <p className="text-xs text-neutral-500">Add a contact email before composing outreach.</p>
+                <p className="text-xs text-slate-500">Add a contact email before composing outreach.</p>
               )}
             </div>
           </fieldset>
-          <label className="block text-xs text-neutral-400">
-            Send now, or schedule (local time)
+          <label className="block font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+            Send now, or schedule in local time
             <input
               type="datetime-local"
               name="scheduled_for"
-              className="mt-1 block w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
+              className="ops-input mt-1 block w-full px-3 text-xs sm:max-w-xs"
             />
           </label>
           <button
             type="submit"
-            disabled={!contactRows.some((contact) => contact.email)}
-            className="rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-40"
+            disabled={!contactRows.some((c) => c.email)}
+            className="rounded-lg bg-purple-600 hover:bg-purple-500 px-4 py-2 text-xs font-semibold text-white disabled:opacity-40 transition-colors"
           >
-            Queue outreach
+            Queue Touchpoint
           </button>
         </form>
       </div>
 
-      {/* Call remarks / SPC remarks */}
-      <div className="grid grid-cols-2 gap-6">
-        <form action={logCallRemark.bind(null, id)} className="space-y-2">
-          <label className="block text-sm text-neutral-300">Call Remarks</label>
-          <textarea
-            name="remark"
-            rows={3}
-            className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-          />
-          <button
-            type="submit"
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:border-neutral-500"
-          >
-            Log Call
-          </button>
+      <div className="grid gap-4 md:grid-cols-2">
+        <form action={logCallRemark.bind(null, id)} className="rounded-lg border border-slate-800 bg-slate-900 p-4">
+          <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-slate-300">
+            <OpsIcon name="phone" size={14} className="text-blue-400" />
+            Call remarks
+          </label>
+          <textarea name="remark" rows={3} required className="ops-input mt-3 w-full p-3 text-xs" />
+          <button type="submit" className="ops-button-secondary mt-2">Log call</button>
         </form>
-        <form action={addSpcRemark.bind(null, id)} className="space-y-2">
-          <label className="block text-sm text-neutral-300">SPC Remarks</label>
-          <textarea
-            name="remark"
-            rows={3}
-            className="w-full rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2 text-sm text-white outline-none focus:border-blue-600"
-          />
-          <button
-            type="submit"
-            className="rounded-md border border-neutral-700 px-3 py-1.5 text-sm text-neutral-300 hover:border-neutral-500"
-          >
-            Add Remark
-          </button>
+        <form action={addSpcRemark.bind(null, id)} className="rounded-lg border border-slate-800 bg-slate-900 p-4">
+          <label className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-slate-300">
+            <OpsIcon name="shield" size={14} className="text-amber-400" />
+            SPC remarks
+          </label>
+          <textarea name="remark" rows={3} required className="ops-input mt-3 w-full p-3 text-xs" />
+          <button type="submit" className="ops-button-secondary mt-2">Add remark</button>
         </form>
       </div>
 
-      {/* Plain-file Placement Committee Vault: no redaction/status variants. */}
-      <div>
-        <h2 className="text-sm font-semibold text-white">Placement Committee Vault</h2>
-        <p className="mt-1 text-xs text-neutral-500">
-          Original files only. Tenant and committee permissions still apply, but no file is masked by
-          shortlist status.
-        </p>
+      {/* Committee Vault Files */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2 font-mono">
+          <OpsIcon name="file-text" size={16} className="text-emerald-400" />
+          <span>Placement Committee Vault</span>
+        </h2>
         <form action={uploadVaultFile.bind(null, id)} className="mt-3 flex items-center gap-2">
           <input
             type="file"
             name="file"
             required
             accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.jpg,.jpeg,.png"
-            className="block flex-1 text-xs text-neutral-400 file:mr-2 file:rounded file:border-0 file:bg-neutral-800 file:px-2 file:py-1 file:text-neutral-200"
+            className="block flex-1 text-xs text-slate-400 file:mr-2 file:rounded file:border-0 file:bg-slate-800 file:px-2.5 file:py-1.5 file:text-xs file:text-slate-200"
           />
-          <button className="rounded-md border border-neutral-700 px-3 py-2 text-xs text-neutral-200 hover:bg-neutral-800">
-            Upload
+          <button className="rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3.5 py-1.5 text-xs font-semibold text-white">
+            Upload Vault File
           </button>
         </form>
-        <ul className="mt-3 divide-y divide-neutral-800 rounded-md border border-neutral-800">
+        <ul className="mt-3 divide-y divide-slate-800 border border-slate-800 bg-[#0d1928]">
           {(vaultFiles ?? []).map((file) => (
-            <li key={file.id} className="flex items-center justify-between gap-3 p-3 text-sm">
+            <li key={file.id} className="flex items-center justify-between gap-3 p-3 text-xs">
               <div className="min-w-0">
-                <p className="truncate text-neutral-200">{file.original_name}</p>
-                <p className="text-xs text-neutral-500">
+                <p className="truncate font-medium text-slate-200">{file.original_name}</p>
+                <p className="mt-0.5 font-mono text-[10px] text-slate-500">
                   {(file.size_bytes / 1024).toFixed(1)} KB · {new Date(file.created_at).toLocaleString()}
                 </p>
               </div>
               <a
                 href={`/api/files/download?path=${encodeURIComponent(file.file_path)}&name=${encodeURIComponent(file.original_name)}`}
-                className="text-xs text-blue-400 hover:underline"
+                className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300"
               >
+                <OpsIcon name="download" size={12} />
                 Download
               </a>
             </li>
           ))}
           {(vaultFiles ?? []).length === 0 && (
-            <li className="p-3 text-sm text-neutral-500">No vault files yet.</li>
+            <li className="p-3 text-xs text-slate-500">No vault files yet.</li>
           )}
         </ul>
       </div>
 
-      {/* Activity feed */}
-      <div>
-        <h2 className="text-sm font-semibold text-white">Activity</h2>
-        <ul className="mt-3 space-y-3">
+      {/* Activity Timeline */}
+      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md">
+        <h2 className="text-sm font-bold text-white flex items-center gap-2 font-mono">
+          <OpsIcon name="clock" size={16} className="text-amber-400" />
+          <span>Outreach History &amp; Activity Log</span>
+        </h2>
+        <div className="mt-4 space-y-3 font-mono text-xs">
           {activityRows.map((a) => {
             const job = jobByActivity.get(a.id);
             return (
-            <li key={a.id} className="rounded-md border border-neutral-800 bg-neutral-900 p-3 text-sm">
-              <div className="flex items-center justify-between text-xs text-neutral-500">
-                <span>
-                  {new Date(a.occurred_at).toLocaleString()} · {a.logged_by_name ?? "Unknown"}
-                </span>
-                <span className="uppercase">{a.channel}</span>
-              </div>
-              {a.call_remarks && <p className="mt-1 text-neutral-200">Call: {a.call_remarks}</p>}
-              {a.spc_remarks && <p className="mt-1 text-neutral-200">SPC: {a.spc_remarks}</p>}
-              {a.previous_mails_summary && (
-                <p className="mt-1 whitespace-pre-wrap text-neutral-200">
-                  {a.previous_mails_summary}
-                </p>
-              )}
-              {job && (
-                <div className="mt-2 rounded border border-neutral-800 bg-neutral-950 p-2 text-xs text-neutral-400">
-                  Delivery: <span className="font-medium text-neutral-200">{job.status}</span>
-                  {` · scheduled ${new Date(job.scheduled_for).toLocaleString()} · attempts ${job.attempt_count}`}
-                  {job.last_error && <p className="mt-1 text-red-300">{job.last_error}</p>}
+              <div key={a.id} className="border border-slate-800 bg-slate-950 p-3.5">
+                <div className="flex items-center justify-between text-slate-400 text-[11px]">
+                  <span>{new Date(a.occurred_at).toLocaleString()} · {a.logged_by_name ?? "Coordinator"}</span>
+                  <span className="uppercase text-amber-400 font-bold">{a.channel}</span>
                 </div>
-              )}
-              {a.channel === "email" && (
-                <form
-                  action={updateOutreachStatus.bind(null, id, a.id)}
-                  className="mt-2 flex items-center gap-2"
-                >
-                  <select
-                    name="merge_status"
-                    defaultValue={a.merge_status ?? ""}
-                    className="rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white outline-none focus:border-blue-600"
-                  >
-                    {MERGE_STATUSES.map((s) => (
-                      <option key={s} value={s}>
-                        {s}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    type="submit"
-                    className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:border-neutral-500"
-                  >
-                    Update
-                  </button>
-                </form>
-              )}
-              {job && ["blocked", "failed"].includes(job.status) && (
-                <form action={retryOutreachNotification.bind(null, id, job.id)} className="mt-2">
-                  <button
-                    type="submit"
-                    className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:border-neutral-500"
-                  >
-                    Retry delivery
-                  </button>
-                </form>
-              )}
-              {job && ["blocked", "queued", "scheduled", "failed"].includes(job.status) && (
-                <form action={rescheduleOutreachNotification.bind(null, id, job.id)} className="mt-2 flex gap-2">
-                  <input
-                    type="datetime-local"
-                    name="scheduled_for"
-                    required
-                    className="rounded-md border border-neutral-800 bg-neutral-950 px-2 py-1 text-xs text-white"
-                  />
-                  <button
-                    type="submit"
-                    className="rounded-md border border-neutral-700 px-2 py-1 text-xs text-neutral-300 hover:border-neutral-500"
-                  >
-                    Reschedule
-                  </button>
-                </form>
-              )}
-            </li>
-          )})}
-          {activityRows.length === 0 && (
-            <p className="text-sm text-neutral-500">No activity logged yet.</p>
-          )}
-        </ul>
+                {a.call_remarks && <p className="mt-1 text-slate-200 font-sans">Call: {a.call_remarks}</p>}
+                {a.spc_remarks && <p className="mt-1 text-slate-200 font-sans">SPC: {a.spc_remarks}</p>}
+                {a.previous_mails_summary && (
+                  <p className="mt-1 whitespace-pre-wrap text-slate-300 font-sans">{a.previous_mails_summary}</p>
+                )}
+                {job && (
+                  <div className="mt-2 border-l-2 border-blue-500 bg-slate-900 p-2 text-[10px] text-slate-400">
+                    Delivery: <span className="font-semibold text-slate-200">{job.status}</span>
+                    {` · scheduled ${new Date(job.scheduled_for).toLocaleString()} · attempts ${job.attempt_count}`}
+                    {job.last_error && <p className="mt-1 text-red-300">{job.last_error}</p>}
+                  </div>
+                )}
+                {a.channel === "email" && (
+                  <form action={updateOutreachStatus.bind(null, id, a.id)} className="mt-2 flex items-center gap-2">
+                    <select name="merge_status" defaultValue={a.merge_status ?? ""} className="ops-input px-2 text-[10px]">
+                      {MERGE_STATUSES.map((status) => (
+                        <option key={status} value={status}>{status.replaceAll("_", " ")}</option>
+                      ))}
+                    </select>
+                    <button type="submit" className="ops-button-secondary min-h-9 px-2.5">Update</button>
+                  </form>
+                )}
+                {job && ["blocked", "failed"].includes(job.status) && (
+                  <form action={retryOutreachNotification.bind(null, id, job.id)} className="mt-2">
+                    <button type="submit" className="ops-button-secondary min-h-9 px-2.5">Retry delivery</button>
+                  </form>
+                )}
+                {job && ["blocked", "queued", "scheduled", "failed"].includes(job.status) && (
+                  <form action={rescheduleOutreachNotification.bind(null, id, job.id)} className="mt-2 flex flex-wrap gap-2">
+                    <input type="datetime-local" name="scheduled_for" required className="ops-input px-2 text-[10px]" />
+                    <button type="submit" className="ops-button-secondary min-h-9 px-2.5">Reschedule</button>
+                  </form>
+                )}
+              </div>
+            );
+          })}
+          {activityRows.length === 0 && <p className="text-slate-500 text-center py-4">No outreach logs recorded yet.</p>}
+        </div>
       </div>
     </div>
   );

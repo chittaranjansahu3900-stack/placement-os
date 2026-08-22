@@ -199,6 +199,10 @@ export interface Jd {
   apply_by_deadline: string;
   status: JdStatus;
   admin_approval_required: boolean;
+  spc_review_submitted_at: string | null;
+  spc_review_submitted_by_user_id: string | null;
+  spc_released_at: string | null;
+  spc_released_by_user_id: string | null;
   created_at: string;
   updated_at: string;
 }
