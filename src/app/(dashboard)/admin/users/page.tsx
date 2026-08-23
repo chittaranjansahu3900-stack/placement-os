@@ -11,6 +11,7 @@ import {
   assignPermissionSet,
   removePermissionSet,
 } from "@/app/actions/admin";
+import { impersonateUser } from "@/app/actions/impersonation";
 import { OpsIcon } from "@/components/ops-icon";
 import { StatusBadge } from "@/components/status-badge";
 import type { AppUser, PermissionSet, Role } from "@/types/domain";
@@ -24,6 +25,7 @@ export default async function AdminUsersPage({
   if (!ctx || !ctx.permissionNames.has("User Management")) redirect("/dashboard");
 
   const { error } = await searchParams;
+  const canImpersonate = ctx.permissionNames.has("Impersonate Users");
   const supabase = await createClient();
 
   const [{ data: users }, { data: userRoleRows }, { data: roles }, { data: permissionSets }, { data: directPermissionRows }] = await Promise.all([
@@ -59,17 +61,17 @@ export default async function AdminUsersPage({
   const others = userRows.filter((u) => u.status !== "pending");
 
   return (
-    <div className="max-w-4xl space-y-8">
+    <div className="max-w-4xl space-y-7">
       {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-blue-400">
+          <div className="flex items-center gap-2 font-mono text-xs text-blue-400">
             <OpsIcon name="users" size={14} />
             <span>Identity &amp; Account Governance</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
             <span>User Management</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 font-mono text-xs font-semibold text-slate-300 border border-slate-700">
+            <span className="rounded bg-slate-800 px-2.5 py-0.5 font-mono text-xs font-semibold text-slate-300 border border-slate-700">
               {userRows.length} Accounts
             </span>
           </h1>
@@ -80,17 +82,17 @@ export default async function AdminUsersPage({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3.5 text-xs text-red-200">
-          <OpsIcon name="alert-triangle" size={16} className="text-red-400" />
+        <div className="flex items-center gap-2.5 rounded-lg border border-red-800/80 bg-red-950/70 p-3.5 text-xs text-red-200 shadow-sm">
+          <OpsIcon name="alert-triangle" size={15} className="text-red-400 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {/* Pending Approval Section */}
       {pending.length > 0 && (
-        <section className="space-y-3 border-l-2 border-amber-500 bg-slate-900 p-5">
-          <h2 className="text-sm font-bold text-amber-300 font-mono flex items-center gap-2">
-            <OpsIcon name="shield" size={16} className="text-amber-400" />
+        <section className="space-y-3 rounded-lg border border-amber-800/80 bg-amber-950/20 p-5 shadow-sm">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-amber-300 font-mono flex items-center gap-2">
+            <OpsIcon name="shield" size={14} className="text-amber-400" />
             <span>Pending Recruiter Verification Queue ({pending.length})</span>
           </h2>
           <div className="divide-y divide-amber-900/40">
@@ -104,7 +106,7 @@ export default async function AdminUsersPage({
                   <form action={approveUser.bind(null, u.id)}>
                     <button
                       type="submit"
-                      className="inline-flex items-center gap-1 rounded-lg bg-emerald-600 hover:bg-emerald-500 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all"
+                      className="ops-button-primary text-xs"
                     >
                       <OpsIcon name="check" size={12} />
                       <span>Approve &amp; Unlock</span>
@@ -113,7 +115,7 @@ export default async function AdminUsersPage({
                   <form action={rejectUser.bind(null, u.id)}>
                     <button
                       type="submit"
-                      className="inline-flex items-center gap-1 rounded-lg border border-red-900 bg-red-950/60 px-3.5 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-900 transition-colors"
+                      className="ops-button-destructive text-xs"
                     >
                       <OpsIcon name="x" size={12} />
                       <span>Reject</span>
@@ -127,13 +129,13 @@ export default async function AdminUsersPage({
       )}
 
       {/* All Users Directory */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md space-y-4">
-        <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
-          <OpsIcon name="users" size={16} className="text-blue-400" />
+      <section className="rounded-lg border border-slate-750 bg-slate-900/90 p-5 shadow-sm space-y-4">
+        <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2 border-b border-slate-800 pb-3">
+          <OpsIcon name="users" size={14} className="text-blue-400" />
           <span>Active &amp; Deactivated Accounts</span>
         </h2>
 
-        <div className="divide-y divide-slate-800/80">
+        <div className="divide-y divide-slate-800">
           {others.map((u) => {
             const userRoles = rolesByUser.get(u.id) ?? [];
             const availableRoles = roleRows.filter((r) => !userRoles.some((ur) => ur.id === r.id));
@@ -152,11 +154,22 @@ export default async function AdminUsersPage({
 
                   <div className="flex items-center gap-2">
                     <StatusBadge status={u.status} size="sm" />
+                    {canImpersonate && u.status === "active" && u.id !== ctx.appUser.id && (
+                      <form action={impersonateUser.bind(null, u.id)}>
+                        <button
+                          type="submit"
+                          title="View the app exactly as this user sees it"
+                          className="rounded border border-blue-800 bg-blue-950/60 px-2.5 py-1 text-xs font-semibold text-blue-300 hover:bg-blue-900"
+                        >
+                          Impersonate
+                        </button>
+                      </form>
+                    )}
                     {u.status === "active" && (
                       <form action={deactivateUser.bind(null, u.id)}>
                         <button
                           type="submit"
-                          className="rounded-lg border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs text-slate-400 hover:text-red-300 hover:border-red-900 transition-colors"
+                          className="rounded border border-slate-700 bg-slate-800 px-2.5 py-1 text-xs text-slate-400 hover:text-red-300 hover:border-red-800 transition-colors"
                         >
                           Deactivate
                         </button>
@@ -166,7 +179,7 @@ export default async function AdminUsersPage({
                       <form action={reactivateUser.bind(null, u.id)}>
                         <button
                           type="submit"
-                          className="rounded-lg border border-emerald-800 bg-emerald-950/60 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-900"
+                          className="rounded border border-emerald-800 bg-emerald-950/60 px-2.5 py-1 text-xs font-semibold text-emerald-300 hover:bg-emerald-900"
                         >
                           Reactivate
                         </button>
@@ -177,13 +190,13 @@ export default async function AdminUsersPage({
 
                 {/* Assigned Roles Chips */}
                 <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
-                  <span className="text-slate-500 font-bold uppercase text-[10px]">Roles:</span>
+                  <span className="text-slate-400 font-semibold uppercase text-[10px]">Roles:</span>
                   {userRoles.map((r) => (
                     <form key={r.id} action={removeRole.bind(null, u.id, r.id)}>
                       <button
                         type="submit"
                         title="Click to remove role"
-                        className="rounded-full bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-xs text-slate-200 hover:border-red-800 hover:text-red-300 transition-colors"
+                        className="rounded bg-slate-800 border border-slate-700 px-2.5 py-0.5 text-xs text-slate-200 hover:border-red-800 hover:text-red-300 transition-colors"
                       >
                         {r.name} ×
                       </button>
@@ -193,21 +206,26 @@ export default async function AdminUsersPage({
                     <form action={assignRole.bind(null, u.id)} className="flex items-center gap-1">
                       <select
                         name="role_id"
-                        className="rounded-lg border border-slate-700 bg-slate-950 px-2 py-1 text-xs text-white outline-none focus:border-blue-500"
+                        defaultValue=""
+                        required
+                        className="ops-select text-xs py-1 text-slate-200"
                       >
+                        <option value="" disabled>
+                          Select role…
+                        </option>
                         {availableRoles.map((r) => (
                           <option key={r.id} value={r.id}>{r.name}</option>
                         ))}
                       </select>
-                      <button type="submit" className="rounded-lg bg-blue-600 hover:bg-blue-500 px-2.5 py-1 text-xs font-semibold text-white">
+                      <button type="submit" className="ops-button-primary text-xs py-1 px-2.5 min-h-0">
                         + Assign
                       </button>
                     </form>
                   )}
                 </div>
 
-                <details className="border border-slate-800 bg-[#0d1928] p-3">
-                  <summary className="cursor-pointer font-mono text-[11px] font-semibold text-slate-300">
+                <details className="rounded border border-slate-800 bg-slate-950/70 p-3 shadow-inner">
+                  <summary className="cursor-pointer font-mono text-[11px] font-semibold text-slate-300 hover:text-white transition-colors">
                     Direct permission grants ({directPermissions.length})
                   </summary>
                   <div className="mt-3 flex flex-wrap items-center gap-2">
@@ -219,7 +237,7 @@ export default async function AdminUsersPage({
                         <button
                           type="submit"
                           title="Remove direct permission grant"
-                          className="rounded-full border border-blue-800 bg-blue-950 px-2.5 py-0.5 text-[11px] text-blue-200 hover:border-red-700 hover:text-red-300"
+                          className="rounded border border-blue-800 bg-blue-950/80 px-2.5 py-0.5 text-[11px] text-blue-200 hover:border-red-700 hover:text-red-300"
                         >
                           {permissionSet.name} ×
                         </button>
@@ -229,24 +247,29 @@ export default async function AdminUsersPage({
                       <form action={assignPermissionSet.bind(null, u.id)} className="flex items-center gap-1">
                         <select
                           name="permission_set_id"
-                          className="ops-input px-2 text-[11px]"
+                          defaultValue=""
+                          required
+                          className="ops-select text-[11px] py-1 text-slate-200"
                         >
+                          <option value="" disabled>
+                            Select permission set…
+                          </option>
                           {availablePermissions.map((permissionSet) => (
                             <option key={permissionSet.id} value={permissionSet.id}>
                               {permissionSet.name}
                             </option>
                           ))}
                         </select>
-                        <button type="submit" className="ops-button-secondary min-h-9 px-2.5">
-                          Add grant
+                        <button type="submit" className="ops-button-secondary text-xs py-1 px-2.5 min-h-0">
+                          Add Grant
                         </button>
                       </form>
                     )}
                     {directPermissions.length === 0 && availablePermissions.length === 0 && (
-                      <span className="text-[11px] text-slate-500">No permission sets available.</span>
+                      <span className="text-[11px] text-slate-400 font-mono">No permission sets available.</span>
                     )}
                   </div>
-                  <p className="mt-2 text-[10px] text-slate-500">
+                  <p className="mt-2 text-[10px] text-slate-400 font-mono">
                     Direct grants remain independent of assigned roles until explicitly removed.
                   </p>
                 </details>

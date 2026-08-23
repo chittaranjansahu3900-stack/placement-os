@@ -8,6 +8,9 @@ import {
 } from "@/components/dashboard-nav";
 import { OpsIcon } from "@/components/ops-icon";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
+import { getImpersonationStash } from "@/lib/auth/impersonation";
+import { stopImpersonating } from "@/app/actions/impersonation";
+import { createClient } from "@/lib/supabase/server";
 
 function items(...values: Array<DashboardNavItem | false>): DashboardNavItem[] {
   return values.filter((value): value is DashboardNavItem => Boolean(value));
@@ -16,6 +19,18 @@ function items(...values: Array<DashboardNavItem | false>): DashboardNavItem[] {
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
   const ctx = await getCurrentUserContext();
   if (!ctx) redirect("/login");
+
+  const impersonation = await getImpersonationStash();
+
+  const supabase = await createClient();
+  const { data: activeBatches } = await supabase
+    .from("batches")
+    .select("id, name, starts_on, is_active, institute_id")
+    .eq("institute_id", ctx.appUser.institute_id)
+    .eq("is_active", true)
+    .order("starts_on", { ascending: false });
+
+  const activeBatch = activeBatches?.[0] ?? null;
 
   const canManageCompanies =
     ctx.permissionNames.has("CRM/Outreach") ||
@@ -42,7 +57,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       items: items(
         { href: "/dashboard", label: "Dashboard", icon: "dashboard", exact: true },
         canSeeSpcDashboard && { href: "/spc", label: "SPC Pipeline", icon: "radar" },
-        canSeeReports && { href: "/reports", label: "Reports", icon: "chart" }
+        canSeeReports && { href: "/reports", label: "Reports & Analytics", icon: "chart" }
       ),
     },
     {
@@ -51,7 +66,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         canManageCompanies && { href: "/companies", label: "Company CRM", icon: "building" },
         canPostJd && { href: "/jds/new", label: "Post a JD", icon: "plus", exact: true },
         (isRecruiter || isAdmin) && { href: "/jds", label: "Job Descriptions", icon: "briefcase" },
-        isStudent && { href: "/jobs", label: "Browse JDs", icon: "briefcase" }
+        isStudent && { href: "/jobs", label: "Browse Opportunities", icon: "briefcase" }
       ),
     },
     {
@@ -59,73 +74,105 @@ export default async function DashboardLayout({ children }: { children: React.Re
       items: items(
         isStudent && { href: "/applications", label: "My Applications", icon: "check-shield" },
         isStudent && { href: "/resume", label: "My Placement CV", icon: "file-text" },
-        isStudent && { href: "/defaults", label: "Defaults", icon: "alert-circle" },
-        canReviewCvs && { href: "/resume/review", label: "CV Review", icon: "sparkles" }
+        isStudent && { href: "/defaults", label: "Attendance & Defaults", icon: "alert-circle" },
+        canReviewCvs && { href: "/resume/review", label: "CV Review Workbench", icon: "sparkles" }
       ),
     },
     {
-      label: "Governance",
+      label: "Governance & Admin",
       items: items(
         canImportRoster && { href: "/admin/roster", label: "Roster & Batches", icon: "upload" },
         canSeeDefaultsAdmin && { href: "/admin/defaults", label: "Defaults Tracker", icon: "alert-triangle" },
         canManageUsers && { href: "/admin/users", label: "User Access", icon: "users" },
         canManageRoles && { href: "/admin/roles", label: "Roles & Permissions", icon: "shield" },
-        canViewAuditLog && { href: "/admin/audit-log", label: "Audit Trail", icon: "terminal" }
+        canViewAuditLog && { href: "/admin/audit-log", label: "Security Audit Trail", icon: "terminal" },
+        canViewAuditLog && { href: "/admin/deliverability", label: "Email Deliverability", icon: "mail" }
       ),
     },
   ].filter((group) => group.items.length > 0);
 
   return (
     <div className="flex min-h-screen flex-col bg-night text-slate-100 selection:bg-blue-500/30 selection:text-white">
-      <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-slate-800 bg-[#0d1928] px-3 sm:px-5">
+      {/* Refined Top Navigation Bar */}
+      <header className="z-20 flex h-14 shrink-0 items-center justify-between border-b border-slate-800/80 bg-[#0b121e] px-4 sm:px-6 shadow-sm">
         <div className="flex min-w-0 items-center gap-4">
           <Link href="/dashboard" className="group flex min-w-0 items-center gap-2.5">
-            <span className="relative flex size-8 shrink-0 items-center justify-center border border-blue-500 bg-blue-950 font-display text-base font-bold tracking-wide text-blue-200 before:absolute before:right-0 before:top-0 before:size-1.5 before:bg-blue-500">
+            <span className="relative flex size-8 shrink-0 items-center justify-center rounded-md border border-blue-500/60 bg-blue-950 font-display text-sm font-bold tracking-tight text-blue-200 shadow-[0_0_12px_rgba(59,130,246,0.2)]">
               PO
             </span>
             <span className="min-w-0">
-              <span className="block truncate font-display text-lg font-bold tracking-wide text-white">
+              <span className="block truncate font-display text-base font-bold tracking-tight text-white group-hover:text-blue-200 transition-colors">
                 Placement<span className="text-blue-400">OS</span>
               </span>
-              <span className="hidden font-mono text-[9px] uppercase tracking-[0.14em] text-slate-500 sm:block">
-                IIM Raipur · Operations console
+              <span className="hidden font-mono text-[9px] uppercase tracking-wider text-slate-400 sm:block">
+                IIM Raipur · Placement Office
               </span>
             </span>
           </Link>
 
-          <div className="hidden items-center gap-2 border-l border-slate-800 pl-4 font-mono text-[10px] text-slate-400 md:flex">
-            <span className="size-1.5 bg-emerald-400" aria-hidden />
-            <span>Active placement season</span>
+          <div className="hidden items-center gap-2 border-l border-slate-800 pl-4 font-mono text-[11px] text-slate-400 md:flex">
+            {activeBatch ? (
+              <>
+                <span className="relative flex size-2">
+                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-emerald-400 opacity-60"></span>
+                  <span className="relative inline-flex size-2 rounded-full bg-emerald-400"></span>
+                </span>
+                <span className="text-slate-300 font-medium">{activeBatch.name} Placement Season</span>
+              </>
+            ) : (
+              <>
+                <span className="relative flex size-2 rounded-full bg-slate-600"></span>
+                <span className="text-slate-400">No active placement season</span>
+              </>
+            )}
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="hidden items-center gap-2 border border-slate-700 bg-slate-900 px-2.5 py-1.5 sm:flex">
-            <span className="flex size-6 items-center justify-center bg-slate-800 font-mono text-[10px] font-semibold text-blue-300">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2.5 rounded-md border border-slate-800 bg-slate-900/90 px-3 py-1.5 shadow-sm">
+            <span className="flex size-6 items-center justify-center rounded bg-slate-850 font-mono text-[11px] font-bold text-blue-300 border border-slate-700">
               {ctx.appUser.name.charAt(0).toUpperCase()}
             </span>
-            <span className="max-w-40 leading-tight">
-              <span className="block truncate text-[11px] font-medium text-slate-200">{ctx.appUser.name}</span>
-              <span className="block truncate font-mono text-[9px] uppercase tracking-wide text-slate-500">
+            <div className="max-w-44 leading-tight hidden sm:block">
+              <span className="block truncate text-xs font-medium text-slate-200">{ctx.appUser.name}</span>
+              <span className="block truncate font-mono text-[9px] uppercase tracking-wider text-slate-400">
                 {primaryRole}
               </span>
-            </span>
+            </div>
           </div>
           <form action={logout}>
             <button
               type="submit"
               aria-label="Sign out"
-              className="flex size-9 items-center justify-center border border-slate-700 bg-slate-900 text-slate-400 transition-colors hover:border-red-700 hover:bg-red-950 hover:text-red-300"
+              title="Sign out"
+              className="flex size-8 items-center justify-center rounded-md border border-slate-800 bg-slate-900/90 text-slate-400 transition-all hover:border-red-800/80 hover:bg-red-950/80 hover:text-red-300"
             >
-              <OpsIcon name="log-out" size={15} />
+              <OpsIcon name="log-out" size={14} />
             </button>
           </form>
         </div>
       </header>
 
+      {impersonation && (
+        <div className="z-10 flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-amber-800/80 bg-amber-950/40 px-4 py-2 sm:px-6">
+          <span className="font-mono text-xs text-amber-200">
+            Impersonating <span className="font-semibold text-white">{ctx.appUser.name}</span> as{" "}
+            <span className="font-semibold">{impersonation.adminName}</span>
+          </span>
+          <form action={stopImpersonating}>
+            <button
+              type="submit"
+              className="rounded border border-amber-700 bg-amber-900/60 px-2.5 py-1 text-xs font-semibold text-amber-100 hover:bg-amber-800"
+            >
+              Return to Admin
+            </button>
+          </form>
+        </div>
+      )}
+
       <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
         <DashboardNav groups={groups} />
-        <main className="min-w-0 flex-1 overflow-y-auto bg-night px-4 py-5 sm:px-6 lg:px-8 lg:py-7">
+        <main className="min-w-0 flex-1 overflow-y-auto bg-[#090d16] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
           <div className="mx-auto max-w-7xl">{children}</div>
         </main>
       </div>
