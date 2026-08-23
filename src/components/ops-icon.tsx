@@ -8,7 +8,9 @@ export type OpsIconName =
   | "chart"
   | "file-text"
   | "users"
+  | "user"
   | "user-check"
+  | "graduation-cap"
   | "shield"
   | "upload"
   | "alert-circle"
@@ -42,7 +44,9 @@ export type OpsIconName =
   | "phone"
   | "map-pin"
   | "award"
-  | "trending-up";
+  | "trending-up"
+  | "arrow-left"
+  | "printer";
 
 interface OpsIconProps {
   name: OpsIconName;
@@ -130,12 +134,27 @@ export function OpsIcon({ name, className = "size-4", size = 16 }: OpsIconProps)
           <path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       );
+    case "user":
+      return (
+        <svg {...props}>
+          <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
+          <circle cx="12" cy="7" r="4" />
+        </svg>
+      );
     case "user-check":
       return (
         <svg {...props}>
           <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
           <circle cx="9" cy="7" r="4" />
           <path d="m16 11 2 2 4-5" />
+        </svg>
+      );
+    case "graduation-cap":
+      return (
+        <svg {...props}>
+          <path d="M22 10 12 5 2 10l10 5 10-5Z" />
+          <path d="M6 12v5c0 1.5 2.5 3 6 3s6-1.5 6-3v-5" />
+          <path d="M22 10v6" />
         </svg>
       );
     case "shield":
@@ -375,11 +394,19 @@ export function OpsIcon({ name, className = "size-4", size = 16 }: OpsIconProps)
           <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11" />
         </svg>
       );
-    case "trending-up":
+    case "arrow-left":
       return (
         <svg {...props}>
-          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-          <polyline points="16 7 22 7 22 13" />
+          <path d="m12 19-7-7 7-7" />
+          <path d="M19 12H5" />
+        </svg>
+      );
+    case "printer":
+      return (
+        <svg {...props}>
+          <polyline points="6 9 6 2 18 2 18 9" />
+          <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" />
+          <rect width="12" height="8" x="6" y="14" />
         </svg>
       );
     default:
