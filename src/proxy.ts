@@ -3,8 +3,10 @@ import { createServerClient } from "@supabase/ssr";
 
 // Next.js 16 renamed `middleware.ts` to `proxy.ts` (runs on the Node.js
 // runtime now, not Edge). This refreshes the Supabase session cookie on
-// every request and gates unauthenticated access to everything except the
-// public marketing page and the auth routes.
+// protected requests and gates unauthenticated access to everything except
+// the public marketing page and the auth routes. Public routes deliberately
+// bypass Supabase so login and signup remain available during an auth-service
+// outage (and do not perform an unnecessary network request).
 //
 // TODO: BRD Section 9 leaves the institute SSO provider/protocol unresolved
 // ("Specific SSO provider/protocol for institute login"). This proxy and the
@@ -14,6 +16,13 @@ import { createServerClient } from "@supabase/ssr";
 const PUBLIC_PATHS = ["/", "/login", "/signup", "/auth"];
 
 export async function proxy(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
+
+  if (isPublic) {
+    return NextResponse.next({ request });
+  }
+
   let response = NextResponse.next({ request });
 
   const supabase = createServerClient(
@@ -39,10 +48,7 @@ export async function proxy(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser();
 
-  const { pathname } = request.nextUrl;
-  const isPublic = PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`));
-
-  if (!user && !isPublic) {
+  if (!user) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
     url.searchParams.set("next", pathname);

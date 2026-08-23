@@ -22,6 +22,13 @@ env:
       - BUILD
       - RUNTIME
 
+  # Recruiter signup provisions auth and application records before a user
+  # session exists, so it requires the server-only Supabase service role.
+  - variable: SUPABASE_SERVICE_ROLE_KEY
+    secret: SUPABASE_SERVICE_ROLE_KEY
+    availability:
+      - RUNTIME
+
   # Server-side notification controls. Keep sending disabled until CDPO signs
   # off the wording in src/lib/notifications/templates.ts and Resend verifies
   # the sending domain. Changing the sender later is configuration-only.
@@ -58,7 +65,7 @@ env:
       - RUNTIME
 
 # Configure NEXT_PUBLIC_SUPABASE_ANON_KEY in the App Hosting backend's
-# Environment settings. Add SUPABASE_SERVICE_ROLE_KEY, RESEND_API_KEY,
-# RESEND_WEBHOOK_SECRET, NOTIFICATION_CRON_SECRET, GROQ_API_KEY,
-# GEMINI_API_KEY, and ANTHROPIC_API_KEY here as `secret`
-# references only after creating them with Firebase/Secret Manager.
+# Environment settings. Add RESEND_API_KEY, RESEND_WEBHOOK_SECRET,
+# NOTIFICATION_CRON_SECRET, GROQ_API_KEY, GEMINI_API_KEY, and
+# ANTHROPIC_API_KEY here as `secret` references only after creating them with
+# Firebase/Secret Manager.

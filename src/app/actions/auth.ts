@@ -48,6 +48,15 @@ export async function signupRecruiter(formData: FormData) {
     redirect(`/signup?error=${encodeURIComponent("Server misconfigured: no institute set")}`);
   }
 
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.error(
+      "Recruiter signup is unavailable because the server-side Supabase configuration is missing.",
+    );
+    redirect(
+      `/signup?error=${encodeURIComponent("Registration is temporarily unavailable. Please contact the CDPO administrator.")}`,
+    );
+  }
+
   const service = createServiceClient();
 
   const { data: institute, error: instituteError } = await service
