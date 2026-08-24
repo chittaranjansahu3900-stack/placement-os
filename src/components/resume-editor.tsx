@@ -390,7 +390,8 @@ export function ResumeEditor({
 
   return (
     <div className="space-y-4">
-      {/* Unified Topbar — CV switcher, tool panels, template, save, export */}
+      {/* Unified Topbar — Row 1: identity+switcher / tool pills / export. Row 2: template gallery / zoom. */}
+      <div className="space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#334155] bg-[#0f172a] p-3 shadow-sm">
         <div className="flex min-w-0 flex-wrap items-center gap-3">
           <div className="hidden items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-amber-400 sm:flex">
@@ -701,9 +702,9 @@ export function ResumeEditor({
               onApplyImported={(imported) => setContent(imported)}
             />
           </TopbarDropdown>
+        </div>
 
-          <div className="h-6 w-px bg-[#334155]" />
-
+        <div className="flex flex-wrap items-center gap-2">
           {/* Full View / Export */}
           <Link
             href={`/resume/${documentId}`}
@@ -712,29 +713,6 @@ export function ResumeEditor({
           >
             <OpsIcon name="eye" size={14} />
           </Link>
-
-          {/* Template gallery */}
-          <div className="flex items-center gap-1 rounded-full bg-[#1e293b] p-1">
-            {CV_TEMPLATES.map((template, i) => {
-              const dotColors = ["#6366f1", "#3b82f6", "#f59e0b"];
-              const selected = template.id === templateId;
-              return (
-                <button
-                  key={template.id}
-                  type="button"
-                  onClick={() => setTemplateId(template.id)}
-                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "bg-[#6366f1] text-white" : "text-slate-300 hover:bg-[rgba(255,255,255,0.06)]"}`}
-                >
-                  <span className="size-1.5 shrink-0 rounded-full" style={{ background: selected ? "white" : dotColors[i % dotColors.length] }} />
-                  {template.name}
-                </button>
-              );
-            })}
-            <span title="More templates coming soon" className="flex shrink-0 cursor-not-allowed items-center gap-1 whitespace-nowrap px-2.5 py-1.5 text-xs text-slate-600">
-              <OpsIcon name="plus" size={11} />
-              Browse
-            </span>
-          </div>
 
           <ResumeExportButtons fileName={content.personalInfo.name || content.title} content={content} templateId={templateId} />
           <form action={saveCvDocument}>
@@ -750,6 +728,57 @@ export function ResumeEditor({
             </button>
           </form>
         </div>
+      </div>
+
+      {/* Row 2 — Template gallery + zoom controls */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#334155] bg-[#0f172a] px-3 py-2 shadow-sm">
+        <div className="flex items-center gap-1 rounded-full bg-[#1e293b] p-1">
+          {CV_TEMPLATES.map((template, i) => {
+            const dotColors = ["#6366f1", "#3b82f6", "#f59e0b"];
+            const selected = template.id === templateId;
+            return (
+              <button
+                key={template.id}
+                type="button"
+                onClick={() => setTemplateId(template.id)}
+                className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "bg-[#6366f1] text-white" : "text-slate-300 hover:bg-[rgba(255,255,255,0.06)]"}`}
+              >
+                <span className="size-1.5 shrink-0 rounded-full" style={{ background: selected ? "white" : dotColors[i % dotColors.length] }} />
+                {template.name}
+              </button>
+            );
+          })}
+          <span title="More templates coming soon" className="flex shrink-0 cursor-not-allowed items-center gap-1 whitespace-nowrap px-2.5 py-1.5 text-xs text-slate-600">
+            <OpsIcon name="plus" size={11} />
+            Browse
+          </span>
+        </div>
+
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.max(40, z - 10))}
+            className="flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
+          >
+            <OpsIcon name="minus" size={12} />
+          </button>
+          <span className="w-12 text-center font-mono text-xs text-slate-400">{zoom}%</span>
+          <button
+            type="button"
+            onClick={() => setZoom((z) => Math.min(150, z + 10))}
+            className="flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
+          >
+            <OpsIcon name="plus" size={12} />
+          </button>
+          <button
+            type="button"
+            onClick={fitZoom}
+            className="rounded-lg border border-[#334155] px-2.5 py-1 text-xs text-slate-400 hover:text-slate-200"
+          >
+            Fit
+          </button>
+        </div>
+      </div>
       </div>
 
       {/* Editor + Live Canvas */}
@@ -1562,30 +1591,6 @@ export function ResumeEditor({
           ref={canvasWrapperRef}
           className="flex-1 bg-[radial-gradient(circle_at_20%_20%,#151e36_0%,#0c1020_100%)] p-6 lg:max-h-[calc(100vh-180px)] lg:overflow-y-auto lg:p-8"
         >
-          <div className="mb-3 flex items-center justify-end gap-1.5">
-            <button
-              type="button"
-              onClick={() => setZoom((z) => Math.max(40, z - 10))}
-              className="flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
-            >
-              <OpsIcon name="minus" size={12} />
-            </button>
-            <span className="w-12 text-center font-mono text-xs text-slate-400">{zoom}%</span>
-            <button
-              type="button"
-              onClick={() => setZoom((z) => Math.min(150, z + 10))}
-              className="flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
-            >
-              <OpsIcon name="plus" size={12} />
-            </button>
-            <button
-              type="button"
-              onClick={fitZoom}
-              className="rounded-lg border border-[#334155] px-2.5 py-1 text-xs text-slate-400 hover:text-slate-200"
-            >
-              Fit
-            </button>
-          </div>
           <div
             style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
             className="mx-auto max-w-[820px] overflow-hidden rounded shadow-[0_20px_48px_-10px_rgba(0,0,0,0.12),0_10px_20px_-5px_rgba(0,0,0,0.08)]"
