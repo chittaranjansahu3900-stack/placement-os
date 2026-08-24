@@ -437,6 +437,107 @@ export function ResumeEditor({
             </div>
           </TopbarDropdown>
 
+          {/* Review Remarks */}
+          {comments.length > 0 && (
+            <TopbarDropdown
+              align="right"
+              panelClassName="w-80 space-y-2.5 p-3.5"
+              trigger={(open) => (
+                <span
+                  title={`Review Remarks (${comments.length})`}
+                  className={`relative flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#4f46e5] text-white" : "border-amber-700 bg-amber-950/40 text-amber-400 hover:text-amber-300"}`}
+                >
+                  <OpsIcon name="message-square" size={14} />
+                  <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold text-amber-950">
+                    {comments.length}
+                  </span>
+                </span>
+              )}
+            >
+              <h2 className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-amber-300">
+                <OpsIcon name="message-square" size={13} className="text-amber-400" />
+                <span>SPC Committee Review Remarks ({comments.length})</span>
+              </h2>
+              <div className="space-y-2">
+                {comments.map((comment) => (
+                  <div key={comment.id} className="rounded-md border border-[#334155] bg-[#080f21] p-3 text-xs">
+                    <div className="flex items-center justify-between font-mono text-[10px] uppercase text-slate-400">
+                      <span>
+                        {comment.anchor_section}
+                        {comment.anchor_bullet_id ? ` · ${comment.anchor_bullet_id}` : ""}
+                      </span>
+                      <span className={comment.status === "applied" ? "font-bold text-emerald-400" : "text-amber-400"}>
+                        {comment.status}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-slate-200">{comment.comment_text}</p>
+                    <div className="mt-2 flex gap-2">
+                      {(["open", "applied", "dismissed"] as const).map((status) => (
+                        <form key={status} action={updateCvReviewCommentStatus}>
+                          <input type="hidden" name="comment_id" value={comment.id} />
+                          <input type="hidden" name="cv_document_id" value={documentId} />
+                          <input type="hidden" name="status" value={status} />
+                          <button
+                            type="submit"
+                            disabled={comment.status === status}
+                            className="rounded border border-[#334155] bg-[#1e293b] px-2 py-0.5 font-mono text-[10px] text-slate-300 hover:bg-slate-700 disabled:opacity-40"
+                          >
+                            Mark {status}
+                          </button>
+                        </form>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </TopbarDropdown>
+          )}
+
+          {/* AI Resume Assistant */}
+          <TopbarDropdown
+            align="right"
+            panelClassName="w-96 p-3.5"
+            trigger={(open) => (
+              <span
+                title="AI Resume Assistant"
+                className={`flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#6366f1] bg-[#1e293b] text-white" : "border-[#4f46e5] bg-[#1e1b4b] text-[#a5b4fc] hover:text-white"}`}
+              >
+                <OpsIcon name="sparkles" size={14} />
+              </span>
+            )}
+          >
+            <ResumeAiAssistant
+              documentId={documentId}
+              content={content}
+              onApplyBullet={(bullet) => {
+                setContent((current) => ({
+                  ...current,
+                  experience: current.experience.length
+                    ? current.experience.map((entry, index) =>
+                        index === 0
+                          ? {
+                              ...entry,
+                              bullets: [...entry.bullets, { id: newId("ai"), text: bullet }],
+                            }
+                          : entry,
+                      )
+                    : [
+                        {
+                          id: newId("exp"),
+                          company: "Experience",
+                          role: "Role",
+                          period: "",
+                          bullets: [{ id: newId("ai"), text: bullet }],
+                        },
+                      ],
+                }));
+              }}
+              onApplyImported={(imported) => setContent(imported)}
+            />
+          </TopbarDropdown>
+
+          <div className="h-6 w-px bg-[#334155]" />
+
           {/* Full View / Export */}
           <Link
             href={`/resume/${documentId}`}
@@ -474,81 +575,6 @@ export function ResumeEditor({
         </div>
       </div>
 
-      {/* Review Comments Alert */}
-      {comments.length > 0 && (
-        <section className="rounded-lg border border-amber-800/80 bg-slate-900/95 p-4 shadow-sm space-y-3">
-          <h2 className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-amber-300">
-            <OpsIcon name="sparkles" size={14} className="text-amber-400" />
-            <span>SPC Committee Review Remarks ({comments.length})</span>
-          </h2>
-          <div className="space-y-2">
-            {comments.map((comment) => (
-              <div key={comment.id} className="rounded-md border border-slate-800 bg-slate-950 p-3 text-xs">
-                <div className="flex items-center justify-between text-slate-400 font-mono text-[10px] uppercase">
-                  <span>
-                    {comment.anchor_section}
-                    {comment.anchor_bullet_id ? ` · ${comment.anchor_bullet_id}` : ""}
-                  </span>
-                  <span className={comment.status === "applied" ? "text-emerald-400 font-bold" : "text-amber-400"}>
-                    {comment.status}
-                  </span>
-                </div>
-                <p className="mt-1 text-slate-200">{comment.comment_text}</p>
-                <div className="mt-2 flex gap-2">
-                  {(["open", "applied", "dismissed"] as const).map((status) => (
-                    <form
-                      key={status}
-                      action={updateCvReviewCommentStatus}
-                    >
-                      <input type="hidden" name="comment_id" value={comment.id} />
-                      <input type="hidden" name="cv_document_id" value={documentId} />
-                      <input type="hidden" name="status" value={status} />
-                      <button
-                        type="submit"
-                        disabled={comment.status === status}
-                        className="rounded border border-slate-700 bg-slate-800 px-2 py-0.5 font-mono text-[10px] text-slate-300 hover:bg-slate-700 disabled:opacity-40"
-                      >
-                        Mark {status}
-                      </button>
-                    </form>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
-
-      {/* AI Assistant */}
-      <ResumeAiAssistant
-        documentId={documentId}
-        content={content}
-        onApplyBullet={(bullet) => {
-          setContent((current) => ({
-            ...current,
-            experience: current.experience.length
-              ? current.experience.map((entry, index) =>
-                  index === 0
-                    ? {
-                        ...entry,
-                        bullets: [...entry.bullets, { id: newId("ai"), text: bullet }],
-                      }
-                    : entry,
-                )
-              : [
-                  {
-                    id: newId("exp"),
-                    company: "Experience",
-                    role: "Role",
-                    period: "",
-                    bullets: [{ id: newId("ai"), text: bullet }],
-                  },
-                ],
-          }));
-        }}
-        onApplyImported={(imported) => setContent(imported)}
-      />
-
       {/* Editor + Live Canvas */}
       <div className="overflow-hidden rounded-lg border border-[#334155] bg-[#080f21] lg:flex lg:items-stretch">
         {/* Icon rail */}
@@ -567,7 +593,7 @@ export function ResumeEditor({
         </div>
 
         {/* Form column */}
-        <div className="min-w-0 flex-1 space-y-4 p-4 lg:max-h-[calc(100vh-180px)] lg:overflow-y-auto lg:border-r lg:border-[#1e293b] lg:p-5">
+        <div className="min-w-0 flex-1 space-y-4 p-4 lg:max-h-[calc(100vh-180px)] lg:max-w-[420px] lg:flex-none lg:overflow-y-auto lg:border-r lg:border-[#1e293b] lg:p-5">
           {/* Personal Details */}
           <section
             ref={(el) => {
