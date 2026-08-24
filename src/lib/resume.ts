@@ -2,15 +2,25 @@ import type {
   CvAcademicEntry,
   CvBullet,
   CvContent,
+  CvCustomSection,
   CvExperienceEntry,
   CvJdFitAnalysis,
+  CvLanguageEntry,
   CvProjectEntry,
+  CvPublicationEntry,
   Student,
 } from "@/types/domain";
 
 const MAX_TEXT = 4_000;
 const MAX_ITEMS = 20;
 const MAX_BULLETS = 12;
+
+// Mirrors Cursivo's DEFAULT_SECTION_ORDER (constants/index.js) — academics and
+// personal stay fixed-position, never part of this list.
+export const DEFAULT_SECTION_ORDER = [
+  "experience", "positions", "projects", "skills", "languages",
+  "certifications", "awards", "activities", "hobbies", "publications", "customSections",
+];
 
 function text(value: unknown, max = MAX_TEXT): string {
   return typeof value === "string" ? value.trim().slice(0, max) : "";
@@ -204,6 +214,44 @@ export function normalizeCvContent(value: unknown): CvContent {
       }
     : null;
 
+  const languages: CvLanguageEntry[] = Array.isArray(source.languages)
+    ? source.languages.slice(0, MAX_ITEMS).map((item, index) => {
+        const row = record(item);
+        return {
+          id: id(row.id, `language-${index + 1}`),
+          name: text(row.name, 100),
+          level: text(row.level, 50),
+        };
+      })
+    : [];
+
+  const publications: CvPublicationEntry[] = Array.isArray(source.publications)
+    ? source.publications.slice(0, MAX_ITEMS).map((item, index) => {
+        const row = record(item);
+        return {
+          id: id(row.id, `publication-${index + 1}`),
+          title: text(row.title, 300),
+          publisher: text(row.publisher, 300),
+          date: text(row.date, 50),
+          link: text(row.link, 500),
+        };
+      })
+    : [];
+
+  const customSections: CvCustomSection[] = Array.isArray(source.customSections)
+    ? source.customSections.slice(0, MAX_ITEMS).map((item, index) => {
+        const row = record(item);
+        const rowId = id(row.id, `custom-section-${index + 1}`);
+        return {
+          id: rowId,
+          title: text(row.title, 100),
+          items: bullets(row.items, rowId),
+        };
+      })
+    : [];
+
+  const validSectionKeys = new Set(DEFAULT_SECTION_ORDER);
+
   return {
     title: text(source.title, 200) || "Placement CV",
     personalInfo: {
@@ -213,6 +261,11 @@ export function normalizeCvContent(value: unknown): CvContent {
       linkedin: text(personal.linkedin, 500),
       location: text(personal.location, 300),
       summary: text(personal.summary),
+      headline: text(personal.headline, 200),
+      website: text(personal.website, 500),
+      dateOfBirth: text(personal.dateOfBirth, 50),
+      gender: text(personal.gender, 50),
+      totalExperience: text(personal.totalExperience, 50),
     },
     academics,
     experience,
@@ -227,6 +280,27 @@ export function normalizeCvContent(value: unknown): CvContent {
     awards: Array.isArray(source.awards)
       ? source.awards.slice(0, MAX_ITEMS).map((item) => text(item, 1_000)).filter(Boolean)
       : [],
+    languages,
+    hobbies: Array.isArray(source.hobbies)
+      ? source.hobbies.slice(0, MAX_ITEMS).map((item) => text(item, 200)).filter(Boolean)
+      : [],
+    publications,
+    activities: Array.isArray(source.activities)
+      ? source.activities.slice(0, MAX_ITEMS).map((item) => text(item, 500)).filter(Boolean)
+      : [],
+    customSections,
+    hiddenSections: Array.isArray(source.hiddenSections)
+      ? [...new Set(source.hiddenSections.map((item) => text(item, 50)).filter((key) => validSectionKeys.has(key)))]
+      : [],
+    sectionOrder: (() => {
+      const provided = Array.isArray(source.sectionOrder)
+        ? [...new Set(source.sectionOrder.map((item) => text(item, 50)).filter((key) => validSectionKeys.has(key)))]
+        : [];
+      // Union so a section type added after a document was last saved still
+      // gets a stable position (appended) rather than vanishing from order.
+      const missing = DEFAULT_SECTION_ORDER.filter((key) => !provided.includes(key));
+      return [...provided, ...missing];
+    })(),
     jdFit: fit,
   };
 }

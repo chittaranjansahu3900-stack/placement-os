@@ -47,7 +47,14 @@ export type OpsIconName =
   | "trending-up"
   | "arrow-left"
   | "printer"
-  | "message-square";
+  | "message-square"
+  | "zap"
+  | "globe"
+  | "activity"
+  | "heart"
+  | "book-open"
+  | "minus"
+  | "chevron-up";
 
 interface OpsIconProps {
   name: OpsIconName;
@@ -414,6 +421,51 @@ export function OpsIcon({ name, className = "size-4", size = 16 }: OpsIconProps)
       return (
         <svg {...props}>
           <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+        </svg>
+      );
+    case "zap":
+      return (
+        <svg {...props}>
+          <path d="M13 2 3 14h9l-1 8 10-12h-9z" />
+        </svg>
+      );
+    case "globe":
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="12" r="10" />
+          <path d="M2 12h20" />
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
+        </svg>
+      );
+    case "activity":
+      return (
+        <svg {...props}>
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+        </svg>
+      );
+    case "heart":
+      return (
+        <svg {...props}>
+          <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+        </svg>
+      );
+    case "book-open":
+      return (
+        <svg {...props}>
+          <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" />
+          <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" />
+        </svg>
+      );
+    case "minus":
+      return (
+        <svg {...props}>
+          <path d="M5 12h14" />
+        </svg>
+      );
+    case "chevron-up":
+      return (
+        <svg {...props}>
+          <path d="m18 15-6-6-6 6" />
         </svg>
       );
     default:

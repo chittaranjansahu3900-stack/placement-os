@@ -280,6 +280,26 @@ export interface CvJdFitAnalysis {
   analyzedAt: string;
 }
 
+export interface CvLanguageEntry {
+  id: string;
+  name: string;
+  level: string;
+}
+
+export interface CvPublicationEntry {
+  id: string;
+  title: string;
+  publisher: string;
+  date: string;
+  link: string;
+}
+
+export interface CvCustomSection {
+  id: string;
+  title: string;
+  items: CvBullet[];
+}
+
 export interface CvContent {
   title: string;
   personalInfo: {
@@ -289,6 +309,11 @@ export interface CvContent {
     linkedin: string;
     location: string;
     summary: string;
+    headline: string;
+    website: string;
+    dateOfBirth: string;
+    gender: string;
+    totalExperience: string;
   };
   academics: CvAcademicEntry[];
   experience: CvExperienceEntry[];
@@ -297,6 +322,15 @@ export interface CvContent {
   skills: string[];
   certifications: string[];
   awards: string[];
+  languages: CvLanguageEntry[];
+  hobbies: string[];
+  publications: CvPublicationEntry[];
+  activities: string[];
+  customSections: CvCustomSection[];
+  // Section keys excluded from the rendered/exported CV — data stays intact,
+  // this is a render-time filter only (mirrors Cursivo's fmt.hiddenSections).
+  hiddenSections: string[];
+  sectionOrder: string[];
   jdFit: CvJdFitAnalysis | null;
 }
 

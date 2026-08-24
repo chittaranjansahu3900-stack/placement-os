@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import {
   saveCvDocument,
@@ -22,9 +22,12 @@ import type {
   CompanyTypePersona,
   CvAcademicEntry,
   CvContent,
+  CvCustomSection,
   CvDocument,
   CvExperienceEntry,
+  CvLanguageEntry,
   CvProjectEntry,
+  CvPublicationEntry,
   CvReviewComment,
 } from "@/types/domain";
 
@@ -44,11 +47,19 @@ function urgency(deadline: string) {
   return { label: `${days}d left`, className: "text-slate-300 border-slate-700 bg-slate-900" };
 }
 
+function moveArrayItem<T>(array: T[], index: number, direction: -1 | 1): T[] {
+  const target = index + direction;
+  if (target < 0 || target >= array.length) return array;
+  const copy = [...array];
+  [copy[index], copy[target]] = [copy[target], copy[index]];
+  return copy;
+}
+
 const inputClass =
   "w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2.5 py-1.5 text-[13px] text-slate-200 outline-none transition-colors focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]";
 const labelClass = "block text-[11px] font-medium uppercase tracking-[0.05em] text-slate-500";
 const addButtonClass =
-  "rounded-lg border border-dashed border-[#334155] px-2.5 py-1 text-xs text-[#64748b] transition-colors hover:border-[#4f46e5] hover:text-[#94a3b8]";
+  "shrink-0 rounded-lg border border-dashed border-[#334155] px-2.5 py-1 text-xs text-[#64748b] transition-colors hover:border-[#4f46e5] hover:text-[#94a3b8]";
 const cardClass = "rounded-lg border border-[#334155] bg-[#0f172a] p-4 shadow-sm";
 const entryCardClass =
   "group mb-2 overflow-hidden rounded-lg border border-[#334155] bg-[#1e293b] open:border-l-[3px] open:border-l-[#6366f1] open:shadow-[0_6px_20px_rgba(0,0,0,0.3)]";
@@ -66,18 +77,56 @@ function linesToBullets(value: string, current: { id: string; text: string }[], 
   }));
 }
 
-const RAIL_SECTIONS: { key: string; label: string; icon: OpsIconName }[] = [
-  { key: "personal", label: "Personal & Contact", icon: "user" },
-  { key: "academics", label: "Academic Records", icon: "graduation-cap" },
-  { key: "experience", label: "Experience", icon: "briefcase" },
-  { key: "projects", label: "Projects", icon: "layers" },
+// Matches src/lib/resume.ts's DEFAULT_SECTION_ORDER plus the two fixed
+// (never hideable/reorderable) sections — mirrors Cursivo's own rail exactly.
+const RAIL_SECTIONS: { key: string; label: string; icon: OpsIconName; toggleable: boolean }[] = [
+  { key: "personal", label: "Personal & Contact", icon: "user", toggleable: false },
+  { key: "academics", label: "Academic Records", icon: "graduation-cap", toggleable: false },
+  { key: "skills", label: "Skills", icon: "zap", toggleable: true },
+  { key: "experience", label: "Experience", icon: "briefcase", toggleable: true },
+  { key: "positions", label: "Positions", icon: "star", toggleable: true },
+  { key: "projects", label: "Projects", icon: "layers", toggleable: true },
+  { key: "languages", label: "Languages", icon: "globe", toggleable: true },
+  { key: "certifications", label: "Certifications", icon: "check-shield", toggleable: true },
+  { key: "awards", label: "Awards", icon: "award", toggleable: true },
+  { key: "activities", label: "Activities", icon: "activity", toggleable: true },
+  { key: "hobbies", label: "Hobbies", icon: "heart", toggleable: true },
+  { key: "publications", label: "Publications", icon: "book-open", toggleable: true },
+  { key: "customSections", label: "Custom Sections", icon: "grid", toggleable: true },
 ];
 
-function EntryHeader({ title, onRemove }: { title: string; onRemove: () => void }) {
+function EntryHeader({
+  title, onRemove, onMoveUp, onMoveDown,
+}: {
+  title: string;
+  onRemove: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
+}) {
   return (
     <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-[13px] font-medium text-slate-200 hover:text-white">
       <span className="min-w-0 truncate">{title}</span>
-      <span className="flex shrink-0 items-center gap-2">
+      <span className="flex shrink-0 items-center gap-1.5">
+        {onMoveUp && (
+          <button
+            type="button"
+            title="Move up"
+            onClick={(event) => { event.preventDefault(); event.stopPropagation(); onMoveUp(); }}
+            className="text-slate-500 hover:text-slate-300"
+          >
+            <OpsIcon name="chevron-up" size={12} />
+          </button>
+        )}
+        {onMoveDown && (
+          <button
+            type="button"
+            title="Move down"
+            onClick={(event) => { event.preventDefault(); event.stopPropagation(); onMoveDown(); }}
+            className="text-slate-500 hover:text-slate-300"
+          >
+            <OpsIcon name="chevron-down" size={12} />
+          </button>
+        )}
         <button
           type="button"
           onClick={(event) => {
@@ -96,6 +145,72 @@ function EntryHeader({ title, onRemove }: { title: string; onRemove: () => void 
         />
       </span>
     </summary>
+  );
+}
+
+function SectionHeader({
+  title, sectionKey, hiddenSections, onToggleHidden, onAdd, addLabel,
+}: {
+  title: string;
+  sectionKey?: string;
+  hiddenSections?: string[];
+  onToggleHidden?: (key: string) => void;
+  onAdd?: () => void;
+  addLabel?: string;
+}) {
+  const isHidden = sectionKey ? (hiddenSections ?? []).includes(sectionKey) : false;
+  return (
+    <div className="mb-2 flex items-center justify-between gap-2">
+      <div className="flex items-center gap-1.5">
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">{title}</h2>
+        {sectionKey && onToggleHidden && (
+          <button
+            type="button"
+            onClick={() => onToggleHidden(sectionKey)}
+            title={isHidden ? "Hidden from CV — click to show" : "Shown on CV — click to hide"}
+            className={isHidden ? "text-slate-600 hover:text-slate-400" : "text-emerald-500 hover:text-emerald-400"}
+          >
+            <OpsIcon name={isHidden ? "eye-off" : "eye"} size={13} />
+          </button>
+        )}
+      </div>
+      {onAdd && addLabel && (
+        <button type="button" onClick={onAdd} className={addButtonClass}>{addLabel}</button>
+      )}
+    </div>
+  );
+}
+
+function StringListEditor({
+  items, onChange, placeholder,
+}: {
+  items: string[];
+  onChange: (items: string[]) => void;
+  placeholder: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {items.map((item, index) => (
+        <div key={index} className="flex items-center gap-2">
+          <input
+            value={item}
+            onChange={(event) => onChange(items.map((value, i) => (i === index ? event.target.value : value)))}
+            placeholder={placeholder}
+            className={inputClass}
+          />
+          <button
+            type="button"
+            onClick={() => onChange(items.filter((_, i) => i !== index))}
+            className="shrink-0 text-[#ef4444] hover:text-red-300"
+          >
+            <OpsIcon name="x" size={14} />
+          </button>
+        </div>
+      ))}
+      <button type="button" onClick={() => onChange([...items, ""])} className={addButtonClass}>
+        + Add
+      </button>
+    </div>
   );
 }
 
@@ -119,9 +234,13 @@ export function ResumeEditor({
   const [content, setContent] = useState(() => normalizeCvContent(initialContent));
   const [templateId, setTemplateId] = useState(() => normalizeCvTemplateId(initialTemplateId));
   const [builder, setBuilder] = useState({ action: "", outcome: "", metric: "" });
+  const [skillInput, setSkillInput] = useState("");
+  const [sectionFilter, setSectionFilter] = useState("");
+  const [zoom, setZoom] = useState(100);
 
   const sectionRefs = useRef(new Map<string, HTMLElement>());
   const detailsRefs = useRef(new Map<string, HTMLDetailsElement>());
+  const canvasWrapperRef = useRef<HTMLDivElement>(null);
 
   function scrollToSection(key: string) {
     sectionRefs.current.get(key)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -137,6 +256,31 @@ export function ResumeEditor({
     el?.scrollIntoView({ behavior: "smooth", block: "center" });
     el?.focus({ preventScroll: true });
   }
+
+  function toggleSectionHidden(key: string) {
+    setContent((current) => ({
+      ...current,
+      hiddenSections: current.hiddenSections.includes(key)
+        ? current.hiddenSections.filter((k) => k !== key)
+        : [...current.hiddenSections, key],
+    }));
+  }
+
+  function expandAll() {
+    detailsRefs.current.forEach((el) => { el.open = true; });
+  }
+  function collapseAll() {
+    detailsRefs.current.forEach((el) => { el.open = false; });
+  }
+
+  function fitZoom() {
+    const width = canvasWrapperRef.current?.clientWidth;
+    if (!width) return;
+    setZoom(Math.max(40, Math.min(150, Math.round(((width - 48) / 794) * 100))));
+  }
+  useEffect(() => {
+    fitZoom();
+  }, []);
 
   function updatePersonal(field: keyof CvContent["personalInfo"], value: string) {
     setContent((current) => ({
@@ -176,6 +320,40 @@ export function ResumeEditor({
     }));
   }
 
+  function updateLanguage(index: number, patch: Partial<CvLanguageEntry>) {
+    setContent((current) => ({
+      ...current,
+      languages: current.languages.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)),
+    }));
+  }
+
+  function updatePublication(index: number, patch: Partial<CvPublicationEntry>) {
+    setContent((current) => ({
+      ...current,
+      publications: current.publications.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)),
+    }));
+  }
+
+  function updateCustomSection(index: number, patch: Partial<CvCustomSection>) {
+    setContent((current) => ({
+      ...current,
+      customSections: current.customSections.map((row, rowIndex) => (rowIndex === index ? { ...row, ...patch } : row)),
+    }));
+  }
+
+  function addSkill() {
+    const value = skillInput.trim();
+    if (!value || content.skills.includes(value)) {
+      setSkillInput("");
+      return;
+    }
+    setContent((current) => ({ ...current, skills: [...current.skills, value] }));
+    setSkillInput("");
+  }
+  function removeSkill(skill: string) {
+    setContent((current) => ({ ...current, skills: current.skills.filter((s) => s !== skill) }));
+  }
+
   function addAchievement() {
     const parts = [builder.action.trim(), builder.outcome.trim(), builder.metric.trim()].filter(Boolean);
     if (!parts.length) return;
@@ -206,6 +384,9 @@ export function ResumeEditor({
 
   const currentVersion = versions.find((v) => v.id === documentId);
   const nearestDeadline = upcomingJds[0] ? urgency(upcomingJds[0].apply_by_deadline) : null;
+
+  const pillTriggerClass = (open: boolean, activeTone = "border-[#334155] text-slate-300 hover:border-slate-600") =>
+    `flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${open ? "border-[#4f46e5] bg-[#1e293b] text-white" : `bg-[#1e293b] ${activeTone}`}`;
 
   return (
     <div className="space-y-4">
@@ -303,11 +484,9 @@ export function ResumeEditor({
             align="right"
             panelClassName="w-72 space-y-2.5 p-3.5"
             trigger={(open) => (
-              <span
-                title="Original CV File"
-                className={`flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#4f46e5] text-white" : "border-[#334155] text-slate-400 hover:text-slate-200"}`}
-              >
-                <OpsIcon name="upload" size={14} />
+              <span className={pillTriggerClass(open)}>
+                <OpsIcon name="upload" size={13} />
+                <span>Upload</span>
               </span>
             )}
           >
@@ -348,11 +527,9 @@ export function ResumeEditor({
               align="right"
               panelClassName="w-80 space-y-2.5 p-3.5"
               trigger={(open) => (
-                <span
-                  title="JD Keyword Fit Score"
-                  className={`flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#4f46e5] text-white" : "border-[#334155] text-slate-400 hover:text-slate-200"}`}
-                >
-                  <OpsIcon name="sparkles" size={14} />
+                <span className={pillTriggerClass(open)}>
+                  <OpsIcon name="sparkles" size={13} />
+                  <span>JD Fit{content.jdFit ? ` · ${content.jdFit.score}%` : ""}</span>
                 </span>
               )}
             >
@@ -408,14 +585,10 @@ export function ResumeEditor({
             align="right"
             panelClassName="w-72 space-y-2.5 p-3.5"
             trigger={(open) => (
-              <span
-                title="Application Deadlines"
-                className={`relative flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#4f46e5] text-white" : "border-[#334155] text-slate-400 hover:text-slate-200"}`}
-              >
-                <OpsIcon name="clock" size={14} />
-                {nearestDeadline && (
-                  <span className="absolute -right-1 -top-1 size-2 rounded-full bg-amber-400" />
-                )}
+              <span className={pillTriggerClass(open)}>
+                <OpsIcon name="clock" size={13} />
+                <span>Deadlines</span>
+                {nearestDeadline && <span className="size-1.5 rounded-full bg-amber-400" />}
               </span>
             )}
           >
@@ -443,14 +616,9 @@ export function ResumeEditor({
               align="right"
               panelClassName="w-80 space-y-2.5 p-3.5"
               trigger={(open) => (
-                <span
-                  title={`Review Remarks (${comments.length})`}
-                  className={`relative flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#4f46e5] text-white" : "border-amber-700 bg-amber-950/40 text-amber-400 hover:text-amber-300"}`}
-                >
-                  <OpsIcon name="message-square" size={14} />
-                  <span className="absolute -right-1.5 -top-1.5 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold text-amber-950">
-                    {comments.length}
-                  </span>
+                <span className={pillTriggerClass(open, "border-amber-700 text-amber-400 hover:text-amber-300")}>
+                  <OpsIcon name="message-square" size={13} />
+                  <span>Remarks · {comments.length}</span>
                 </span>
               )}
             >
@@ -498,11 +666,9 @@ export function ResumeEditor({
             align="right"
             panelClassName="w-96 p-3.5"
             trigger={(open) => (
-              <span
-                title="AI Resume Assistant"
-                className={`flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#6366f1] bg-[#1e293b] text-white" : "border-[#4f46e5] bg-[#1e1b4b] text-[#a5b4fc] hover:text-white"}`}
-              >
-                <OpsIcon name="sparkles" size={14} />
+              <span className={pillTriggerClass(open, "border-[#4f46e5] text-[#a5b4fc] hover:text-white")}>
+                <OpsIcon name="sparkles" size={13} />
+                <span>AI Assistant</span>
               </span>
             )}
           >
@@ -547,17 +713,28 @@ export function ResumeEditor({
             <OpsIcon name="eye" size={14} />
           </Link>
 
-          <select
-            value={templateId}
-            onChange={(event) => setTemplateId(normalizeCvTemplateId(event.target.value))}
-            className="rounded-full border border-[#334155] bg-[#1e293b] px-3 py-1.5 text-xs font-medium text-white outline-none focus:border-[#6366f1]"
-          >
-            {CV_TEMPLATES.map((template) => (
-              <option key={template.id} value={template.id}>
-                {template.name}
-              </option>
-            ))}
-          </select>
+          {/* Template gallery */}
+          <div className="flex items-center gap-1 rounded-full bg-[#1e293b] p-1">
+            {CV_TEMPLATES.map((template, i) => {
+              const dotColors = ["#6366f1", "#3b82f6", "#f59e0b"];
+              const selected = template.id === templateId;
+              return (
+                <button
+                  key={template.id}
+                  type="button"
+                  onClick={() => setTemplateId(template.id)}
+                  className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "bg-[#6366f1] text-white" : "text-slate-300 hover:bg-[rgba(255,255,255,0.06)]"}`}
+                >
+                  <span className="size-1.5 shrink-0 rounded-full" style={{ background: selected ? "white" : dotColors[i % dotColors.length] }} />
+                  {template.name}
+                </button>
+              );
+            })}
+            <span title="More templates coming soon" className="flex shrink-0 cursor-not-allowed items-center gap-1 whitespace-nowrap px-2.5 py-1.5 text-xs text-slate-600">
+              <OpsIcon name="plus" size={11} />
+              Browse
+            </span>
+          </div>
 
           <ResumeExportButtons fileName={content.personalInfo.name || content.title} content={content} templateId={templateId} />
           <form action={saveCvDocument}>
@@ -579,21 +756,43 @@ export function ResumeEditor({
       <div className="overflow-hidden rounded-lg border border-[#334155] bg-[#080f21] lg:flex lg:items-stretch">
         {/* Icon rail */}
         <div className="flex shrink-0 flex-row gap-1 border-b border-[#1e293b] bg-[#030507] p-2 lg:w-[46px] lg:flex-col lg:border-b-0 lg:border-r lg:py-4">
-          {RAIL_SECTIONS.map((section) => (
-            <button
-              key={section.key}
-              type="button"
-              title={section.label}
-              onClick={() => scrollToSection(section.key)}
-              className="relative flex size-[38px] items-center justify-center rounded-lg text-[#4e6280] transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-[#94a3b8]"
-            >
-              <OpsIcon name={section.icon} size={17} />
-            </button>
-          ))}
+          {RAIL_SECTIONS.map((section) => {
+            const matchesFilter = !sectionFilter.trim() || section.label.toLowerCase().includes(sectionFilter.trim().toLowerCase());
+            const isHidden = section.toggleable && content.hiddenSections.includes(section.key);
+            return (
+              <button
+                key={section.key}
+                type="button"
+                title={section.label}
+                onClick={() => scrollToSection(section.key)}
+                className={`relative flex size-[38px] items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-[#94a3b8] ${matchesFilter ? "text-[#4e6280]" : "text-[#2a3648] opacity-40"} ${isHidden ? "opacity-40" : ""}`}
+              >
+                <OpsIcon name={section.icon} size={17} />
+              </button>
+            );
+          })}
         </div>
 
         {/* Form column */}
         <div className="min-w-0 flex-1 space-y-4 p-4 lg:max-h-[calc(100vh-180px)] lg:max-w-[420px] lg:flex-none lg:overflow-y-auto lg:border-r lg:border-[#1e293b] lg:p-5">
+          {/* Search + expand/collapse */}
+          <div className="space-y-2">
+            <div className="relative">
+              <OpsIcon name="search" size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
+              <input
+                value={sectionFilter}
+                onChange={(event) => setSectionFilter(event.target.value)}
+                placeholder="Search sections…"
+                className={`${inputClass} pl-8`}
+              />
+            </div>
+            <div className="flex items-center gap-2 text-[11px] text-slate-400">
+              <button type="button" onClick={expandAll} className="hover:text-slate-200">Expand all</button>
+              <span className="text-slate-700">·</span>
+              <button type="button" onClick={collapseAll} className="hover:text-slate-200">Collapse all</button>
+            </div>
+          </div>
+
           {/* Personal Details */}
           <section
             ref={(el) => {
@@ -605,12 +804,23 @@ export function ResumeEditor({
               Personal &amp; Contact Header
             </h2>
             <div className="grid gap-3 sm:grid-cols-2">
-              <div>
+              <div className="sm:col-span-2">
                 <label className={labelClass}>Full Candidate Name</label>
                 <input
                   data-field={resumeFieldKey({ section: "personal", field: "name" })}
                   value={content.personalInfo.name}
                   onChange={(event) => updatePersonal("name", event.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className={labelClass}>Resume Headline</label>
+                <input
+                  data-field={resumeFieldKey({ section: "personal", field: "headline" })}
+                  value={content.personalInfo.headline}
+                  onChange={(event) => updatePersonal("headline", event.target.value.slice(0, 80))}
+                  placeholder="Senior PM | Fintech · Growth | 0→1 (80 chars max)"
+                  maxLength={80}
                   className={inputClass}
                 />
               </div>
@@ -633,11 +843,21 @@ export function ResumeEditor({
                 />
               </div>
               <div>
-                <label className={labelClass}>LinkedIn / Portfolio URL</label>
+                <label className={labelClass}>LinkedIn</label>
                 <input
                   data-field={resumeFieldKey({ section: "personal", field: "linkedin" })}
                   value={content.personalInfo.linkedin}
                   onChange={(event) => updatePersonal("linkedin", event.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Website / Portfolio</label>
+                <input
+                  data-field={resumeFieldKey({ section: "personal", field: "website" })}
+                  value={content.personalInfo.website}
+                  onChange={(event) => updatePersonal("website", event.target.value)}
+                  placeholder="github.com/yourname or yourname.dev"
                   className={inputClass}
                 />
               </div>
@@ -647,6 +867,33 @@ export function ResumeEditor({
                   data-field={resumeFieldKey({ section: "personal", field: "location" })}
                   value={content.personalInfo.location}
                   onChange={(event) => updatePersonal("location", event.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Total Experience</label>
+                <input
+                  value={content.personalInfo.totalExperience}
+                  onChange={(event) => updatePersonal("totalExperience", event.target.value)}
+                  placeholder="e.g. 6 Years"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Date of Birth (optional)</label>
+                <input
+                  value={content.personalInfo.dateOfBirth}
+                  onChange={(event) => updatePersonal("dateOfBirth", event.target.value)}
+                  placeholder="e.g. 15 Aug 1995"
+                  className={inputClass}
+                />
+              </div>
+              <div>
+                <label className={labelClass}>Gender (optional)</label>
+                <input
+                  value={content.personalInfo.gender}
+                  onChange={(event) => updatePersonal("gender", event.target.value)}
+                  placeholder="e.g. Male / Female"
                   className={inputClass}
                 />
               </div>
@@ -669,26 +916,19 @@ export function ResumeEditor({
               if (el) sectionRefs.current.set("academics", el);
             }}
           >
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-                Academic Record Entries
-              </h2>
-              <button
-                type="button"
-                onClick={() =>
-                  setContent((c) => ({
-                    ...c,
-                    academics: [
-                      ...c.academics,
-                      { id: newId("acad"), course: "", institute: "", year: "", result: "" },
-                    ],
-                  }))
-                }
-                className={addButtonClass}
-              >
-                + Add Row
-              </button>
-            </div>
+            <SectionHeader
+              title="Academic Record Entries"
+              onAdd={() =>
+                setContent((c) => ({
+                  ...c,
+                  academics: [
+                    ...c.academics,
+                    { id: newId("acad"), course: "", institute: "", year: "", result: "" },
+                  ],
+                }))
+              }
+              addLabel="+ Add Row"
+            />
             {content.academics.map((row, index) => (
               <details
                 key={row.id}
@@ -749,32 +989,61 @@ export function ResumeEditor({
             ))}
           </section>
 
+          {/* Skills */}
+          <section
+            ref={(el) => {
+              if (el) sectionRefs.current.set("skills", el);
+            }}
+          >
+            <SectionHeader title="Skills" sectionKey="skills" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
+            <div className={cardClass}>
+              <div className="mb-2 flex flex-wrap gap-1.5">
+                {content.skills.map((skill) => (
+                  <span key={skill} className="flex items-center gap-1 rounded-full border border-[#334155] bg-[#1e293b] px-2.5 py-1 text-xs text-slate-200">
+                    {skill}
+                    <button type="button" onClick={() => removeSkill(skill)} className="text-slate-500 hover:text-red-400">
+                      <OpsIcon name="x" size={10} />
+                    </button>
+                  </span>
+                ))}
+                {content.skills.length === 0 && <p className="text-xs text-slate-500">No skills added yet.</p>}
+              </div>
+              <div className="flex gap-2">
+                <input
+                  data-field={resumeFieldKey({ section: "skills", field: "skills" })}
+                  value={skillInput}
+                  onChange={(event) => setSkillInput(event.target.value)}
+                  onKeyDown={(event) => { if (event.key === "Enter") { event.preventDefault(); addSkill(); } }}
+                  placeholder="Type a skill and press Enter"
+                  className={inputClass}
+                />
+                <button type="button" onClick={addSkill} className={addButtonClass}>Add</button>
+              </div>
+            </div>
+          </section>
+
           {/* Experience & Internships */}
           <section
             ref={(el) => {
               if (el) sectionRefs.current.set("experience", el);
             }}
           >
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-                Internships &amp; Professional Experience
-              </h2>
-              <button
-                type="button"
-                onClick={() =>
-                  setContent((c) => ({
-                    ...c,
-                    experience: [
-                      ...c.experience,
-                      { id: newId("exp"), company: "", role: "", period: "", bullets: [] },
-                    ],
-                  }))
-                }
-                className={addButtonClass}
-              >
-                + Add Experience
-              </button>
-            </div>
+            <SectionHeader
+              title="Internships & Professional Experience"
+              sectionKey="experience"
+              hiddenSections={content.hiddenSections}
+              onToggleHidden={toggleSectionHidden}
+              onAdd={() =>
+                setContent((c) => ({
+                  ...c,
+                  experience: [
+                    ...c.experience,
+                    { id: newId("exp"), company: "", role: "", period: "", bullets: [] },
+                  ],
+                }))
+              }
+              addLabel="+ Add Experience"
+            />
             {content.experience.map((entry, index) => (
               <details
                 key={entry.id}
@@ -786,6 +1055,8 @@ export function ResumeEditor({
               >
                 <EntryHeader
                   title={entry.company || `Experience #${index + 1}`}
+                  onMoveUp={index > 0 ? () => setContent((c) => ({ ...c, experience: moveArrayItem(c.experience, index, -1) })) : undefined}
+                  onMoveDown={index < content.experience.length - 1 ? () => setContent((c) => ({ ...c, experience: moveArrayItem(c.experience, index, 1) })) : undefined}
                   onRemove={() =>
                     setContent((c) => ({
                       ...c,
@@ -841,32 +1112,118 @@ export function ResumeEditor({
             ))}
           </section>
 
+          {/* Positions of Responsibility */}
+          <section
+            ref={(el) => {
+              if (el) sectionRefs.current.set("positions", el);
+            }}
+          >
+            <SectionHeader
+              title="Positions of Responsibility"
+              sectionKey="positions"
+              hiddenSections={content.hiddenSections}
+              onToggleHidden={toggleSectionHidden}
+              onAdd={() =>
+                setContent((c) => ({
+                  ...c,
+                  positions: [
+                    ...c.positions,
+                    { id: newId("pos"), company: "", role: "", period: "", bullets: [] },
+                  ],
+                }))
+              }
+              addLabel="+ Add Position"
+            />
+            {content.positions.map((entry, index) => (
+              <details
+                key={entry.id}
+                ref={(el) => {
+                  if (el) detailsRefs.current.set(entry.id, el);
+                  else detailsRefs.current.delete(entry.id);
+                }}
+                className={entryCardClass}
+              >
+                <EntryHeader
+                  title={entry.role || `Position #${index + 1}`}
+                  onMoveUp={index > 0 ? () => setContent((c) => ({ ...c, positions: moveArrayItem(c.positions, index, -1) })) : undefined}
+                  onMoveDown={index < content.positions.length - 1 ? () => setContent((c) => ({ ...c, positions: moveArrayItem(c.positions, index, 1) })) : undefined}
+                  onRemove={() =>
+                    setContent((c) => ({
+                      ...c,
+                      positions: c.positions.filter((_, i) => i !== index),
+                    }))
+                  }
+                />
+                <div className="space-y-3 border-t border-[#334155] p-3">
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div>
+                      <label className={labelClass}>Organization / Club</label>
+                      <input
+                        data-field={resumeFieldKey({ section: "positions", entryId: entry.id, field: "company" })}
+                        value={entry.company}
+                        onChange={(e) => updateExperience("positions", index, { company: e.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Position / Role</label>
+                      <input
+                        value={entry.role}
+                        onChange={(e) => updateExperience("positions", index, { role: e.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+                    <div>
+                      <label className={labelClass}>Duration / Period</label>
+                      <input
+                        data-field={resumeFieldKey({ section: "positions", entryId: entry.id, field: "period" })}
+                        value={entry.period}
+                        onChange={(e) => updateExperience("positions", index, { period: e.target.value })}
+                        className={inputClass}
+                      />
+                    </div>
+                  </div>
+                  <div>
+                    <label className={labelClass}>Bullets (one line per bullet)</label>
+                    <textarea
+                      data-field={resumeFieldKey({ section: "positions", entryId: entry.id, field: "bullets" })}
+                      value={entry.bullets.map((b) => b.text).join("\n")}
+                      onChange={(e) =>
+                        updateExperience("positions", index, {
+                          bullets: linesToBullets(e.target.value, entry.bullets, "pos-b"),
+                        })
+                      }
+                      rows={3}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              </details>
+            ))}
+          </section>
+
           {/* Academic & Live Projects */}
           <section
             ref={(el) => {
               if (el) sectionRefs.current.set("projects", el);
             }}
           >
-            <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-                Key Academic &amp; Industry Projects
-              </h2>
-              <button
-                type="button"
-                onClick={() =>
-                  setContent((c) => ({
-                    ...c,
-                    projects: [
-                      ...c.projects,
-                      { id: newId("proj"), name: "", role: "", period: "", link: "", bullets: [] },
-                    ],
-                  }))
-                }
-                className={addButtonClass}
-              >
-                + Add Project
-              </button>
-            </div>
+            <SectionHeader
+              title="Key Academic & Industry Projects"
+              sectionKey="projects"
+              hiddenSections={content.hiddenSections}
+              onToggleHidden={toggleSectionHidden}
+              onAdd={() =>
+                setContent((c) => ({
+                  ...c,
+                  projects: [
+                    ...c.projects,
+                    { id: newId("proj"), name: "", role: "", period: "", link: "", bullets: [] },
+                  ],
+                }))
+              }
+              addLabel="+ Add Project"
+            />
             {content.projects.map((entry, index) => (
               <details
                 key={entry.id}
@@ -878,6 +1235,8 @@ export function ResumeEditor({
               >
                 <EntryHeader
                   title={entry.name || `Project #${index + 1}`}
+                  onMoveUp={index > 0 ? () => setContent((c) => ({ ...c, projects: moveArrayItem(c.projects, index, -1) })) : undefined}
+                  onMoveDown={index < content.projects.length - 1 ? () => setContent((c) => ({ ...c, projects: moveArrayItem(c.projects, index, 1) })) : undefined}
                   onRemove={() =>
                     setContent((c) => ({
                       ...c,
@@ -924,6 +1283,225 @@ export function ResumeEditor({
                           bullets: linesToBullets(e.target.value, entry.bullets, "proj-b"),
                         })
                       }
+                      rows={3}
+                      className={inputClass}
+                    />
+                  </div>
+                </div>
+              </details>
+            ))}
+          </section>
+
+          {/* Languages */}
+          <section
+            ref={(el) => {
+              if (el) sectionRefs.current.set("languages", el);
+            }}
+          >
+            <SectionHeader
+              title="Languages"
+              sectionKey="languages"
+              hiddenSections={content.hiddenSections}
+              onToggleHidden={toggleSectionHidden}
+              onAdd={() => setContent((c) => ({ ...c, languages: [...c.languages, { id: newId("lang"), name: "", level: "" }] }))}
+              addLabel="+ Add"
+            />
+            <div className="space-y-2">
+              {content.languages.map((row, index) => (
+                <div key={row.id} className="flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1e293b] p-2.5">
+                  <input
+                    data-field={index === 0 ? resumeFieldKey({ section: "languages", field: "languages" }) : undefined}
+                    value={row.name}
+                    onChange={(e) => updateLanguage(index, { name: e.target.value })}
+                    placeholder="Language"
+                    className={inputClass}
+                  />
+                  <select
+                    value={row.level}
+                    onChange={(e) => updateLanguage(index, { level: e.target.value })}
+                    className="w-36 shrink-0 rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-[13px] text-slate-200"
+                  >
+                    <option value="">Level</option>
+                    <option>Basic</option>
+                    <option>Conversational</option>
+                    <option>Fluent</option>
+                    <option>Native</option>
+                  </select>
+                  <button
+                    type="button"
+                    onClick={() => setContent((c) => ({ ...c, languages: c.languages.filter((_, i) => i !== index) }))}
+                    className="shrink-0 text-[#ef4444] hover:text-red-300"
+                  >
+                    <OpsIcon name="x" size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          {/* Certifications */}
+          <section
+            ref={(el) => {
+              if (el) sectionRefs.current.set("certifications", el);
+            }}
+          >
+            <SectionHeader title="Certifications" sectionKey="certifications" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
+            <StringListEditor
+              items={content.certifications}
+              onChange={(items) => setContent((c) => ({ ...c, certifications: items }))}
+              placeholder="e.g. Google Data Analytics"
+            />
+          </section>
+
+          {/* Awards */}
+          <section
+            ref={(el) => {
+              if (el) sectionRefs.current.set("awards", el);
+            }}
+          >
+            <SectionHeader title="Awards & Achievements" sectionKey="awards" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
+            <StringListEditor
+              items={content.awards}
+              onChange={(items) => setContent((c) => ({ ...c, awards: items }))}
+              placeholder="e.g. Dean's List, 2024"
+            />
+          </section>
+
+          {/* Activities */}
+          <section
+            ref={(el) => {
+              if (el) sectionRefs.current.set("activities", el);
+            }}
+          >
+            <SectionHeader title="Extracurricular Activities" sectionKey="activities" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
+            <StringListEditor
+              items={content.activities}
+              onChange={(items) => setContent((c) => ({ ...c, activities: items }))}
+              placeholder="e.g. Captain, college football team"
+            />
+          </section>
+
+          {/* Hobbies */}
+          <section
+            ref={(el) => {
+              if (el) sectionRefs.current.set("hobbies", el);
+            }}
+          >
+            <SectionHeader title="Hobbies & Interests" sectionKey="hobbies" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
+            <StringListEditor
+              items={content.hobbies}
+              onChange={(items) => setContent((c) => ({ ...c, hobbies: items }))}
+              placeholder="e.g. Chess, Long-distance running"
+            />
+          </section>
+
+          {/* Publications */}
+          <section
+            ref={(el) => {
+              if (el) sectionRefs.current.set("publications", el);
+            }}
+          >
+            <SectionHeader
+              title="Publications"
+              sectionKey="publications"
+              hiddenSections={content.hiddenSections}
+              onToggleHidden={toggleSectionHidden}
+              onAdd={() =>
+                setContent((c) => ({
+                  ...c,
+                  publications: [...c.publications, { id: newId("pub"), title: "", publisher: "", date: "", link: "" }],
+                }))
+              }
+              addLabel="+ Add"
+            />
+            {content.publications.map((row, index) => (
+              <details
+                key={row.id}
+                ref={(el) => {
+                  if (el) detailsRefs.current.set(row.id, el);
+                  else detailsRefs.current.delete(row.id);
+                }}
+                className={entryCardClass}
+              >
+                <EntryHeader
+                  title={row.title || `Publication #${index + 1}`}
+                  onRemove={() => setContent((c) => ({ ...c, publications: c.publications.filter((_, i) => i !== index) }))}
+                />
+                <div className="grid gap-3 border-t border-[#334155] p-3 sm:grid-cols-2">
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>Title</label>
+                    <input
+                      data-field={resumeFieldKey({ section: "publications", entryId: row.id, field: "title" })}
+                      value={row.title}
+                      onChange={(e) => updatePublication(index, { title: e.target.value })}
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Publisher / Journal</label>
+                    <input value={row.publisher} onChange={(e) => updatePublication(index, { publisher: e.target.value })} className={inputClass} />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Date</label>
+                    <input value={row.date} onChange={(e) => updatePublication(index, { date: e.target.value })} className={inputClass} />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className={labelClass}>Link (optional)</label>
+                    <input value={row.link} onChange={(e) => updatePublication(index, { link: e.target.value })} className={inputClass} />
+                  </div>
+                </div>
+              </details>
+            ))}
+          </section>
+
+          {/* Custom Sections */}
+          <section
+            ref={(el) => {
+              if (el) sectionRefs.current.set("customSections", el);
+            }}
+          >
+            <SectionHeader
+              title="Custom Sections"
+              sectionKey="customSections"
+              hiddenSections={content.hiddenSections}
+              onToggleHidden={toggleSectionHidden}
+              onAdd={() =>
+                setContent((c) => ({
+                  ...c,
+                  customSections: [...c.customSections, { id: newId("custom"), title: "", items: [] }],
+                }))
+              }
+              addLabel="+ Add Section"
+            />
+            {content.customSections.map((section, index) => (
+              <details
+                key={section.id}
+                ref={(el) => {
+                  if (el) detailsRefs.current.set(section.id, el);
+                  else detailsRefs.current.delete(section.id);
+                }}
+                className={entryCardClass}
+              >
+                <EntryHeader
+                  title={section.title || `Custom Section #${index + 1}`}
+                  onRemove={() => setContent((c) => ({ ...c, customSections: c.customSections.filter((_, i) => i !== index) }))}
+                />
+                <div className="space-y-3 border-t border-[#334155] p-3">
+                  <div>
+                    <label className={labelClass}>Section Title</label>
+                    <input
+                      value={section.title}
+                      onChange={(e) => updateCustomSection(index, { title: e.target.value })}
+                      placeholder="e.g. Volunteering"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div>
+                    <label className={labelClass}>Items (one line per item)</label>
+                    <textarea
+                      data-field={resumeFieldKey({ section: "customSections", entryId: section.id, field: "items" })}
+                      value={section.items.map((item) => item.text).join("\n")}
+                      onChange={(e) => updateCustomSection(index, { items: linesToBullets(e.target.value, section.items, "custom-item") })}
                       rows={3}
                       className={inputClass}
                     />
@@ -980,8 +1558,38 @@ export function ResumeEditor({
         </div>
 
         {/* Live Preview Canvas */}
-        <div className="flex-1 bg-[radial-gradient(circle_at_20%_20%,#151e36_0%,#0c1020_100%)] p-6 lg:max-h-[calc(100vh-180px)] lg:overflow-y-auto lg:p-8">
-          <div className="mx-auto max-w-[820px] overflow-hidden rounded shadow-[0_20px_48px_-10px_rgba(0,0,0,0.12),0_10px_20px_-5px_rgba(0,0,0,0.08)]">
+        <div
+          ref={canvasWrapperRef}
+          className="flex-1 bg-[radial-gradient(circle_at_20%_20%,#151e36_0%,#0c1020_100%)] p-6 lg:max-h-[calc(100vh-180px)] lg:overflow-y-auto lg:p-8"
+        >
+          <div className="mb-3 flex items-center justify-end gap-1.5">
+            <button
+              type="button"
+              onClick={() => setZoom((z) => Math.max(40, z - 10))}
+              className="flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
+            >
+              <OpsIcon name="minus" size={12} />
+            </button>
+            <span className="w-12 text-center font-mono text-xs text-slate-400">{zoom}%</span>
+            <button
+              type="button"
+              onClick={() => setZoom((z) => Math.min(150, z + 10))}
+              className="flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
+            >
+              <OpsIcon name="plus" size={12} />
+            </button>
+            <button
+              type="button"
+              onClick={fitZoom}
+              className="rounded-lg border border-[#334155] px-2.5 py-1 text-xs text-slate-400 hover:text-slate-200"
+            >
+              Fit
+            </button>
+          </div>
+          <div
+            style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
+            className="mx-auto max-w-[820px] overflow-hidden rounded shadow-[0_20px_48px_-10px_rgba(0,0,0,0.12),0_10px_20px_-5px_rgba(0,0,0,0.08)]"
+          >
             <ResumePreview content={content} templateId={templateId} onFieldClick={handleFieldClick} />
           </div>
         </div>

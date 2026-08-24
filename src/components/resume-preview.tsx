@@ -1,12 +1,10 @@
 import type { CvContent } from "@/types/domain";
 import { normalizeCvTemplateId, type CvTemplateId } from "@/lib/resume-templates";
 
-// Sections the editor actually has a form for — clicking a field jumps the
-// caller into the matching sidebar input. `positions`/`skills`/`certifications`/
-// `awards` have no editor UI of their own (resume-editor.tsx doesn't expose
-// them), so their preview spans stay non-interactive rather than jumping
-// somewhere that doesn't exist.
-export type ResumeFieldSection = "personal" | "academics" | "experience" | "projects";
+export type ResumeFieldSection =
+  | "personal" | "academics" | "experience" | "projects" | "positions"
+  | "skills" | "certifications" | "awards" | "languages" | "hobbies"
+  | "publications" | "activities" | "customSections";
 
 export interface ResumeFieldSpec {
   section: ResumeFieldSection;
@@ -16,7 +14,8 @@ export interface ResumeFieldSpec {
 
 // Shared with resume-editor.tsx's data-field attributes — keep in sync.
 export function resumeFieldKey(spec: ResumeFieldSpec): string {
-  return spec.section === "personal" ? `personal:${spec.field}` : `${spec.section}:${spec.entryId}:${spec.field}`;
+  if (spec.section === "personal" || !spec.entryId) return `${spec.section}:${spec.field}`;
+  return `${spec.section}:${spec.entryId}:${spec.field}`;
 }
 
 const clickZoneClass =
@@ -48,12 +47,16 @@ export function ResumePreview({
   const templateId = normalizeCvTemplateId(suppliedTemplateId);
   const compact = templateId === "compact-executive-v1";
   const modern = templateId === "modern-blue-v1";
+  const hiddenSections = content.hiddenSections ?? [];
 
   function click(spec: ResumeFieldSpec) {
     return onFieldClick ? () => onFieldClick(spec) : undefined;
   }
   function zone(spec: ResumeFieldSpec) {
     return onFieldClick ? { onClick: click(spec), className: clickZoneClass } : {};
+  }
+  function hidden(key: string) {
+    return hiddenSections.includes(key);
   }
 
   return (
@@ -65,10 +68,16 @@ export function ResumePreview({
         >
           {personalInfo.name || "Your name"}
         </h1>
+        {personalInfo.headline && (
+          <p {...zone({ section: "personal", field: "headline" })} className={`mt-0.5 text-[11px] font-medium ${modern ? "text-blue-100" : "text-slate-600"} ${zone({ section: "personal", field: "headline" }).className ?? ""}`}>
+            {personalInfo.headline}
+          </p>
+        )}
         <p className={`mt-1 flex flex-wrap justify-center gap-x-2 text-[11px] ${modern ? "text-blue-100" : "text-slate-600"} ${compact ? "justify-start" : ""}`}>
           {personalInfo.phone && <span {...zone({ section: "personal", field: "phone" })}>{personalInfo.phone}</span>}
           {personalInfo.email && <span {...zone({ section: "personal", field: "email" })}>{personalInfo.email}</span>}
           {personalInfo.linkedin && <span {...zone({ section: "personal", field: "linkedin" })}>{personalInfo.linkedin}</span>}
+          {personalInfo.website && <span {...zone({ section: "personal", field: "website" })}>{personalInfo.website}</span>}
           {personalInfo.location && <span {...zone({ section: "personal", field: "location" })}>{personalInfo.location}</span>}
         </p>
         {personalInfo.summary && (
@@ -78,7 +87,7 @@ export function ResumePreview({
         )}
       </header>
 
-      {content.academics.length > 0 && (
+      {content.academics.length > 0 && !hidden("academics") && (
         <section data-resume-section="academics">
           <SectionTitle templateId={templateId}>Academic Performance Record</SectionTitle>
           <div className="space-y-1.5">
@@ -100,7 +109,53 @@ export function ResumePreview({
         </section>
       )}
 
-      {content.projects.length > 0 && (
+      {content.experience.length > 0 && !hidden("experience") && (
+        <section data-resume-section="experience">
+          <SectionTitle templateId={templateId}>Internships / Work Experience</SectionTitle>
+          {content.experience.map((row) => (
+            <div key={row.id} className="mb-3 break-inside-avoid">
+              <div className="flex justify-between gap-4">
+                <p {...zone({ section: "experience", entryId: row.id, field: "company" })}>
+                  <strong>{row.company}</strong>{row.role ? ` — ${row.role}` : ""}
+                </p>
+                <span {...zone({ section: "experience", entryId: row.id, field: "period" })} className={`shrink-0 text-slate-500 ${zone({ section: "experience", entryId: row.id, field: "period" }).className ?? ""}`}>
+                  {row.period}
+                </span>
+              </div>
+              <ul {...zone({ section: "experience", entryId: row.id, field: "bullets" })} className={`mt-1 list-disc space-y-0.5 pl-5 ${zone({ section: "experience", entryId: row.id, field: "bullets" }).className ?? ""}`}>
+                {row.bullets.filter((bullet) => bullet.text).map((bullet) => (
+                  <li key={bullet.id} data-bullet-id={bullet.id}>{bullet.text}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {content.positions.length > 0 && !hidden("positions") && (
+        <section data-resume-section="positions">
+          <SectionTitle templateId={templateId}>Positions of Responsibility</SectionTitle>
+          {content.positions.map((row) => (
+            <div key={row.id} className="mb-3 break-inside-avoid">
+              <div className="flex justify-between gap-4">
+                <p {...zone({ section: "positions", entryId: row.id, field: "company" })}>
+                  <strong>{row.role}</strong>{row.company ? ` — ${row.company}` : ""}
+                </p>
+                <span {...zone({ section: "positions", entryId: row.id, field: "period" })} className={`shrink-0 text-slate-500 ${zone({ section: "positions", entryId: row.id, field: "period" }).className ?? ""}`}>
+                  {row.period}
+                </span>
+              </div>
+              <ul {...zone({ section: "positions", entryId: row.id, field: "bullets" })} className={`mt-1 list-disc space-y-0.5 pl-5 ${zone({ section: "positions", entryId: row.id, field: "bullets" }).className ?? ""}`}>
+                {row.bullets.filter((bullet) => bullet.text).map((bullet) => (
+                  <li key={bullet.id} data-bullet-id={bullet.id}>{bullet.text}</li>
+                ))}
+              </ul>
+            </div>
+          ))}
+        </section>
+      )}
+
+      {content.projects.length > 0 && !hidden("projects") && (
         <section data-resume-section="projects">
           <SectionTitle templateId={templateId}>Projects</SectionTitle>
           {content.projects.map((row) => (
@@ -124,57 +179,28 @@ export function ResumePreview({
         </section>
       )}
 
-      {content.positions.length > 0 && (
-        <section data-resume-section="positions">
-          <SectionTitle templateId={templateId}>Positions of Responsibility</SectionTitle>
-          {content.positions.map((row) => (
-            <div key={row.id} className="mb-3 break-inside-avoid">
-              <div className="flex justify-between gap-4">
-                <p><strong>{row.role}</strong>{row.company ? ` — ${row.company}` : ""}</p>
-                <span className="shrink-0 text-slate-500">{row.period}</span>
-              </div>
-              <ul className="mt-1 list-disc space-y-0.5 pl-5">
-                {row.bullets.filter((bullet) => bullet.text).map((bullet) => (
-                  <li key={bullet.id} data-bullet-id={bullet.id}>{bullet.text}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {content.experience.length > 0 && (
-        <section data-resume-section="experience">
-          <SectionTitle templateId={templateId}>Internships / Work Experience</SectionTitle>
-          {content.experience.map((row) => (
-            <div key={row.id} className="mb-3 break-inside-avoid">
-              <div className="flex justify-between gap-4">
-                <p {...zone({ section: "experience", entryId: row.id, field: "company" })}>
-                  <strong>{row.company}</strong>{row.role ? ` — ${row.role}` : ""}
-                </p>
-                <span {...zone({ section: "experience", entryId: row.id, field: "period" })} className={`shrink-0 text-slate-500 ${zone({ section: "experience", entryId: row.id, field: "period" }).className ?? ""}`}>
-                  {row.period}
-                </span>
-              </div>
-              <ul {...zone({ section: "experience", entryId: row.id, field: "bullets" })} className={`mt-1 list-disc space-y-0.5 pl-5 ${zone({ section: "experience", entryId: row.id, field: "bullets" }).className ?? ""}`}>
-                {row.bullets.filter((bullet) => bullet.text).map((bullet) => (
-                  <li key={bullet.id} data-bullet-id={bullet.id}>{bullet.text}</li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </section>
-      )}
-
-      {content.skills.length > 0 && (
-        <section data-resume-section="skills">
+      {content.skills.length > 0 && !hidden("skills") && (
+        <section data-resume-section="skills" {...zone({ section: "skills", field: "skills" })}>
           <SectionTitle templateId={templateId}>Skills</SectionTitle>
-          <p>{content.skills.join("  •  ")}</p>
+          <div className="flex flex-wrap gap-1.5">
+            {content.skills.map((item, index) => (
+              <span key={`${item}-${index}`} className="rounded border border-slate-300 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-700">
+                {item}
+              </span>
+            ))}
+          </div>
         </section>
       )}
 
-      {content.certifications.length > 0 && (
-        <section data-resume-section="certifications">
+      {content.languages.length > 0 && !hidden("languages") && (
+        <section data-resume-section="languages" {...zone({ section: "languages", field: "languages" })}>
+          <SectionTitle templateId={templateId}>Languages</SectionTitle>
+          <p>{content.languages.map((row) => `${row.name}${row.level ? ` (${row.level})` : ""}`).join("  •  ")}</p>
+        </section>
+      )}
+
+      {content.certifications.length > 0 && !hidden("certifications") && (
+        <section data-resume-section="certifications" {...zone({ section: "certifications", field: "certifications" })}>
           <SectionTitle templateId={templateId}>Certifications</SectionTitle>
           <ul className="list-disc pl-5">
             {content.certifications.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
@@ -182,14 +208,54 @@ export function ResumePreview({
         </section>
       )}
 
-      {content.awards.length > 0 && (
-        <section data-resume-section="awards">
+      {content.awards.length > 0 && !hidden("awards") && (
+        <section data-resume-section="awards" {...zone({ section: "awards", field: "awards" })}>
           <SectionTitle templateId={templateId}>Awards &amp; Achievements</SectionTitle>
           <ul className="list-disc pl-5">
             {content.awards.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
           </ul>
         </section>
       )}
+
+      {content.activities.length > 0 && !hidden("activities") && (
+        <section data-resume-section="activities" {...zone({ section: "activities", field: "activities" })}>
+          <SectionTitle templateId={templateId}>Extracurricular Activities</SectionTitle>
+          <ul className="list-disc pl-5">
+            {content.activities.map((item, index) => <li key={`${item}-${index}`}>{item}</li>)}
+          </ul>
+        </section>
+      )}
+
+      {content.publications.length > 0 && !hidden("publications") && (
+        <section data-resume-section="publications">
+          <SectionTitle templateId={templateId}>Publications</SectionTitle>
+          {content.publications.map((row) => (
+            <div key={row.id} {...zone({ section: "publications", entryId: row.id, field: "title" })} className={`mb-1 ${zone({ section: "publications", entryId: row.id, field: "title" }).className ?? ""}`}>
+              <strong>{row.title}</strong>
+              {row.publisher ? ` — ${row.publisher}` : ""}
+              {row.date ? ` (${row.date})` : ""}
+            </div>
+          ))}
+        </section>
+      )}
+
+      {content.hobbies.length > 0 && !hidden("hobbies") && (
+        <section data-resume-section="hobbies" {...zone({ section: "hobbies", field: "hobbies" })}>
+          <SectionTitle templateId={templateId}>Hobbies &amp; Interests</SectionTitle>
+          <p>{content.hobbies.join("  •  ")}</p>
+        </section>
+      )}
+
+      {content.customSections.length > 0 && content.customSections.map((section) => (
+        !hidden(`custom:${section.id}`) && section.items.some((item) => item.text) && (
+          <section key={section.id} data-resume-section={`custom:${section.id}`}>
+            <SectionTitle templateId={templateId}>{section.title || "Additional Information"}</SectionTitle>
+            <ul {...zone({ section: "customSections", entryId: section.id, field: "items" })} className={`list-disc pl-5 ${zone({ section: "customSections", entryId: section.id, field: "items" }).className ?? ""}`}>
+              {section.items.filter((item) => item.text).map((item) => <li key={item.id}>{item.text}</li>)}
+            </ul>
+          </section>
+        )
+      ))}
     </article>
   );
 }
