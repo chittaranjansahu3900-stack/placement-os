@@ -21,6 +21,7 @@ import { OpsIcon, type OpsIconName } from "@/components/ops-icon";
 import type {
   CompanyTypePersona,
   CvAcademicEntry,
+  CvBullet,
   CvContent,
   CvCustomSection,
   CvDocument,
@@ -70,11 +71,133 @@ function newId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
 }
 
-function linesToBullets(value: string, current: { id: string; text: string }[], prefix: string) {
-  return value.split("\n").map((line, index) => ({
-    id: current[index]?.id ?? newId(prefix),
-    text: line,
-  }));
+const BULLET_MAX = 220;
+
+// Wraps the current selection in a bullet <input> with markdown-lite markers
+// — shared syntax with renderFormattedText() in resume-preview.tsx.
+function wrapSelection(input: HTMLInputElement, value: string, marker: string) {
+  const start = input.selectionStart ?? value.length;
+  const end = input.selectionEnd ?? value.length;
+  const selected = value.slice(start, end) || "text";
+  const next = value.slice(0, start) + marker + selected + marker + value.slice(end);
+  return { next, selStart: start + marker.length, selEnd: start + marker.length + selected.length };
+}
+
+function BulletRow({
+  bullet, onChange, onRemove, dataField, documentId,
+}: {
+  bullet: CvBullet;
+  onChange: (text: string) => void;
+  onRemove: () => void;
+  dataField?: string;
+  documentId: string;
+}) {
+  const inputRef = useRef<HTMLInputElement>(null);
+  const [improving, setImproving] = useState(false);
+
+  function applyMarker(marker: string) {
+    const input = inputRef.current;
+    if (!input) return;
+    const { next, selStart, selEnd } = wrapSelection(input, bullet.text, marker);
+    onChange(next.slice(0, BULLET_MAX));
+    requestAnimationFrame(() => {
+      input.focus();
+      input.setSelectionRange(selStart, selEnd);
+    });
+  }
+
+  async function improve() {
+    if (!bullet.text.trim() || improving) return;
+    setImproving(true);
+    try {
+      const response = await fetch("/api/resume/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ purpose: "writing_assist", input: bullet.text, cvDocumentId: documentId }),
+      });
+      const payload = (await response.json()) as { output?: string };
+      if (response.ok && payload.output) onChange(payload.output.slice(0, BULLET_MAX));
+    } catch {
+      // Best-effort — matches this app's existing silent-AI-failure convention.
+    } finally {
+      setImproving(false);
+    }
+  }
+
+  return (
+    <div className="rounded-lg border border-[#334155] bg-[#0f172a] p-2">
+      <input
+        ref={inputRef}
+        data-field={dataField}
+        value={bullet.text}
+        onChange={(e) => onChange(e.target.value.slice(0, BULLET_MAX))}
+        maxLength={BULLET_MAX}
+        className={`${inputClass} mb-1.5`}
+      />
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex items-center gap-1">
+          <button type="button" title="Bold" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("**")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] font-bold text-slate-300 hover:border-slate-600">
+            B
+          </button>
+          <button type="button" title="Italic" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("_")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] italic text-slate-300 hover:border-slate-600">
+            I
+          </button>
+          <button type="button" title="Underline" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("++")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] underline text-slate-300 hover:border-slate-600">
+            U
+          </button>
+          <button type="button" title="Strikethrough" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("~~")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] line-through text-slate-300 hover:border-slate-600">
+            S
+          </button>
+          <button
+            type="button"
+            onClick={improve}
+            disabled={improving || !bullet.text.trim()}
+            className="ml-1 flex items-center gap-1 rounded-full border border-emerald-700 bg-emerald-950/40 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-900/40 disabled:opacity-40"
+          >
+            <OpsIcon name="sparkles" size={10} />
+            {improving ? "Improving…" : "Improve"}
+          </button>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <span className="font-mono text-[10px] text-slate-500">{bullet.text.length}/{BULLET_MAX}</span>
+          <button type="button" onClick={onRemove} className="text-[#ef4444] hover:text-red-300">
+            <OpsIcon name="x" size={12} />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BulletEditor({
+  bullets, onChange, dataFieldBase, documentId,
+}: {
+  bullets: CvBullet[];
+  onChange: (bullets: CvBullet[]) => void;
+  dataFieldBase?: string;
+  documentId: string;
+}) {
+  return (
+    <div className="space-y-2">
+      {bullets.map((bullet, index) => (
+        <BulletRow
+          key={bullet.id}
+          bullet={bullet}
+          documentId={documentId}
+          dataField={index === 0 ? dataFieldBase : undefined}
+          onChange={(text) => onChange(bullets.map((b, i) => (i === index ? { ...b, text } : b)))}
+          onRemove={() => onChange(bullets.filter((_, i) => i !== index))}
+        />
+      ))}
+      <button
+        type="button"
+        onClick={() => onChange([...bullets, { id: newId("bullet"), text: "" }])}
+        className={addButtonClass}
+      >
+        + Add bullet
+      </button>
+    </div>
+  );
 }
 
 // Matches src/lib/resume.ts's DEFAULT_SECTION_ORDER plus the two fixed
@@ -1123,17 +1246,12 @@ export function ResumeEditor({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Achievement Bullets (one line per bullet)</label>
-                    <textarea
-                      data-field={resumeFieldKey({ section: "experience", entryId: entry.id, field: "bullets" })}
-                      value={entry.bullets.map((b) => b.text).join("\n")}
-                      onChange={(e) =>
-                        updateExperience("experience", index, {
-                          bullets: linesToBullets(e.target.value, entry.bullets, "bullet"),
-                        })
-                      }
-                      rows={4}
-                      className={inputClass}
+                    <label className={labelClass}>Achievement Bullets</label>
+                    <BulletEditor
+                      bullets={entry.bullets}
+                      documentId={documentId}
+                      dataFieldBase={resumeFieldKey({ section: "experience", entryId: entry.id, field: "bullets" })}
+                      onChange={(bullets) => updateExperience("experience", index, { bullets })}
                     />
                   </div>
                 </div>
@@ -1213,17 +1331,12 @@ export function ResumeEditor({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Bullets (one line per bullet)</label>
-                    <textarea
-                      data-field={resumeFieldKey({ section: "positions", entryId: entry.id, field: "bullets" })}
-                      value={entry.bullets.map((b) => b.text).join("\n")}
-                      onChange={(e) =>
-                        updateExperience("positions", index, {
-                          bullets: linesToBullets(e.target.value, entry.bullets, "pos-b"),
-                        })
-                      }
-                      rows={3}
-                      className={inputClass}
+                    <label className={labelClass}>Bullets</label>
+                    <BulletEditor
+                      bullets={entry.bullets}
+                      documentId={documentId}
+                      dataFieldBase={resumeFieldKey({ section: "positions", entryId: entry.id, field: "bullets" })}
+                      onChange={(bullets) => updateExperience("positions", index, { bullets })}
                     />
                   </div>
                 </div>
@@ -1303,17 +1416,12 @@ export function ResumeEditor({
                     </div>
                   </div>
                   <div>
-                    <label className={labelClass}>Project Bullets (one line per bullet)</label>
-                    <textarea
-                      data-field={resumeFieldKey({ section: "projects", entryId: entry.id, field: "bullets" })}
-                      value={entry.bullets.map((b) => b.text).join("\n")}
-                      onChange={(e) =>
-                        updateProject(index, {
-                          bullets: linesToBullets(e.target.value, entry.bullets, "proj-b"),
-                        })
-                      }
-                      rows={3}
-                      className={inputClass}
+                    <label className={labelClass}>Project Bullets</label>
+                    <BulletEditor
+                      bullets={entry.bullets}
+                      documentId={documentId}
+                      dataFieldBase={resumeFieldKey({ section: "projects", entryId: entry.id, field: "bullets" })}
+                      onChange={(bullets) => updateProject(index, { bullets })}
                     />
                   </div>
                 </div>
@@ -1526,13 +1634,12 @@ export function ResumeEditor({
                     />
                   </div>
                   <div>
-                    <label className={labelClass}>Items (one line per item)</label>
-                    <textarea
-                      data-field={resumeFieldKey({ section: "customSections", entryId: section.id, field: "items" })}
-                      value={section.items.map((item) => item.text).join("\n")}
-                      onChange={(e) => updateCustomSection(index, { items: linesToBullets(e.target.value, section.items, "custom-item") })}
-                      rows={3}
-                      className={inputClass}
+                    <label className={labelClass}>Items</label>
+                    <BulletEditor
+                      bullets={section.items}
+                      documentId={documentId}
+                      dataFieldBase={resumeFieldKey({ section: "customSections", entryId: section.id, field: "items" })}
+                      onChange={(items) => updateCustomSection(index, { items })}
                     />
                   </div>
                 </div>

@@ -1,5 +1,28 @@
+import type { ReactNode } from "react";
 import type { CvContent } from "@/types/domain";
 import { normalizeCvTemplateId, type CvTemplateId } from "@/lib/resume-templates";
+
+// Small markdown-lite dialect for bullet text: **bold**, _italic_,
+// ~~strikethrough~~, ++underline++ (not standard markdown — there's no
+// widely-agreed underline syntax, this app picks one). Shared with the
+// formatting toolbar in resume-editor.tsx's BulletRow — keep markers in sync.
+export function renderFormattedText(text: string): ReactNode[] {
+  const pattern = /\*\*(.+?)\*\*|_(.+?)_|~~(.+?)~~|\+\+(.+?)\+\+/g;
+  const nodes: ReactNode[] = [];
+  let lastIndex = 0;
+  let key = 0;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(text))) {
+    if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index));
+    if (match[1] !== undefined) nodes.push(<strong key={key++}>{match[1]}</strong>);
+    else if (match[2] !== undefined) nodes.push(<em key={key++}>{match[2]}</em>);
+    else if (match[3] !== undefined) nodes.push(<s key={key++}>{match[3]}</s>);
+    else if (match[4] !== undefined) nodes.push(<u key={key++}>{match[4]}</u>);
+    lastIndex = pattern.lastIndex;
+  }
+  if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+  return nodes;
+}
 
 export type ResumeFieldSection =
   | "personal" | "academics" | "experience" | "projects" | "positions"
@@ -124,7 +147,7 @@ export function ResumePreview({
               </div>
               <ul {...zone({ section: "experience", entryId: row.id, field: "bullets" })} className={`mt-1 list-disc space-y-0.5 pl-5 ${zone({ section: "experience", entryId: row.id, field: "bullets" }).className ?? ""}`}>
                 {row.bullets.filter((bullet) => bullet.text).map((bullet) => (
-                  <li key={bullet.id} data-bullet-id={bullet.id}>{bullet.text}</li>
+                  <li key={bullet.id} data-bullet-id={bullet.id}>{renderFormattedText(bullet.text)}</li>
                 ))}
               </ul>
             </div>
@@ -147,7 +170,7 @@ export function ResumePreview({
               </div>
               <ul {...zone({ section: "positions", entryId: row.id, field: "bullets" })} className={`mt-1 list-disc space-y-0.5 pl-5 ${zone({ section: "positions", entryId: row.id, field: "bullets" }).className ?? ""}`}>
                 {row.bullets.filter((bullet) => bullet.text).map((bullet) => (
-                  <li key={bullet.id} data-bullet-id={bullet.id}>{bullet.text}</li>
+                  <li key={bullet.id} data-bullet-id={bullet.id}>{renderFormattedText(bullet.text)}</li>
                 ))}
               </ul>
             </div>
@@ -171,7 +194,7 @@ export function ResumePreview({
               {row.link && <p className="text-[10px] text-slate-500">{row.link}</p>}
               <ul {...zone({ section: "projects", entryId: row.id, field: "bullets" })} className={`mt-1 list-disc space-y-0.5 pl-5 ${zone({ section: "projects", entryId: row.id, field: "bullets" }).className ?? ""}`}>
                 {row.bullets.filter((bullet) => bullet.text).map((bullet) => (
-                  <li key={bullet.id} data-bullet-id={bullet.id}>{bullet.text}</li>
+                  <li key={bullet.id} data-bullet-id={bullet.id}>{renderFormattedText(bullet.text)}</li>
                 ))}
               </ul>
             </div>
@@ -251,7 +274,7 @@ export function ResumePreview({
           <section key={section.id} data-resume-section={`custom:${section.id}`}>
             <SectionTitle templateId={templateId}>{section.title || "Additional Information"}</SectionTitle>
             <ul {...zone({ section: "customSections", entryId: section.id, field: "items" })} className={`list-disc pl-5 ${zone({ section: "customSections", entryId: section.id, field: "items" }).className ?? ""}`}>
-              {section.items.filter((item) => item.text).map((item) => <li key={item.id}>{item.text}</li>)}
+              {section.items.filter((item) => item.text).map((item) => <li key={item.id}>{renderFormattedText(item.text)}</li>)}
             </ul>
           </section>
         )
