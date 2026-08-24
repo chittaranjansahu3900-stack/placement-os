@@ -1,20 +1,48 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { saveCvDocument, updateCvReviewCommentStatus } from "@/app/actions/resume";
+import Link from "next/link";
+import {
+  saveCvDocument,
+  updateCvReviewCommentStatus,
+  cloneCvVersion,
+  createCvDocument,
+  scoreCvForJd,
+  setLatestCvDocument,
+} from "@/app/actions/resume";
+import { uploadCvFile } from "@/app/actions/files";
 import { ResumeExportButtons } from "@/components/resume-export-buttons";
 import { ResumeAiAssistant } from "@/components/resume-ai-assistant";
 import { ResumePreview, resumeFieldKey, type ResumeFieldSpec } from "@/components/resume-preview";
+import { TopbarDropdown } from "@/components/topbar-dropdown";
 import { normalizeCvContent } from "@/lib/resume";
 import { CV_TEMPLATES, normalizeCvTemplateId } from "@/lib/resume-templates";
 import { OpsIcon, type OpsIconName } from "@/components/ops-icon";
 import type {
+  CompanyTypePersona,
   CvAcademicEntry,
   CvContent,
+  CvDocument,
   CvExperienceEntry,
   CvProjectEntry,
   CvReviewComment,
 } from "@/types/domain";
+
+type CvVersionRow = CvDocument & { company_type_personas: { category_name: string } | null };
+type UpcomingJd = {
+  id: string;
+  role_title: string;
+  apply_by_deadline: string;
+  companies: { name: string } | null;
+};
+
+function urgency(deadline: string) {
+  const hours = Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / 3_600_000));
+  if (hours < 24) return { label: `${hours}h left`, className: "text-red-300 border-red-800 bg-red-950/80" };
+  const days = Math.ceil(hours / 24);
+  if (days <= 3) return { label: `${days}d left`, className: "text-amber-300 border-amber-800 bg-amber-950/80" };
+  return { label: `${days}d left`, className: "text-slate-300 border-slate-700 bg-slate-900" };
+}
 
 const inputClass =
   "w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2.5 py-1.5 text-[13px] text-slate-200 outline-none transition-colors focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]";
@@ -76,11 +104,17 @@ export function ResumeEditor({
   initialContent,
   initialTemplateId,
   comments,
+  versions,
+  personas,
+  upcomingJds,
 }: {
   documentId: string;
   initialContent: CvContent;
   initialTemplateId: string;
   comments: ReviewCommentWithAuthor[];
+  versions: CvVersionRow[];
+  personas: CompanyTypePersona[];
+  upcomingJds: UpcomingJd[];
 }) {
   const [content, setContent] = useState(() => normalizeCvContent(initialContent));
   const [templateId, setTemplateId] = useState(() => normalizeCvTemplateId(initialTemplateId));
@@ -170,12 +204,248 @@ export function ResumeEditor({
     setBuilder({ action: "", outcome: "", metric: "" });
   }
 
+  const currentVersion = versions.find((v) => v.id === documentId);
+  const nearestDeadline = upcomingJds[0] ? urgency(upcomingJds[0].apply_by_deadline) : null;
+
   return (
     <div className="space-y-4">
-      {/* Top Controls Bar */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#334155] bg-[#0f172a] p-4 shadow-sm">
-        <div className="flex flex-wrap items-center gap-3">
-          <label className="text-xs font-mono font-semibold uppercase text-slate-500">Template:</label>
+      {/* Unified Topbar — CV switcher, tool panels, template, save, export */}
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#334155] bg-[#0f172a] p-3 shadow-sm">
+        <div className="flex min-w-0 flex-wrap items-center gap-3">
+          <div className="hidden items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-amber-400 sm:flex">
+            <OpsIcon name="file-text" size={12} />
+            <span>Placement CV Studio</span>
+          </div>
+
+          {/* CV Switcher */}
+          <TopbarDropdown
+            panelClassName="w-72 p-3"
+            trigger={(open) => (
+              <span
+                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium text-white transition-colors ${open ? "border-[#6366f1] bg-[#1e293b]" : "border-[#334155] bg-[#1e293b] hover:border-[#4f46e5]"}`}
+              >
+                <span className="max-w-40 truncate">{content.title || "My CV"}</span>
+                {currentVersion && (
+                  <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-amber-400">
+                    v{currentVersion.version_no}
+                  </span>
+                )}
+                <OpsIcon name="chevron-down" size={12} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
+              </span>
+            )}
+          >
+            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              My CV Versions ({versions.length})
+            </p>
+            <div className="max-h-56 space-y-1.5 overflow-y-auto">
+              {versions.map((v) => (
+                <Link
+                  key={v.id}
+                  href={`/resume?cv=${v.id}`}
+                  className={`block rounded-md border p-2.5 text-xs transition-colors ${
+                    v.id === documentId
+                      ? "border-amber-700/80 bg-amber-950/40 text-amber-200"
+                      : "border-[#334155] bg-[#1e293b] text-slate-300 hover:border-slate-600"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate font-semibold text-white">{normalizeCvContent(v.content).title}</span>
+                    <span className="shrink-0 font-mono text-[10px] text-amber-400">v{v.version_no}</span>
+                  </div>
+                  <div className="mt-0.5 flex items-center justify-between font-mono text-[10px] text-slate-500">
+                    <span>{v.company_type_personas?.category_name ?? "General"}</span>
+                    {v.is_latest && (
+                      <span className="rounded border border-emerald-700/80 bg-emerald-950 px-1.5 py-0.2 text-[9px] font-bold text-emerald-300">
+                        PRIMARY
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            <div className="mt-3 flex items-center gap-2 border-t border-[#334155] pt-3">
+              <form action={cloneCvVersion} className="flex-1">
+                <input type="hidden" name="cv_document_id" value={documentId} />
+                <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#334155] px-2 py-1.5 text-[11px] text-slate-300 hover:border-slate-600">
+                  <OpsIcon name="copy" size={11} />
+                  <span>Clone</span>
+                </button>
+              </form>
+              {currentVersion && !currentVersion.is_latest && (
+                <form action={setLatestCvDocument} className="flex-1">
+                  <input type="hidden" name="cv_document_id" value={documentId} />
+                  <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-700/70 bg-emerald-950/40 px-2 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-900/40">
+                    <OpsIcon name="check" size={11} />
+                    <span>Set Primary</span>
+                  </button>
+                </form>
+              )}
+            </div>
+
+            <form action={createCvDocument} className="mt-3 space-y-2 border-t border-[#334155] pt-3">
+              <select name="persona_id" className="w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-xs text-white">
+                <option value="">General Placement CV</option>
+                {personas.map((persona) => (
+                  <option key={persona.id} value={persona.id}>{persona.category_name}</option>
+                ))}
+              </select>
+              <button className="w-full rounded-lg border border-dashed border-[#334155] px-2 py-1.5 text-xs text-[#94a3b8] hover:border-[#4f46e5]">
+                + Create Pre-filled CV
+              </button>
+            </form>
+          </TopbarDropdown>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Upload */}
+          <TopbarDropdown
+            align="right"
+            panelClassName="w-72 space-y-2.5 p-3.5"
+            trigger={(open) => (
+              <span
+                title="Original CV File"
+                className={`flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#4f46e5] text-white" : "border-[#334155] text-slate-400 hover:text-slate-200"}`}
+              >
+                <OpsIcon name="upload" size={14} />
+              </span>
+            )}
+          >
+            <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+              <OpsIcon name="upload" size={13} className="text-blue-400" />
+              <span>Original CV File</span>
+            </h2>
+            <p className="text-[11px] leading-relaxed text-slate-500">
+              Stored and downloaded in full without contact-detail redaction or shortlist gating.
+            </p>
+            {currentVersion?.file_url && (
+              <a
+                href={`/api/files/download?path=${encodeURIComponent(currentVersion.file_url)}&name=${encodeURIComponent(`${content.title}.pdf`)}`}
+                className="inline-flex items-center gap-1.5 font-mono text-xs text-blue-400 hover:text-blue-300"
+              >
+                <OpsIcon name="download" size={12} />
+                Download uploaded file
+              </a>
+            )}
+            <form action={uploadCvFile} className="space-y-2">
+              <input type="hidden" name="cv_document_id" value={documentId} />
+              <input
+                type="file"
+                name="file"
+                accept=".pdf,.doc,.docx,.txt"
+                required
+                className={`${inputClass} file:mr-2 file:rounded file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-xs file:text-slate-200`}
+              />
+              <button className="w-full rounded-lg border border-[#334155] px-2 py-1.5 text-xs text-slate-300 hover:border-slate-600">
+                Upload or Replace File
+              </button>
+            </form>
+          </TopbarDropdown>
+
+          {/* JD Keyword Fit */}
+          {upcomingJds.length > 0 && (
+            <TopbarDropdown
+              align="right"
+              panelClassName="w-80 space-y-2.5 p-3.5"
+              trigger={(open) => (
+                <span
+                  title="JD Keyword Fit Score"
+                  className={`flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#4f46e5] text-white" : "border-[#334155] text-slate-400 hover:text-slate-200"}`}
+                >
+                  <OpsIcon name="sparkles" size={14} />
+                </span>
+              )}
+            >
+              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">JD Keyword Fit Score</h2>
+              {content.jdFit && (
+                <div className="space-y-2 rounded-md border border-blue-900/60 bg-blue-950/30 p-3">
+                  <div className="flex items-baseline justify-between">
+                    <span className="font-mono text-2xl font-bold text-blue-200">{content.jdFit.score}%</span>
+                    <span className="font-mono text-[10px] font-bold uppercase text-blue-400">ATS Match</span>
+                  </div>
+                  <div className="space-y-1.5 font-mono text-[11px]">
+                    {Object.entries(content.jdFit.sectionCoverage).map(([section, score]) => (
+                      <div key={section} className="space-y-0.5">
+                        <div className="flex justify-between text-slate-400">
+                          <span className="capitalize">{section}</span>
+                          <span>{score}%</span>
+                        </div>
+                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                          <div className="h-full rounded-full bg-blue-500" style={{ width: `${score}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {content.jdFit.missingKeywords.length > 0 && (
+                    <p className="border-t border-blue-900/40 pt-2 font-mono text-[11px] text-amber-300">
+                      Missing: {content.jdFit.missingKeywords.join(", ")}
+                    </p>
+                  )}
+                </div>
+              )}
+              <form action={scoreCvForJd} className="space-y-2">
+                <input type="hidden" name="cv_document_id" value={documentId} />
+                <select name="jd_id" required className="w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-xs text-white">
+                  <option value="">Select Target JD...</option>
+                  {upcomingJds.map((jd) => (
+                    <option key={jd.id} value={jd.id}>{jd.companies?.name} — {jd.role_title}</option>
+                  ))}
+                </select>
+                <textarea
+                  name="job_description"
+                  placeholder="Paste JD requirements to calculate section match..."
+                  className={`${inputClass} min-h-20`}
+                />
+                <button className="w-full rounded-lg border border-[#334155] px-2 py-1.5 text-xs text-slate-300 hover:border-slate-600">
+                  Calculate ATS Fit
+                </button>
+              </form>
+            </TopbarDropdown>
+          )}
+
+          {/* Deadlines */}
+          <TopbarDropdown
+            align="right"
+            panelClassName="w-72 space-y-2.5 p-3.5"
+            trigger={(open) => (
+              <span
+                title="Application Deadlines"
+                className={`relative flex size-8 items-center justify-center rounded-lg border transition-colors ${open ? "border-[#4f46e5] text-white" : "border-[#334155] text-slate-400 hover:text-slate-200"}`}
+              >
+                <OpsIcon name="clock" size={14} />
+                {nearestDeadline && (
+                  <span className="absolute -right-1 -top-1 size-2 rounded-full bg-amber-400" />
+                )}
+              </span>
+            )}
+          >
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Application Deadlines</h2>
+            <div className="space-y-2">
+              {upcomingJds.map((jd) => {
+                const itemUrgency = urgency(jd.apply_by_deadline);
+                return (
+                  <div key={jd.id} className="rounded-md border border-[#334155] bg-[#1e293b] p-2.5">
+                    <p className="text-xs font-bold text-white">{jd.companies?.name ?? "Company"}</p>
+                    <p className="truncate text-[11px] text-slate-400">{jd.role_title}</p>
+                    <span className={`mt-1.5 inline-block rounded border px-2 py-0.5 font-mono text-[10px] font-semibold ${itemUrgency.className}`}>
+                      {itemUrgency.label}
+                    </span>
+                  </div>
+                );
+              })}
+              {upcomingJds.length === 0 && <p className="font-mono text-xs text-slate-400">No active deadlines.</p>}
+            </div>
+          </TopbarDropdown>
+
+          {/* Full View / Export */}
+          <Link
+            href={`/resume/${documentId}`}
+            title="Full View / Export"
+            className="flex size-8 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
+          >
+            <OpsIcon name="eye" size={14} />
+          </Link>
+
           <select
             value={templateId}
             onChange={(event) => setTemplateId(normalizeCvTemplateId(event.target.value))}
@@ -187,8 +457,7 @@ export function ResumeEditor({
               </option>
             ))}
           </select>
-        </div>
-        <div className="flex items-center gap-2">
+
           <ResumeExportButtons fileName={content.personalInfo.name || content.title} content={content} templateId={templateId} />
           <form action={saveCvDocument}>
             <input type="hidden" name="cv_document_id" value={documentId} />
