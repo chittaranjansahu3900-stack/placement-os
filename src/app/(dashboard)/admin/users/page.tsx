@@ -11,10 +11,10 @@ import {
   removePermissionSet,
 } from "@/app/actions/admin";
 import { impersonateUser } from "@/app/actions/impersonation";
-import { AdminActionButton, SubmitOnChangeSelect } from "@/components/admin-user-controls";
-import { AdminUserTabs } from "@/components/admin-user-tabs";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatusBadge } from "@/components/status-badge";
+import { AdminActionButton, SubmitOnChangeSelect } from "@/components/admin/admin-user-controls";
+import { AdminUserTabs } from "@/components/admin/admin-user-tabs";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatusBadge } from "@/components/shared/status-badge";
 import type { AppUser, PermissionSet, Role } from "@/types/domain";
 
 const PAGE_SIZE = 20;

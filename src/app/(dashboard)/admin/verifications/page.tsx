@@ -1,9 +1,9 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
-import { OpsIcon } from "@/components/ops-icon";
-import { AdminUserTabs } from "@/components/admin-user-tabs";
-import { VerificationWorkbench, type VerificationUser } from "@/components/verification-workbench";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { AdminUserTabs } from "@/components/admin/admin-user-tabs";
+import { VerificationWorkbench, type VerificationUser } from "@/components/admin/verification-workbench";
 import type { AppUser } from "@/types/domain";
 
 export default async function AdminVerificationsPage({

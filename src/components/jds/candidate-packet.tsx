@@ -1,4 +1,4 @@
-import { ResumePreview } from "@/components/resume-preview";
+import { ResumePreview } from "@/components/shared/resume-preview";
 import { canViewCandidatePacket } from "@/lib/candidate-packets";
 import { normalizeCvContent } from "@/lib/resume";
 import type { CandidatePacketData } from "@/lib/candidate-packets";

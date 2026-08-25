@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 
 type BulkAction = (formData: FormData) => void | Promise<void>;
 

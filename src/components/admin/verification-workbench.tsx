@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatusBadge } from "@/components/status-badge";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatusBadge } from "@/components/shared/status-badge";
 import { approveUser, rejectUser } from "@/app/actions/admin";
 
 export interface VerificationUser {

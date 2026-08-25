@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { importRoster } from "@/app/actions/roster";
 import { EXPECTED_ROSTER_COLUMNS } from "@/lib/roster-constants";
 import { previewRosterCsv } from "@/lib/roster-csv";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import type { Batch } from "@/types/domain";
 
 export function RosterImportReview({ batches }: { batches: Batch[] }) {

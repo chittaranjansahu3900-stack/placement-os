@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import type { AuditLogEntry } from "@/types/domain";
 
 export default async function AuditLogPage() {

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 
 interface AdminUserTabsProps {
   pendingCount: number;

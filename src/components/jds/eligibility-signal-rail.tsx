@@ -1,4 +1,4 @@
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 
 export type EligibilitySignalState = "pass" | "fail" | "review" | "unknown";
 

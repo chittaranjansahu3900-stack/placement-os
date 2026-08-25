@@ -1,6 +1,6 @@
 "use client";
 
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 
 export function PacketPrintButton() {
   return (

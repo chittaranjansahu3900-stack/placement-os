@@ -3,17 +3,17 @@ import { bulkUpdateApplicationStatus, updateApplicationStatus } from "@/app/acti
 import { confirmPlacement } from "@/app/actions/placements";
 import { assignInterviewRound } from "@/app/actions/spc";
 import { addPrivateNote } from "@/app/actions/private-notes";
-import { CandidatePacket } from "@/components/candidate-packet";
+import { CandidatePacket } from "@/components/jds/candidate-packet";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { loadCandidatePackets } from "@/lib/candidate-packets";
 import { createClient } from "@/lib/supabase/server";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatusBadge } from "@/components/status-badge";
-import { BulkApplicantActions } from "@/components/bulk-applicant-actions";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { BulkApplicantActions } from "@/components/jds/bulk-applicant-actions";
 import {
   EligibilitySignalRail,
   type EligibilitySignalItem,
-} from "@/components/eligibility-signal-rail";
+} from "@/components/jds/eligibility-signal-rail";
 import type { ApplicantDirectoryRow, ApplicationPrivateNote } from "@/types/domain";
 
 const ACTIONS = ["shortlisted", "interview", "selected", "waitlisted", "rejected"] as const;

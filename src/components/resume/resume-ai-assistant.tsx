@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { normalizeCvContent } from "@/lib/resume";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import type { CvContent } from "@/types/domain";
 
 type Purpose = "writing_assist" | "cv_import" | "quality_review";

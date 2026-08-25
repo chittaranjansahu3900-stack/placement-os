@@ -5,8 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { outreachTemplate, renderOutreachTemplate } from "@/lib/outreach-templates";
 import { uploadVaultFile } from "@/app/actions/files";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatusBadge } from "@/components/status-badge";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatusBadge } from "@/components/shared/status-badge";
 import {
   updateCompanyStage,
   assignCompanyPerson,

@@ -5,9 +5,9 @@ import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { updateStalenessThreshold } from "@/app/actions/spc";
 import { releaseJdToBatch } from "@/app/actions/jds";
 import { currentRoundByJd } from "@/lib/spc-current-round";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatusBadge } from "@/components/status-badge";
-import { StatCard } from "@/components/stat-card";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatusBadge } from "@/components/shared/status-badge";
+import { StatCard } from "@/components/shared/stat-card";
 import type { SpcPipelineRow } from "@/types/domain";
 import type { Database } from "@/types/database.types";
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { login } from "@/app/actions/auth";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 
 export default async function LoginPage({
   searchParams,

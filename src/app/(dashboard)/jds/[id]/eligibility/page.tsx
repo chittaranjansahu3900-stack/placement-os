@@ -7,8 +7,8 @@ import {
   includeStudentInJd,
   removeEligibilityOverride,
 } from "@/app/actions/eligibility";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatCard } from "@/components/stat-card";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatCard } from "@/components/shared/stat-card";
 import type { Jd, JdEligibilityOverride, Student } from "@/types/domain";
 
 export default async function JdEligibilityPage({

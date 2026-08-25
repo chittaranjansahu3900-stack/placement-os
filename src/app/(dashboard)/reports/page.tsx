@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { ACCREDITATION_FIELDS, REPORT_TEMPLATES } from "@/lib/placement-export";
 import { metricDelta, placementBatchMetrics } from "@/lib/placement-comparison";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatCard } from "@/components/stat-card";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatCard } from "@/components/shared/stat-card";
 import type { Batch } from "@/types/domain";
 import type { Database } from "@/types/database.types";
 

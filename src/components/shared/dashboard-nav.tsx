@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { OpsIcon, type OpsIconName } from "@/components/ops-icon";
+import { OpsIcon, type OpsIconName } from "@/components/shared/ops-icon";
 
 export type DashboardNavItem = {
   href: string;

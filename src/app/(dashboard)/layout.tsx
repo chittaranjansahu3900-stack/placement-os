@@ -5,8 +5,8 @@ import {
   DashboardNav,
   type DashboardNavGroup,
   type DashboardNavItem,
-} from "@/components/dashboard-nav";
-import { OpsIcon } from "@/components/ops-icon";
+} from "@/components/shared/dashboard-nav";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { getImpersonationStash } from "@/lib/auth/impersonation";
 import { stopImpersonating } from "@/app/actions/impersonation";

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { canViewDeliverability } from "@/lib/notifications/deliverability-access";
 import { getAuthorizedNotificationDeliverabilityReport } from "@/lib/notifications/deliverability-server";

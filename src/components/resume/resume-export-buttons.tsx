@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import type { CvContent } from "@/types/domain";
 
 export function ResumeExportButtons({ fileName, content, templateId = "placement-cell-v2" }: { fileName: string; content: CvContent; templateId?: string }) {

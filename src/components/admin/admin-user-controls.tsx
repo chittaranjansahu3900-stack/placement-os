@@ -1,7 +1,7 @@
 "use client";
 
 import { useFormStatus } from "react-dom";
-import { OpsIcon, type OpsIconName } from "@/components/ops-icon";
+import { OpsIcon, type OpsIconName } from "@/components/shared/ops-icon";
 
 export function AdminActionButton({
   children,

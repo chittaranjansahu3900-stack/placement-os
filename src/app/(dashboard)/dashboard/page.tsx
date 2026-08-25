@@ -2,9 +2,9 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { createClient } from "@/lib/supabase/server";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatCard } from "@/components/stat-card";
-import { StatusBadge } from "@/components/status-badge";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatCard } from "@/components/shared/stat-card";
+import { StatusBadge } from "@/components/shared/status-badge";
 
 type ActiveJdSummary = {
   id: string;

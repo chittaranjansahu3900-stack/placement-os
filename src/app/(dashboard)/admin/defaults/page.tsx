@@ -3,8 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { importDefaults, updateDefaultsThreshold } from "@/app/actions/defaults";
 import { EXPECTED_DEFAULTS_COLUMNS, DEFAULTS_ACTIVITY_TYPES } from "@/lib/defaults-constants";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatCard } from "@/components/stat-card";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatCard } from "@/components/shared/stat-card";
 import type { Batch, Student } from "@/types/domain";
 
 export default async function AdminDefaultsPage({

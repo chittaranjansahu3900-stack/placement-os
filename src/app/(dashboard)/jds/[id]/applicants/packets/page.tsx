@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { CandidatePacket } from "@/components/candidate-packet";
-import { PacketPrintButton } from "@/components/packet-print-button";
+import { CandidatePacket } from "@/components/jds/candidate-packet";
+import { PacketPrintButton } from "@/components/jds/packet-print-button";
 import { loadCandidatePackets } from "@/lib/candidate-packets";
 import { createClient } from "@/lib/supabase/server";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import type { ApplicantDirectoryRow } from "@/types/domain";
 
 export default async function CandidatePacketsPage({ params }: { params: Promise<{ id: string }> }) {

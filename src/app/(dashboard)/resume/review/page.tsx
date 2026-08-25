@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { addCvReviewComment } from "@/app/actions/resume";
-import { ResumePreview } from "@/components/resume-preview";
+import { ResumePreview } from "@/components/shared/resume-preview";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { normalizeCvContent } from "@/lib/resume";
 import { createClient } from "@/lib/supabase/server";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import type { CvDocument, CvReviewComment } from "@/types/domain";
 
 type ReviewDocument = CvDocument & {

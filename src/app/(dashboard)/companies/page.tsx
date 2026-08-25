@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { createCompany } from "@/app/actions/companies";
-import { CompanyImportReview } from "@/components/company-import-review";
+import { CompanyImportReview } from "@/components/companies/company-import-review";
 import { outreachFunnel } from "@/lib/outreach-funnel";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import type { Company, PipelineStage } from "@/types/domain";
 
 const STAGES: { key: PipelineStage; label: string; color: string; border: string; bg: string }[] = [

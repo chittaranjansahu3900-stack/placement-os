@@ -1,10 +1,10 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ResumeExportButtons } from "@/components/resume-export-buttons";
-import { ResumePreview } from "@/components/resume-preview";
+import { ResumeExportButtons } from "@/components/resume/resume-export-buttons";
+import { ResumePreview } from "@/components/shared/resume-preview";
 import { normalizeCvContent } from "@/lib/resume";
 import { createClient } from "@/lib/supabase/server";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import type { CvDocument } from "@/types/domain";
 
 type SharedCv = CvDocument & {

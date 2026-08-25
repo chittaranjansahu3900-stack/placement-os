@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { importCompanies } from "@/app/actions/companies";
 import { COMPANY_IMPORT_COLUMNS, previewCompanyCsv } from "@/lib/company-csv";
-import { OpsIcon } from "@/components/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
 
 export function CompanyImportReview() {
   const [csv, setCsv] = useState("");

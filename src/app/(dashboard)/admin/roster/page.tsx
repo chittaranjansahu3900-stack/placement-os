@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
-import { CreateLoginButton } from "@/components/create-login-button";
-import { RosterImportReview } from "@/components/roster-import-review";
+import { CreateLoginButton } from "@/components/admin/create-login-button";
+import { RosterImportReview } from "@/components/admin/roster-import-review";
 import { createBatch, setBatchActive } from "@/app/actions/admin";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatusBadge } from "@/components/status-badge";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatusBadge } from "@/components/shared/status-badge";
 import type { Batch, Student } from "@/types/domain";
 
 export default async function RosterPage({

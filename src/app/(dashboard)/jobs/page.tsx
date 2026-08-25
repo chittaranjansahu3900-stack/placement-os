@@ -1,8 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { applyToJd } from "@/app/actions/applications";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatusBadge } from "@/components/status-badge";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatusBadge } from "@/components/shared/status-badge";
 import type { Jd } from "@/types/domain";
 
 type JdWithCompany = Jd & { companies: { name: string } | null };

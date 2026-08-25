@@ -11,13 +11,13 @@ import {
   setLatestCvDocument,
 } from "@/app/actions/resume";
 import { uploadCvFile } from "@/app/actions/files";
-import { ResumeExportButtons } from "@/components/resume-export-buttons";
-import { ResumeAiAssistant } from "@/components/resume-ai-assistant";
-import { ResumePreview, resumeFieldKey, type ResumeFieldSpec } from "@/components/resume-preview";
-import { TopbarDropdown } from "@/components/topbar-dropdown";
+import { ResumeExportButtons } from "@/components/resume/resume-export-buttons";
+import { ResumeAiAssistant } from "@/components/resume/resume-ai-assistant";
+import { ResumePreview, resumeFieldKey, type ResumeFieldSpec } from "@/components/shared/resume-preview";
+import { TopbarDropdown } from "@/components/resume/topbar-dropdown";
 import { normalizeCvContent } from "@/lib/resume";
 import { CV_TEMPLATES, normalizeCvTemplateId } from "@/lib/resume-templates";
-import { OpsIcon, type OpsIconName } from "@/components/ops-icon";
+import { OpsIcon, type OpsIconName } from "@/components/shared/ops-icon";
 import type {
   CompanyTypePersona,
   CvAcademicEntry,

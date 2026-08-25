@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatCard } from "@/components/stat-card";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatCard } from "@/components/shared/stat-card";
 import type { DefaultRecord } from "@/types/domain";
 
 export default async function MyDefaultsPage() {

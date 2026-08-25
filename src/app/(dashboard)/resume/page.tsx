@@ -2,8 +2,8 @@ import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { createClient } from "@/lib/supabase/server";
 import { normalizeCvContent } from "@/lib/resume";
 import { createCvDocument } from "@/app/actions/resume";
-import { ResumeEditor } from "@/components/resume-editor";
-import { OpsIcon } from "@/components/ops-icon";
+import { ResumeEditor } from "@/components/resume/resume-editor";
+import { OpsIcon } from "@/components/shared/ops-icon";
 import type { CompanyTypePersona, CvDocument, CvReviewComment } from "@/types/domain";
 
 type CvWithPersona = CvDocument & {

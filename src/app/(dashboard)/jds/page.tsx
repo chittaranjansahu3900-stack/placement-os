@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { cloneJdToSeason } from "@/app/actions/jds";
 import { createClient } from "@/lib/supabase/server";
-import { OpsIcon } from "@/components/ops-icon";
-import { StatusBadge } from "@/components/status-badge";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { StatusBadge } from "@/components/shared/status-badge";
 import type { Batch, Jd } from "@/types/domain";
 
 type JdWithCompany = Jd & {
