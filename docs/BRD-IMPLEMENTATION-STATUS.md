@@ -355,7 +355,7 @@ these items is signed off.
    `updateStalenessThreshold`, `updateDefaultsThreshold`, and two `isAdmin`/persona-identity checks —
    because their RLS is genuinely `has_role('Admin')`-hardcoded with no covering Permission Set, or
    (for `isStudent`/`isRecruiter`) they gate persona-identity nav sections by design, not a specific
-   grant. Full writeup in `docs/HANDOVER-CODEX.md`, Claude's track item 1.
+   grant. Full writeup in `docs/archive/HANDOVER-CODEX.md`, Claude's track item 1.
 3. Add automated tests for RLS, cross-tenant isolation, recruiter-company scoping, masking, student
    column guards, application CV snapshots, bulk shortlist, and reporting calculations. **Still the best
    way to make sure fix #6 above stays fixed** — this class of bug (row-level RLS with no column guard,
@@ -431,7 +431,7 @@ these items is signed off.
 6. Complete full Profile Sheet import mapping, user auto-expiry, the permission UI-gate audit, and the verified CRUD/RLS matrix.
 7. AI-assisted Resume Maker rewrite/diff flow and structured CV import; validate the completed DOCX/PDF/template library with recruiter ATS tools.
 8. **New, 22 August 2026 — from the post-UI-redesign security/UX review** (full detail and
-   evidence in `docs/CLAUDE-FINAL-REVIEW.md`): fix `/admin/users`' role-assignment dropdown, which
+   evidence in `docs/archive/CLAUDE-FINAL-REVIEW.md`): fix `/admin/users`' role-assignment dropdown, which
    currently defaults to granting Admin (the most privileged role) on an unmodified click — High
    severity, not a security-boundary bypass (already gated behind User Management) but a dangerous
    UI default. Also: the dashboard header's "2024–26 Placement Season" badge is a hardcoded string,
@@ -440,7 +440,7 @@ these items is signed off.
 
 ### P2 — requires product/infrastructure decisions
 
-**Decided 21 August 2026** (see `docs/HANDOVER-CODEX.md` for full detail) — items 1–4 below now have
+**Decided 21 August 2026** (see `docs/archive/HANDOVER-CODEX.md` for full detail) — items 1–4 below now have
 an answer; the Resend, Storage, and AI code paths are implemented but still require their row-specific
 hosted configuration and pilot validation:
 
