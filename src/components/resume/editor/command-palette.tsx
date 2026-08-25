@@ -71,12 +71,11 @@ export function CommandPalette({ open, onClose }: { open: boolean; onClose: () =
     return groups;
   }, [commands, query]);
 
+  // The parent only mounts this component while `open` is true, so `query`
+  // already starts blank on every mount — just focus the input.
   useEffect(() => {
-    if (open) {
-      setQuery("");
-      requestAnimationFrame(() => inputRef.current?.focus());
-    }
-  }, [open]);
+    requestAnimationFrame(() => inputRef.current?.focus());
+  }, []);
 
   useEffect(() => {
     if (!open) return;

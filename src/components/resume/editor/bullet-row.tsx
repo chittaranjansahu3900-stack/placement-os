@@ -1,9 +1,15 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { OpsIcon } from "@/components/shared/ops-icon";
 import { BULLET_MAX, inputClass, wrapSelection } from "./shared";
 import type { CvBullet } from "@/types/domain";
+
+function autoGrow(el: HTMLTextAreaElement | null) {
+  if (!el) return;
+  el.style.height = "auto";
+  el.style.height = `${el.scrollHeight}px`;
+}
 
 export function BulletRow({
   bullet, onChange, onRemove, dataField, documentId,
@@ -14,8 +20,12 @@ export function BulletRow({
   dataField?: string;
   documentId: string;
 }) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const [improving, setImproving] = useState(false);
+
+  useEffect(() => {
+    autoGrow(inputRef.current);
+  }, [bullet.text]);
 
   function applyMarker(marker: string) {
     const input = inputRef.current;
@@ -48,13 +58,14 @@ export function BulletRow({
 
   return (
     <div className="rounded-lg border border-[#334155] bg-[#0f172a] p-2">
-      <input
+      <textarea
         ref={inputRef}
         data-field={dataField}
         value={bullet.text}
         onChange={(e) => onChange(e.target.value.slice(0, BULLET_MAX))}
         maxLength={BULLET_MAX}
-        className={`${inputClass} mb-1.5`}
+        rows={1}
+        className={`${inputClass} mb-1.5 resize-none overflow-hidden leading-snug`}
       />
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">

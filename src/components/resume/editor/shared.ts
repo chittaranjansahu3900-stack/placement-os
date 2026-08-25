@@ -95,9 +95,9 @@ export function isSectionFilled(content: CvContent, key: string): boolean {
 
 export const BULLET_MAX = 220;
 
-// Wraps the current selection in a bullet <input> with markdown-lite markers
+// Wraps the current selection in a bullet <textarea> with markdown-lite markers
 // — shared syntax with renderFormattedText() in resume-preview.tsx.
-export function wrapSelection(input: HTMLInputElement, value: string, marker: string) {
+export function wrapSelection(input: HTMLInputElement | HTMLTextAreaElement, value: string, marker: string) {
   const start = input.selectionStart ?? value.length;
   const end = input.selectionEnd ?? value.length;
   const selected = value.slice(start, end) || "text";

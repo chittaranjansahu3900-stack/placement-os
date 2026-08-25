@@ -15,7 +15,11 @@ export function ResizablePanel({ children }: { children: ReactNode }) {
   const startRef = useRef<{ x: number; width: number } | null>(null);
 
   useEffect(() => {
+    // Reading localStorage during render would mismatch the server-rendered
+    // default width, so this intentionally applies the persisted width only
+    // after mount, on the client.
     const stored = Number(localStorage.getItem(STORAGE_KEY));
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (stored && stored >= MIN_WIDTH && stored <= MAX_WIDTH) setWidth(stored);
   }, []);
 
