@@ -40,7 +40,7 @@ export default async function ReportsPage({
     return (
       <div className="space-y-4">
         <h1 className="text-xl font-bold text-white">Placement Reports &amp; Analytics</h1>
-        <p className="text-sm text-slate-500">No batch records found in the database.</p>
+        <p className="text-sm text-slate-400 font-mono">No batch records found in the database.</p>
       </div>
     );
   }
@@ -85,17 +85,17 @@ export default async function ReportsPage({
   const canExport = ctx.permissionNames.has("Reports & Export");
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-7">
       {/* Header Banner */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-blue-400">
+          <div className="flex items-center gap-2 font-mono text-xs text-blue-400">
             <OpsIcon name="chart" size={14} />
             <span>Audited Institutional Telemetry</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
             <span>Placement Analytics &amp; Reports</span>
-            <span className="rounded-md bg-emerald-950 px-2 py-0.5 font-mono text-xs font-semibold text-emerald-400 border border-emerald-800/60">
+            <span className="rounded bg-emerald-950/90 px-2.5 py-0.5 font-mono text-xs font-semibold text-emerald-400 border border-emerald-700/80">
               {activeBatch.name}
             </span>
           </h1>
@@ -139,22 +139,22 @@ export default async function ReportsPage({
 
       {/* Export Accordion */}
       {canExport && (
-        <details className="group rounded-lg border border-blue-900 bg-slate-900 p-5" open>
+        <details className="group rounded-lg border border-blue-800/80 bg-slate-900/90 p-5 shadow-sm" open>
           <summary className="cursor-pointer font-bold text-white text-sm flex items-center justify-between list-none">
             <span className="flex items-center gap-2 font-mono">
-              <OpsIcon name="download" size={16} className="text-blue-400" />
+              <OpsIcon name="download" size={15} className="text-blue-400" />
               <span>Audited Report Template Exporter</span>
             </span>
             <span className="font-mono text-xs text-blue-400">Section 4.10 Standard</span>
           </summary>
 
-          <form action="/reports/export" method="get" className="mt-5 space-y-4 border-t border-slate-800/80 pt-4">
+          <form action="/reports/export" method="get" className="mt-5 space-y-4 border-t border-slate-800 pt-4">
             <input type="hidden" name="batch_id" value={activeBatch.id} />
             <div className="grid gap-3 sm:grid-cols-3">
               {REPORT_TEMPLATES.map((template, index) => (
                 <label
                   key={template.id}
-                  className="rounded-xl border border-slate-800 bg-slate-950/80 p-3.5 text-xs text-slate-300 hover:border-slate-700 cursor-pointer block"
+                  className="rounded-md border border-slate-750 bg-slate-950/80 p-3.5 text-xs text-slate-300 hover:border-slate-650 cursor-pointer block shadow-inner transition-colors"
                 >
                   <div className="flex items-center gap-2">
                     <input type="radio" name="template" value={template.id} defaultChecked={index === 0} className="accent-blue-600 size-3.5" />
@@ -166,12 +166,12 @@ export default async function ReportsPage({
             </div>
 
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 font-mono">
+              <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-300 font-mono">
                 Accreditation Detail Fields (NIRF / AACSB / EQUIS)
               </p>
               <div className="mt-2.5 flex flex-wrap gap-2">
                 {ACCREDITATION_FIELDS.map(([field, label]) => (
-                  <label key={field} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-950 px-2.5 py-1 text-xs text-slate-300">
+                  <label key={field} className="inline-flex items-center gap-1.5 rounded border border-slate-750 bg-slate-950 px-2.5 py-1 text-xs text-slate-300 cursor-pointer">
                     <input type="checkbox" name="fields" value={field} defaultChecked className="accent-blue-600 size-3.5" />
                     <span>{label}</span>
                   </label>
@@ -179,8 +179,8 @@ export default async function ReportsPage({
               </div>
             </div>
 
-            <div className="flex flex-wrap items-center justify-between gap-4 pt-2 border-t border-slate-800">
-              <label className="inline-flex items-center gap-2 text-xs text-slate-400">
+            <div className="flex flex-wrap items-center justify-between gap-4 pt-3 border-t border-slate-800">
+              <label className="inline-flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                 <input type="checkbox" name="include_unplaced" value="1" defaultChecked className="accent-blue-600 size-3.5" />
                 <span>Include unplaced student rows in applicable breakdown tables</span>
               </label>
@@ -188,7 +188,7 @@ export default async function ReportsPage({
                 type="submit"
                 className="ops-button-primary"
               >
-                <OpsIcon name="download" size={14} />
+                <OpsIcon name="download" size={13} />
                 <span>Download Audited CSV</span>
               </button>
             </div>
@@ -198,22 +198,22 @@ export default async function ReportsPage({
 
       {/* Season Comparison Table */}
       {comparisonBatch && comparisonMetrics && (
-        <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800/80 pb-3">
+        <section className="rounded-lg border border-slate-750 bg-slate-900/90 p-5 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div>
-              <h2 className="text-sm font-bold text-white flex items-center gap-2 font-mono">
-                <OpsIcon name="trending-up" size={16} className="text-amber-400" />
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-white flex items-center gap-2 font-mono">
+                <OpsIcon name="trending-up" size={15} className="text-amber-400" />
                 <span>Season-over-Season Delta Analysis</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                Variance between <strong className="text-white">{activeBatch.name}</strong> vs <strong className="text-slate-300">{comparisonBatch.name}</strong>.
+                Variance between <strong className="text-white font-medium">{activeBatch.name}</strong> vs <strong className="text-slate-300 font-medium">{comparisonBatch.name}</strong>.
               </p>
             </div>
           </div>
 
           <div className="mt-4 overflow-x-auto">
             <table className="w-full text-left text-xs font-mono">
-              <thead className="bg-slate-950/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-800">
+              <thead className="bg-slate-950 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800">
                 <tr>
                   <th className="py-2.5 px-3">Performance Metric</th>
                   <th className="py-2.5 px-3 text-right">{activeBatch.name}</th>
@@ -221,26 +221,26 @@ export default async function ReportsPage({
                   <th className="py-2.5 px-3 text-right">Variance Delta</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800/60">
-                <tr className="hover:bg-slate-800/30">
+              <tbody className="divide-y divide-slate-800">
+                <tr className="hover:bg-slate-850/50">
                   <td className="py-2.5 px-3 font-sans font-medium text-white">Placement Rate</td>
                   <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">{activeMetrics.placementRate.toFixed(1)}%</td>
                   <td className="py-2.5 px-3 text-right text-slate-400">{comparisonMetrics.placementRate.toFixed(1)}%</td>
                   <td className="py-2.5 px-3 text-right text-emerald-400 font-bold">{signed(metricDelta(activeMetrics.placementRate, comparisonMetrics.placementRate), 1, " pp")}</td>
                 </tr>
-                <tr className="hover:bg-slate-800/30">
+                <tr className="hover:bg-slate-850/50">
                   <td className="py-2.5 px-3 font-sans font-medium text-white">Average CTC</td>
                   <td className="py-2.5 px-3 text-right text-amber-300 font-bold">{activeMetrics.averageCtc?.toFixed(1) ?? "—"} LPA</td>
                   <td className="py-2.5 px-3 text-right text-slate-400">{comparisonMetrics.averageCtc?.toFixed(1) ?? "—"} LPA</td>
                   <td className="py-2.5 px-3 text-right text-amber-400 font-bold">{signed(metricDelta(activeMetrics.averageCtc, comparisonMetrics.averageCtc))}</td>
                 </tr>
-                <tr className="hover:bg-slate-800/30">
+                <tr className="hover:bg-slate-850/50">
                   <td className="py-2.5 px-3 font-sans font-medium text-white">Highest CTC</td>
                   <td className="py-2.5 px-3 text-right text-white font-bold">{activeMetrics.highestCtc?.toFixed(1) ?? "—"} LPA</td>
                   <td className="py-2.5 px-3 text-right text-slate-400">{comparisonMetrics.highestCtc?.toFixed(1) ?? "—"} LPA</td>
                   <td className="py-2.5 px-3 text-right text-emerald-400">{signed(metricDelta(activeMetrics.highestCtc, comparisonMetrics.highestCtc))}</td>
                 </tr>
-                <tr className="hover:bg-slate-800/30">
+                <tr className="hover:bg-slate-850/50">
                   <td className="py-2.5 px-3 font-sans font-medium text-white">Hiring Partner Companies</td>
                   <td className="py-2.5 px-3 text-right text-blue-300">{activeMetrics.hiringCompanies}</td>
                   <td className="py-2.5 px-3 text-right text-slate-400">{comparisonMetrics.hiringCompanies}</td>
@@ -253,24 +253,24 @@ export default async function ReportsPage({
       )}
 
       {/* Company Breakdown Table */}
-      <section className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 backdrop-blur-md">
-        <h2 className="text-sm font-bold text-white flex items-center gap-2 font-mono">
-          <OpsIcon name="building" size={16} className="text-blue-400" />
+      <section className="rounded-lg border border-slate-750 bg-slate-900/90 p-5 shadow-sm">
+        <h2 className="text-xs font-semibold text-white uppercase tracking-wider flex items-center gap-2 font-mono border-b border-slate-800 pb-3">
+          <OpsIcon name="building" size={14} className="text-blue-400" />
           <span>Company-Wise Offer Breakdown</span>
         </h2>
 
         <div className="mt-4 overflow-x-auto">
           <table className="w-full text-left text-xs font-mono">
-            <thead className="bg-slate-950/70 text-[11px] font-semibold uppercase tracking-wider text-slate-500 border-b border-slate-800">
+            <thead className="bg-slate-950 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800">
               <tr>
                 <th className="py-2.5 px-3">Recruiting Partner</th>
                 <th className="py-2.5 px-3 text-center">Offers Accepted</th>
                 <th className="py-2.5 px-3 text-right">Average Offered CTC</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800/60">
+            <tbody className="divide-y divide-slate-800">
               {companyRows.map((c) => (
-                <tr key={c.name} className="hover:bg-slate-800/30">
+                <tr key={c.name} className="hover:bg-slate-850/50 transition-colors">
                   <td className="py-2.5 px-3 font-sans font-semibold text-white">{c.name}</td>
                   <td className="py-2.5 px-3 text-center font-bold text-emerald-400">{c.count}</td>
                   <td className="py-2.5 px-3 text-right font-bold text-amber-300">
@@ -280,7 +280,7 @@ export default async function ReportsPage({
               ))}
               {companyRows.length === 0 && (
                 <tr>
-                  <td colSpan={3} className="py-8 text-center text-slate-500">No placements confirmed yet for this season.</td>
+                  <td colSpan={3} className="py-8 text-center text-slate-400 font-mono">No placements confirmed yet for this season.</td>
                 </tr>
               )}
             </tbody>

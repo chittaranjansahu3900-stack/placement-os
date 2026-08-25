@@ -22,25 +22,77 @@ async function requirePermission(permissionName: string) {
   return ctx;
 }
 
-// Section 7.5 user lifecycle: Approval. There's no distinct "rejected"
-// value in user_status (pending/active/deactivated, Section 5) — reject
-// maps to 'deactivated', the closest terminal state the schema has.
-export async function approveUser(userId: string) {
+// Section 7.5 user lifecycle: Approval & Provisioning.
+// When an admin approves a verification request, status transitions to active,
+// ensuring the user account is unlocked and role assignments are established.
+export async function approveUser(userId: string, redirectToOrFormData?: string | FormData) {
+  const redirectTo = typeof redirectToOrFormData === "string" ? redirectToOrFormData : "/admin/verifications";
   await requirePermission("User Management");
   const supabase = await createClient();
-  const { error } = await supabase.from("users").update({ status: "active" }).eq("id", userId);
-  if (error) redirect(`/admin/users?error=${encodeURIComponent(error.message)}`);
-  await logAudit("user.approved", "user", userId, {});
+
+  const { data: user, error: userFetchError } = await supabase
+    .from("users")
+    .select("id, name, email, company_id, institute_id")
+    .eq("id", userId)
+    .single();
+
+  if (userFetchError || !user) {
+    redirect(`${redirectTo}?error=${encodeURIComponent("User not found")}`);
+  }
+
+  const { error: updateError } = await supabase
+    .from("users")
+    .update({ status: "active", updated_at: new Date().toISOString() })
+    .eq("id", userId);
+
+  if (updateError) {
+    redirect(`${redirectTo}?error=${encodeURIComponent(updateError.message)}`);
+  }
+
+  // Ensure role is assigned if this was a company recruiter signup
+  if (user.company_id) {
+    const { data: userRole } = await supabase
+      .from("user_roles")
+      .select("role_id")
+      .eq("user_id", userId)
+      .maybeSingle();
+
+    if (!userRole) {
+      const { data: recruiterRole } = await supabase
+        .from("roles")
+        .select("id")
+        .is("institute_id", null)
+        .eq("name", "Recruiter")
+        .maybeSingle();
+
+      if (recruiterRole) {
+        await supabase.from("user_roles").insert({
+          user_id: userId,
+          role_id: recruiterRole.id,
+        });
+      }
+    }
+  }
+
+  await logAudit("user.approved", "user", userId, { name: user.name, email: user.email });
   revalidatePath("/admin/users");
+  revalidatePath("/admin/verifications");
+  revalidatePath("/dashboard");
 }
 
-export async function rejectUser(userId: string) {
+export async function rejectUser(userId: string, redirectToOrFormData?: string | FormData) {
+  const redirectTo = typeof redirectToOrFormData === "string" ? redirectToOrFormData : "/admin/verifications";
   await requirePermission("User Management");
   const supabase = await createClient();
-  const { error } = await supabase.from("users").update({ status: "deactivated" }).eq("id", userId);
-  if (error) redirect(`/admin/users?error=${encodeURIComponent(error.message)}`);
+  const { error } = await supabase
+    .from("users")
+    .update({ status: "deactivated", updated_at: new Date().toISOString() })
+    .eq("id", userId);
+
+  if (error) redirect(`${redirectTo}?error=${encodeURIComponent(error.message)}`);
   await logAudit("user.rejected", "user", userId, {});
   revalidatePath("/admin/users");
+  revalidatePath("/admin/verifications");
 }
 
 export async function deactivateUser(userId: string) {
@@ -62,11 +114,42 @@ export async function reactivateUser(userId: string) {
 }
 
 export async function assignRole(userId: string, formData: FormData) {
-  await requirePermission("User Management");
-  const roleId = String(formData.get("role_id") ?? "");
-  if (!roleId) redirect(`/admin/users?error=${encodeURIComponent("Choose a role")}`);
+  const ctx = await requirePermission("User Management");
+  const roleId = String(formData.get("role_id") ?? "").trim();
+  const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+  if (!uuidPattern.test(userId) || !uuidPattern.test(roleId)) {
+    redirect(`/admin/users?error=${encodeURIComponent("Choose a valid user and role")}`);
+  }
 
   const supabase = await createClient();
+  const [targetResult, roleResult, assignmentResult] = await Promise.all([
+    supabase.from("users").select("id, institute_id").eq("id", userId).maybeSingle(),
+    supabase.from("roles").select("id, institute_id").eq("id", roleId).maybeSingle(),
+    supabase
+      .from("user_roles")
+      .select("role_id")
+      .eq("user_id", userId)
+      .eq("role_id", roleId)
+      .maybeSingle(),
+  ]);
+
+  if (targetResult.error || !targetResult.data || targetResult.data.institute_id !== ctx.appUser.institute_id) {
+    redirect(`/admin/users?error=${encodeURIComponent("Choose a user from your institute")}`);
+  }
+  if (
+    roleResult.error
+    || !roleResult.data
+    || (roleResult.data.institute_id !== null && roleResult.data.institute_id !== ctx.appUser.institute_id)
+  ) {
+    redirect(`/admin/users?error=${encodeURIComponent("Choose a role available to your institute")}`);
+  }
+  if (assignmentResult.error) {
+    redirect(`/admin/users?error=${encodeURIComponent("Unable to verify the current role assignment")}`);
+  }
+  if (assignmentResult.data) {
+    redirect(`/admin/users?error=${encodeURIComponent("That role is already assigned")}`);
+  }
+
   const { error } = await supabase.from("user_roles").insert({ user_id: userId, role_id: roleId });
   if (error) redirect(`/admin/users?error=${encodeURIComponent(error.message)}`);
 

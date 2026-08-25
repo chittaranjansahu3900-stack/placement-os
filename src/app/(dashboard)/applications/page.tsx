@@ -28,7 +28,7 @@ export default async function ApplicationsPage({
 
   if (!student) {
     return (
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 text-center max-w-xl mx-auto">
+      <div className="rounded-lg border border-slate-750 bg-slate-900/90 p-8 text-center max-w-xl mx-auto shadow-sm">
         <OpsIcon name="shield" size={28} className="mx-auto mb-2 text-amber-400" />
         <h1 className="text-lg font-bold text-white">Student Account Required</h1>
         <p className="mt-2 text-xs text-slate-400">
@@ -49,16 +49,16 @@ export default async function ApplicationsPage({
   const selectedCount = rows.filter((r) => r.status === "selected").length;
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-3xl space-y-7">
       {/* Header Banner */}
       <div className="border-b border-slate-800/80 pb-5">
-        <div className="flex items-center gap-2 text-xs font-mono text-blue-400">
+        <div className="flex items-center gap-2 font-mono text-xs text-blue-400">
           <OpsIcon name="check-shield" size={14} />
           <span>Candidate Application Center</span>
         </div>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
           <span>My Applications Tracker</span>
-          <span className="rounded-md bg-slate-800 px-2 py-0.5 font-mono text-xs font-semibold text-slate-300 border border-slate-700">
+          <span className="rounded bg-slate-800 px-2.5 py-0.5 font-mono text-xs font-semibold text-slate-300 border border-slate-700">
             {rows.length} Applied
           </span>
         </h1>
@@ -68,8 +68,8 @@ export default async function ApplicationsPage({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3.5 text-xs text-red-200">
-          <OpsIcon name="alert-triangle" size={16} className="text-red-400" />
+        <div className="flex items-center gap-2.5 rounded-lg border border-red-800/80 bg-red-950/70 p-3.5 text-xs text-red-200 shadow-sm">
+          <OpsIcon name="alert-triangle" size={15} className="text-red-400 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -93,7 +93,7 @@ export default async function ApplicationsPage({
         <StatCard
           label="Final Offers"
           value={selectedCount}
-          secondary="Confirmed selection"
+          secondary="Confirmed placement offers"
           icon="award"
           highlight="gold"
         />
@@ -108,14 +108,14 @@ export default async function ApplicationsPage({
           return (
             <div
               key={a.id}
-              className="rounded-2xl border border-slate-800 bg-slate-900/60 p-4.5 hover:border-slate-700 transition-all backdrop-blur-md flex flex-wrap items-center justify-between gap-4"
+              className="rounded-lg border border-slate-750 bg-slate-900/90 p-4 hover:border-slate-650 transition-all shadow-sm flex flex-wrap items-center justify-between gap-4"
             >
-              <div className="flex items-start gap-3">
-                <div className="flex size-10 items-center justify-center rounded-xl bg-slate-800 border border-slate-700 text-amber-400 font-bold font-mono text-sm">
+              <div className="flex items-start gap-3 min-w-0">
+                <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-amber-400 font-bold font-mono text-sm shadow-inner">
                   {(a.jds?.companies?.name ?? "C").charAt(0)}
                 </div>
-                <div>
-                  <h2 className="font-bold text-white text-sm">
+                <div className="min-w-0">
+                  <h2 className="font-bold text-white text-sm truncate">
                     {a.jds?.companies?.name ?? "Company"} — {a.jds?.role_title ?? "Role"}
                   </h2>
                   <p className="mt-0.5 font-mono text-xs text-slate-400 flex items-center gap-2">
@@ -124,14 +124,14 @@ export default async function ApplicationsPage({
                 </div>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 shrink-0">
                 <StatusBadge status={a.withdrawn_at ? "withdrawn" : a.status} size="md" />
                 {canWithdraw && (
                   <form action={withdrawApplication}>
                     <input type="hidden" name="application_id" value={a.id} />
                     <button
                       type="submit"
-                      className="rounded-lg border border-red-900/60 bg-red-950/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-900/60 transition-colors"
+                      className="ops-button-destructive text-xs py-1 px-2.5 min-h-0"
                     >
                       Withdraw
                     </button>
@@ -142,9 +142,9 @@ export default async function ApplicationsPage({
           );
         })}
         {rows.length === 0 && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-12 text-center text-slate-500">
-            <OpsIcon name="file-text" size={28} className="mx-auto mb-2 opacity-40" />
-            <p className="text-sm font-medium text-slate-400">You haven&apos;t submitted any applications yet.</p>
+          <div className="rounded-lg border border-slate-750 bg-slate-900/60 p-12 text-center text-slate-400">
+            <OpsIcon name="file-text" size={28} className="mx-auto mb-2 opacity-40 text-slate-400" />
+            <p className="text-sm font-medium text-slate-300">You haven&apos;t submitted any applications yet.</p>
           </div>
         )}
       </div>

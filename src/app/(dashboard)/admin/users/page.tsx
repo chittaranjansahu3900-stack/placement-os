@@ -3,8 +3,6 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import {
-  approveUser,
-  rejectUser,
   deactivateUser,
   reactivateUser,
   assignRole,
@@ -14,12 +12,13 @@ import {
 } from "@/app/actions/admin";
 import { impersonateUser } from "@/app/actions/impersonation";
 import { AdminActionButton, SubmitOnChangeSelect } from "@/components/admin-user-controls";
+import { AdminUserTabs } from "@/components/admin-user-tabs";
 import { OpsIcon } from "@/components/ops-icon";
 import { StatusBadge } from "@/components/status-badge";
 import type { AppUser, PermissionSet, Role } from "@/types/domain";
 
 const PAGE_SIZE = 20;
-const DIRECTORY_STATUSES = ["all", "active", "pending", "deactivated"] as const;
+const DIRECTORY_STATUSES = ["all", "active", "deactivated"] as const;
 type DirectoryStatus = (typeof DIRECTORY_STATUSES)[number];
 
 type SearchParams = {
@@ -98,16 +97,6 @@ function formatJoined(value: string) {
   }).format(new Date(value));
 }
 
-async function approveFromUserDirectory(userId: string) {
-  "use server";
-  await approveUser(userId);
-}
-
-async function rejectFromUserDirectory(userId: string) {
-  "use server";
-  await rejectUser(userId);
-}
-
 export default async function AdminUsersPage({
   searchParams,
 }: {
@@ -128,7 +117,6 @@ export default async function AdminUsersPage({
   const [
     { data: roles },
     { data: permissionSets },
-    { data: pendingUsers },
     { count: totalCount },
     { count: activeCount },
     { count: pendingCount },
@@ -136,8 +124,7 @@ export default async function AdminUsersPage({
   ] = await Promise.all([
     supabase.from("roles").select("*").order("name"),
     supabase.from("permission_sets").select("*").order("name"),
-    supabase.from("users").select("*").eq("status", "pending").order("created_at").limit(4),
-    supabase.from("users").select("id", { count: "exact", head: true }),
+    supabase.from("users").select("id", { count: "exact", head: true }).in("status", ["active", "deactivated"]),
     supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "active"),
     supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "pending"),
     supabase.from("users").select("id", { count: "exact", head: true }).eq("status", "deactivated"),
@@ -152,7 +139,11 @@ export default async function AdminUsersPage({
     .from("users")
     .select(selectedRole ? "*, user_roles!inner(role_id)" : "*", { count: "exact" });
 
-  if (status !== "all") directoryQuery = directoryQuery.eq("status", status);
+  if (status === "all") {
+    directoryQuery = directoryQuery.in("status", ["active", "deactivated"]);
+  } else {
+    directoryQuery = directoryQuery.eq("status", status);
+  }
   if (selectedRole) directoryQuery = directoryQuery.eq("user_roles.role_id", selectedRole);
   if (safeSearch) {
     directoryQuery = directoryQuery.or(`name.ilike.%${safeSearch}%,email.ilike.%${safeSearch}%`);
@@ -226,11 +217,13 @@ export default async function AdminUsersPage({
         </div>
       )}
 
-      <section aria-label="Account overview" className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+      {/* Navigation Sub-Tabs */}
+      <AdminUserTabs pendingCount={pendingCount ?? 0} totalUsersCount={totalCount ?? 0} />
+
+      <section aria-label="Account overview" className="grid gap-3 sm:grid-cols-3">
         {[
-          { label: "Total directory", value: totalCount ?? 0, detail: "All account types", icon: "users" as const, tone: "text-blue-300", border: "border-l-blue-500" },
+          { label: "Managed accounts", value: totalCount ?? 0, detail: "Active and deactivated users", icon: "users" as const, tone: "text-blue-300", border: "border-l-blue-500" },
           { label: "Active", value: activeCount ?? 0, detail: "Can access PlacementOS", icon: "check-shield" as const, tone: "text-emerald-300", border: "border-l-emerald-500" },
-          { label: "Awaiting review", value: pendingCount ?? 0, detail: "Needs an admin decision", icon: "clock" as const, tone: "text-amber-300", border: "border-l-amber-500" },
           { label: "Deactivated", value: deactivatedCount ?? 0, detail: "Access currently blocked", icon: "lock" as const, tone: "text-red-300", border: "border-l-red-500" },
         ].map((metric) => (
           <div key={metric.label} className={`rounded-lg border border-slate-750 border-l-2 ${metric.border} bg-slate-900/90 p-4 shadow-sm`}>
@@ -245,44 +238,6 @@ export default async function AdminUsersPage({
           </div>
         ))}
       </section>
-
-      {(pendingCount ?? 0) > 0 && (
-        <section className="overflow-hidden rounded-lg border border-amber-800/70 bg-amber-950/15 shadow-sm">
-          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-900/50 px-4 py-3">
-            <h2 className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-wider text-amber-300">
-              <OpsIcon name="shield" size={14} />
-              Verification queue
-              <span className="rounded-full bg-amber-400 px-1.5 py-0.5 text-[9px] font-bold text-amber-950">{pendingCount}</span>
-            </h2>
-            {(pendingCount ?? 0) > 4 && (
-              <Link href={accountHref(persistentParams, { status: "pending", page: "1" })} className="text-xs font-semibold text-amber-300 hover:text-amber-200">
-                Review all {pendingCount} <span aria-hidden="true">→</span>
-              </Link>
-            )}
-          </div>
-          <div className="grid divide-y divide-amber-900/40 xl:grid-cols-2 xl:divide-x xl:divide-y-0">
-            {((pendingUsers ?? []) as AppUser[]).map((user) => (
-              <div key={user.id} className="flex flex-wrap items-center justify-between gap-4 px-4 py-3.5">
-                <div className="flex min-w-0 items-center gap-3">
-                  <span className="flex size-9 shrink-0 items-center justify-center rounded-md border border-amber-700/60 bg-amber-950 font-mono text-xs font-bold text-amber-300">{user.name.slice(0, 2).toUpperCase()}</span>
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-semibold text-white">{user.name}</p>
-                    <p className="truncate font-mono text-[11px] text-amber-300/75">{user.email}</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <form action={approveFromUserDirectory.bind(null, user.id)}>
-                    <AdminActionButton className="ops-button-primary min-w-28 text-xs" pendingLabel="Approving" icon="unlock">Approve</AdminActionButton>
-                  </form>
-                  <form action={rejectFromUserDirectory.bind(null, user.id)}>
-                    <AdminActionButton className="ops-button-ghost text-xs text-red-300 hover:border-red-800 hover:bg-red-950" pendingLabel="Rejecting" icon="x">Reject</AdminActionButton>
-                  </form>
-                </div>
-              </div>
-            ))}
-          </div>
-        </section>
-      )}
 
       <section id="account-directory" className="overflow-hidden rounded-lg border border-slate-750 bg-slate-900/90 shadow-sm">
         <div className="border-b border-slate-750 p-4">
@@ -305,7 +260,7 @@ export default async function AdminUsersPage({
             <label>
               <span className="sr-only">Filter by status</span>
               <SubmitOnChangeSelect name="status" defaultValue={status} label="Filter accounts by status" className="ops-select w-full">
-                <option value="all">All statuses</option><option value="active">Active</option><option value="pending">Pending review</option><option value="deactivated">Deactivated</option>
+                <option value="all">All managed accounts</option><option value="active">Active</option><option value="deactivated">Deactivated</option>
               </SubmitOnChangeSelect>
             </label>
             <label>

@@ -58,6 +58,17 @@ feature/security work, not more waiting on infrastructure or decisions.
 
 ## Claude's track
 
+0. **Post-UI-redesign security/UX review — done, 22 August 2026.** Full findings in
+   `docs/CLAUDE-FINAL-REVIEW.md`; handoff narrative and evidence in `docs/AGENT-SYNC.md`. Headline:
+   no Blocker found; every permission-gate variable from item 1 below survived Gemini's visual pass
+   completely unchanged (verified directly in `dashboard-nav.tsx`/`layout.tsx`); the JD-release
+   workflow is correctly implemented in the UI, not just the database (no direct-publish action
+   exists for Recruiter, deadline input has a real `max` attribute enforcing prepone-only, SPC
+   release queue shows all required fields). One High finding (`/admin/users`' role dropdown
+   defaults to granting Admin on an unmodified click) and one Medium (hardcoded season badge in the
+   shared header) — both left for integration since their files are inside the UI redesign's active
+   ownership scope. Migration `0023` and the applicant-masking diagnosis were independently
+   re-verified fresh (not carried over from memory) — still 19/19 and 11/12 respectively.
 1. ~~Systematic permission-vs-role-name UI gate audit~~ — **done, 21 August 2026.** Checked all 12
    files against the real RLS policy behind each action (queried `pg_policy` directly rather than
    assuming from the BRD text). Findings:
@@ -84,17 +95,29 @@ feature/security work, not more waiting on infrastructure or decisions.
      are also correct by design (Section 7.2 ties those personas to a fixed page set, not a single
      permission) and were left as-is.
    - Verified clean after: `npm run build`, `npx tsc --noEmit`, `npm run lint`, `npm test` (58/58).
-2. **pgTAP RLS test suite — started 2026-08-21.**
-   `supabase/tests/database/001_applicant_directory_masking.test.sql` is written and **verified
-   passing (7/7)** against the real hosted project — covers Finding #7 (`students_select` vs
-   `applicant_directory` agreement pre/post shortlist), with the recruiter session genuinely
-   simulated via `set local role authenticated` + `request.jwt.claim.sub`, not just a syntax
-   check. Run it with `DB_URL=<postgres-connection-string> npm run test:rls` — `scripts/run-pgtap.mjs`
-   executes `.test.sql` files directly against `DB_URL` without needing Docker (`supabase test db`
-   still needs Docker and remains the long-term preferred runner once that's available). See
-   `supabase/tests/README.md` for the full writeup.
-   **Still to write:** cross-tenant isolation (`0016`), the column-guard triggers (`0007`, `0011`,
-   `0012`, `0013`, `0018`), and the bulk-shortlist RPC's recruiter-company scoping (`0010`).
+2. **pgTAP RLS test suite — started 2026-08-21, extended 2026-08-22.**
+   Two files now, both run via `DB_URL=<postgres-connection-string> npm run test:rls`
+   (`scripts/run-pgtap.mjs`, Docker-free — `supabase test db` still needs Docker and remains the
+   long-term preferred runner once that's available):
+   - `001_applicant_directory_masking.test.sql` — Finding #7 (`students_select` vs
+     `applicant_directory` agreement pre/post shortlist). **11/12 passing.** The one failure is
+     intentional: the test was corrected 2026-08-22 to assert applicant-row *existence* separately
+     from column masking (it previously only checked scalar column values, which can't distinguish
+     a masked `NULL` from an absent row), and that correction surfaced a real, previously-hidden
+     defect — see Section 3 Finding #10 in `BRD-IMPLEMENTATION-STATUS.md` and
+     `docs/APPLICANT-MASKING-FIX-PROPOSAL.md`. Leave assertion 2 failing until that's fixed; don't
+     revert the test to hide it again.
+   - `002_spc_jd_release_gate.test.sql` — the FR-1.3 SPC release gate (`0023`). Independently
+     security-reviewed and extended from 9 to **19/19 passing**: cross-institute release attempts,
+     pending/deactivated Recruiter and SPC actors, forged release metadata, unrelated-field
+     tampering during release, second-release attempts, past/equal/prepone deadlines, and
+     direct-table-update bypass attempts (blocked by RLS before the trigger ever runs, since SPC
+     lacks `JD Management`). One theorized cross-institute RLS gap was empirically tested and
+     disproven before being written up — verify against real Postgres, don't trust a policy
+     read-through alone, in either direction.
+   **Still to write:** cross-tenant isolation (`0016`) as its own dedicated test (002 only covers it
+   for the JD-release path), the column-guard triggers (`0007`, `0011`, `0012`, `0013`, `0018`), and
+   the bulk-shortlist RPC's recruiter-company scoping (`0010`).
 3. **SSO → Google**, decided 2026-08-21 (FR-9.4). Extends the existing Firebase Custom Token
    federation layer (BRD §12.1) rather than a fresh integration — scope it against that existing
    auth code first.
@@ -109,6 +132,29 @@ feature/security work, not more waiting on infrastructure or decisions.
 5. **FR-9.2 residual**: user auto-expiry (season-end/graduation), full CRUD/RLS matrix
    verification. **FR-9.3**: add missing audit events (JD approvals, Admin shortlist-override
    semantics, permission-set edits).
+6. ~~Applicant-directory masking defect (Section 3 Finding #10)~~ — **closed end to end, 22 August
+   2026.** `get_applicant_directory(p_jd_id)` (`0024_masked_applicant_directory_rpc.sql`) is a
+   `SECURITY DEFINER` RPC modeled on `get_candidate_packets()`'s already-proven pattern: bypasses
+   `students_select` entirely, enforces its own company/institute/permission checks, masks
+   phone/personal_email/gender by status **or** `Student Data - Full` (not `Shortlist Oversight`
+   alone — a real discrepancy the original proposal doc had between its SQL sketch and its own test
+   list, resolved explicitly in the migration). `anon` EXECUTE explicitly revoked, not just
+   `PUBLIC`. Applied to hosted Supabase; `001_applicant_directory_masking.test.sql` rewritten to
+   test the RPC (Finding #7's raw-table guard preserved) — **22/22 passing**, combined with `002`'s
+   19/19 for a fully green 41/41 hosted pgTAP run. Both `.../applicants/page.tsx` and
+   `.../applicants/packets/page.tsx` switched to the RPC (confirmed by direct source read) — full
+   design record in `docs/APPLICANT-MASKING-FIX-PROPOSAL.md`.
+7. **New, found 2026-08-22 — schema-wide `anon` EXECUTE grant.** Every `SECURITY DEFINER` function
+   in this schema (33 of them, not just `0023`'s) has EXECUTE granted to `anon` via Supabase's own
+   default project ACLs; `revoke ... from public` (the pattern used throughout this codebase,
+   including `0023`) never actually strips it, since `anon` has its own direct default-privilege
+   grant independent of the `PUBLIC` pseudo-role. Not exploitable today — every function checked has
+   its own explicit `current_user_id() is null`-or-equivalent guard as backstop — but worth one
+   dedicated migration (`ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM
+   anon`, plus explicit re-grants for anything genuinely meant to be anon-callable, if anything is)
+   instead of relying on that holding for all 33 forever. Not fixed here — out of this review's
+   scope, and a schema-wide grant change deserves its own focused pass, not a rider on an unrelated
+   task.
 
 ## Codex's track
 

@@ -38,46 +38,46 @@ export function StatusBadge({ status, className = "", size = "md" }: StatusBadge
 
   let iconName: OpsIconName = "check-shield";
   let label = status.replaceAll("_", " ");
-  let colorStyles = "bg-command text-slate-300 border-slate-700";
+  let colorStyles = "bg-slate-800/80 text-slate-300 border-slate-700/80";
 
   switch (normalized) {
     case "draft":
       iconName = "clock";
-      colorStyles = "bg-command text-slate-400 border-slate-700";
+      colorStyles = "bg-slate-800/90 text-slate-300 border-slate-700";
       break;
     case "published":
     case "active":
     case "onboarded":
       iconName = "check-shield";
-      colorStyles = "bg-clearance/10 text-emerald-300 border-emerald-700";
+      colorStyles = "bg-emerald-950/70 text-emerald-300 border-emerald-700/60 shadow-[0_0_8px_rgba(16,185,129,0.1)]";
       break;
     case "shortlisted":
       iconName = "star";
-      colorStyles = "bg-clearance/10 text-emerald-300 border-emerald-700";
+      colorStyles = "bg-emerald-950/70 text-emerald-300 border-emerald-700/60 shadow-[0_0_8px_rgba(16,185,129,0.1)]";
       break;
     case "interview":
       iconName = "calendar";
-      colorStyles = "bg-signal/10 text-blue-300 border-blue-700";
+      colorStyles = "bg-blue-950/70 text-blue-300 border-blue-700/60 shadow-[0_0_8px_rgba(59,130,246,0.1)]";
       break;
     case "selected":
     case "placed":
     case "committed":
       iconName = "award";
-      colorStyles = "bg-clearance/10 text-emerald-300 border-emerald-700";
+      colorStyles = "bg-emerald-950/80 text-emerald-200 border-emerald-600/70 font-semibold shadow-[0_0_10px_rgba(16,185,129,0.15)]";
       break;
     case "waitlisted":
       iconName = "clock";
-      colorStyles = "bg-escalation/10 text-amber-300 border-amber-700";
+      colorStyles = "bg-amber-950/70 text-amber-300 border-amber-700/60";
       break;
     case "rejected":
     case "deactivated":
       iconName = "x";
-      colorStyles = "bg-breach/10 text-red-300 border-red-700";
+      colorStyles = "bg-red-950/70 text-red-300 border-red-800/60";
       break;
     case "stale":
       iconName = "alert-triangle";
       label = "Stale pipeline";
-      colorStyles = "bg-escalation/10 text-amber-200 border-amber-700 border-l-2";
+      colorStyles = "bg-amber-950/80 text-amber-200 border-amber-700 font-semibold";
       break;
     case "pending":
     case "pending_spc_review":
@@ -86,17 +86,17 @@ export function StatusBadge({ status, className = "", size = "md" }: StatusBadge
     case "interested":
       iconName = "clock";
       if (normalized === "pending_spc_review") label = "Pending SPC review";
-      colorStyles = "bg-escalation/10 text-amber-300 border-amber-700";
+      colorStyles = "bg-amber-950/80 text-amber-300 border-amber-700/70 shadow-[0_0_8px_rgba(245,158,11,0.1)]";
       break;
     case "applications_closed":
     case "shortlisting":
     case "closed":
       iconName = "layers";
-      colorStyles = "bg-command text-slate-300 border-slate-700";
+      colorStyles = "bg-slate-850 text-slate-300 border-slate-700";
       break;
     default:
       iconName = "shield";
-      colorStyles = "bg-command text-slate-300 border-slate-700";
+      colorStyles = "bg-slate-800/80 text-slate-300 border-slate-700";
   }
 
   const sizeStyles =
@@ -104,9 +104,9 @@ export function StatusBadge({ status, className = "", size = "md" }: StatusBadge
 
   return (
     <span
-      className={`inline-flex items-center rounded-full border font-medium capitalize ${sizeStyles} ${colorStyles} ${className}`}
+      className={`inline-flex items-center rounded-md border font-medium capitalize tracking-tight ${sizeStyles} ${colorStyles} ${className}`}
     >
-      <OpsIcon name={iconName} size={size === "sm" ? 12 : 14} className="shrink-0" />
+      <OpsIcon name={iconName} size={size === "sm" ? 11 : 13} className="shrink-0" />
       <span>{label}</span>
     </span>
   );

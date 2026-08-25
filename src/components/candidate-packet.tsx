@@ -14,9 +14,9 @@ function DetailGrid({ values }: { values: Array<[string, unknown]> }) {
   return (
     <dl className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {values.map(([label, value]) => (
-        <div key={label} className="rounded-md border border-neutral-800 bg-neutral-950/60 p-3">
-          <dt className="text-[11px] uppercase tracking-wide text-neutral-500">{label}</dt>
-          <dd className="mt-1 break-words text-sm text-neutral-200">{displayValue(value)}</dd>
+        <div key={label} className="rounded-md border border-slate-800 bg-slate-950/70 p-3 shadow-inner">
+          <dt className="font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">{label}</dt>
+          <dd className="mt-1 break-words text-xs font-medium text-slate-100">{displayValue(value)}</dd>
         </div>
       ))}
     </dl>
@@ -27,8 +27,8 @@ function ObjectDetails({ title, value }: { title: string; value: object }) {
   const entries = Object.entries(value ?? {});
   if (entries.length === 0) return null;
   return (
-    <section>
-      <h3 className="mb-2 text-sm font-medium text-white">{title}</h3>
+    <section className="space-y-2">
+      <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">{title}</h3>
       <DetailGrid values={entries.map(([key, item]) => [key.replaceAll("_", " "), item])} />
     </section>
   );
@@ -41,22 +41,25 @@ export function CandidatePacket({ packet }: { packet: CandidatePacketData }) {
 
   return (
     <article className="candidate-packet space-y-6">
-      <section className="candidate-profile-sheet rounded-lg border border-neutral-800 bg-neutral-900 p-5">
-        <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+      <section className="candidate-profile-sheet rounded-lg border border-slate-750 bg-slate-900/90 p-5 shadow-md">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-3 border-b border-slate-800 pb-4">
           <div>
-            <p className="text-xs uppercase tracking-wide text-blue-400">Candidate packet</p>
-            <h2 className="mt-1 text-xl font-semibold text-white">{student.name}</h2>
-            <p className="text-sm text-neutral-400">{student.roll_no}</p>
+            <p className="font-mono text-[10px] font-semibold uppercase tracking-wider text-blue-400">
+              Verified Candidate Dossier
+            </p>
+            <h2 className="mt-1 text-xl font-bold tracking-tight text-white">{student.name}</h2>
+            <p className="font-mono text-xs text-slate-400">{student.roll_no}</p>
           </div>
-          <span className="rounded-full border border-neutral-700 px-3 py-1 text-xs capitalize text-neutral-300">
+          <span className="rounded-md border border-slate-700 bg-slate-800 px-3 py-1 font-mono text-xs capitalize text-slate-200">
             {applicant.status.replaceAll("_", " ")}
           </span>
         </div>
 
         {!isUnmasked && (
-          <p className="mb-5 rounded-md border border-amber-900 bg-amber-950/40 px-3 py-2 text-xs text-amber-300">
-            Pre-shortlist packet: phone, personal email, gender, and CV contact fields are masked.
-          </p>
+          <div className="mb-5 flex items-center gap-2 rounded-md border border-amber-800/80 bg-amber-950/60 px-3.5 py-2.5 text-xs text-amber-200 shadow-sm">
+            <span className="font-mono font-bold uppercase text-[10px] bg-amber-900/80 px-1.5 py-0.5 rounded border border-amber-700/80">Privacy Mask</span>
+            <span>Pre-shortlist candidate packet: phone, personal email, gender, and CV contact fields are securely masked.</span>
+          </div>
         )}
 
         <div className="space-y-5">
@@ -73,17 +76,17 @@ export function CandidatePacket({ packet }: { packet: CandidatePacketData }) {
             ]}
           />
 
-          <ObjectDetails title="Postgraduate details" value={student.pg_details ?? {}} />
-          <ObjectDetails title="Graduation details" value={student.graduation_details ?? {}} />
-          <ObjectDetails title="Class 10 / 12 details" value={student.tenth_twelfth_details ?? {}} />
+          <ObjectDetails title="Postgraduate Academic Record" value={student.pg_details ?? {}} />
+          <ObjectDetails title="Graduation Degree Details" value={student.graduation_details ?? {}} />
+          <ObjectDetails title="Secondary & Higher Secondary (10th/12th)" value={student.tenth_twelfth_details ?? {}} />
 
           {student.prior_employers.length > 0 && (
-            <section>
-              <h3 className="mb-2 text-sm font-medium text-white">Prior employers</h3>
+            <section className="space-y-2">
+              <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">Prior Professional Experience</h3>
               <div className="space-y-2">
                 {student.prior_employers.map((employer, index) => (
-                  <div key={`${employer.company}-${index}`} className="rounded-md border border-neutral-800 p-3 text-sm text-neutral-300">
-                    <strong className="text-white">{employer.company}</strong>
+                  <div key={`${employer.company}-${index}`} className="rounded-md border border-slate-800 bg-slate-950/60 p-3 text-xs text-slate-300">
+                    <strong className="text-white font-semibold">{employer.company}</strong>
                     {employer.role ? ` — ${employer.role}` : ""}
                     {employer.duration_months ? ` · ${employer.duration_months} months` : ""}
                   </div>
@@ -107,19 +110,19 @@ export function CandidatePacket({ packet }: { packet: CandidatePacketData }) {
       </section>
 
       {content ? (
-        <section>
-          <div className="mb-3 print:hidden">
-            <h3 className="text-sm font-medium text-white">Attached application CV</h3>
-            <p className="text-xs text-neutral-500">
+        <section className="space-y-3">
+          <div className="flex items-center justify-between border-b border-slate-800 pb-2 print:hidden">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-300">Attached Application CV</h3>
+            <p className="font-mono text-[11px] text-slate-400">
               Version {cvDocument?.version_no} · template {cvDocument?.template_id}
             </p>
           </div>
           <ResumePreview content={content} templateId={cvDocument?.template_id} />
         </section>
       ) : (
-        <p className="rounded-md border border-amber-900 bg-amber-950/40 p-4 text-sm text-amber-300">
+        <div className="rounded-md border border-amber-800/80 bg-amber-950/50 p-4 text-xs text-amber-300">
           This application has no attached CV snapshot.
-        </p>
+        </div>
       )}
     </article>
   );

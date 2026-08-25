@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { OpsIcon } from "@/components/ops-icon";
 import type { CvContent } from "@/types/domain";
 
 export function ResumeExportButtons({ fileName, content, templateId = "placement-cell-v2" }: { fileName: string; content: CvContent; templateId?: string }) {
@@ -23,9 +24,22 @@ export function ResumeExportButtons({ fileName, content, templateId = "placement
   }
 
   return (
-    <div className="flex flex-wrap gap-2 print:hidden">
-      <button type="button" onClick={() => window.print()} className="rounded-md bg-white px-3 py-2 text-xs font-medium text-neutral-950 hover:bg-neutral-200">Print / Save PDF</button>
-      <button type="button" onClick={exportDocx} disabled={exporting} className="rounded-md border border-neutral-700 px-3 py-2 text-xs font-medium text-neutral-200 hover:bg-neutral-800 disabled:opacity-50">
+    <div className="flex flex-wrap items-center gap-2.5 print:hidden">
+      <button
+        type="button"
+        onClick={() => window.print()}
+        className="ops-button-primary text-xs"
+      >
+        <OpsIcon name="printer" size={13} />
+        Print / Save PDF
+      </button>
+      <button
+        type="button"
+        onClick={exportDocx}
+        disabled={exporting}
+        className="ops-button-secondary text-xs"
+      >
+        <OpsIcon name="download" size={13} />
         {exporting ? "Building DOCX…" : "Download Word (.docx)"}
       </button>
     </div>

@@ -10,15 +10,15 @@ export default async function SignupPage({
   const { error } = await searchParams;
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[#080c14] px-4 selection:bg-amber-500/20 selection:text-amber-200">
+    <div className="flex min-h-screen items-center justify-center bg-[#090d16] px-4">
       <div className="w-full max-w-md space-y-6">
         {/* Brand Banner */}
         <div className="text-center">
-          <div className="mb-3 inline-flex size-12 items-center justify-center border border-blue-500 bg-blue-950 font-display text-xl font-bold text-blue-200">
+          <div className="mb-3 inline-flex size-11 items-center justify-center rounded-lg bg-blue-600 font-bold text-white shadow-md shadow-blue-500/20">
             PO
           </div>
           <h1 className="text-2xl font-bold tracking-tight text-white">
-            Placement<span className="text-amber-400">OS</span>
+            Placement<span className="text-blue-400">OS</span>
           </h1>
           <p className="mt-1 text-xs font-mono text-slate-400">
             Corporate Recruiter Onboarding Portal
@@ -26,7 +26,7 @@ export default async function SignupPage({
         </div>
 
         {/* Card */}
-        <div className="space-y-5 rounded-2xl border border-slate-800 bg-[#101e30] p-8">
+        <div className="space-y-5 rounded-lg border border-slate-750 bg-slate-900/90 p-8 shadow-xl">
           <div>
             <h2 className="text-base font-bold text-white">Corporate Self-Registration</h2>
             <p className="text-xs text-slate-400 mt-0.5">
@@ -35,7 +35,7 @@ export default async function SignupPage({
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3 text-xs text-red-200">
+            <div className="flex items-center gap-2.5 rounded-lg border border-red-800/80 bg-red-950/70 p-3 text-xs text-red-200 shadow-sm">
               <OpsIcon name="alert-triangle" size={14} className="text-red-400 shrink-0" />
               <span>{error}</span>
             </div>
@@ -52,7 +52,7 @@ export default async function SignupPage({
                 type="text"
                 required
                 placeholder="e.g. Priya Iyer"
-                className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500"
+                className="ops-input mt-1.5 w-full text-xs text-white"
               />
             </div>
 
@@ -66,7 +66,7 @@ export default async function SignupPage({
                 type="text"
                 required
                 placeholder="e.g. Google India / McKinsey"
-                className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500"
+                className="ops-input mt-1.5 w-full text-xs text-white"
               />
             </div>
 
@@ -81,7 +81,7 @@ export default async function SignupPage({
                 required
                 autoComplete="email"
                 placeholder="name@company.com"
-                className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500"
+                className="ops-input mt-1.5 w-full text-xs text-white"
               />
             </div>
 
@@ -97,13 +97,13 @@ export default async function SignupPage({
                 autoComplete="new-password"
                 minLength={8}
                 placeholder="Minimum 8 characters"
-                className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-amber-500"
+                className="ops-input mt-1.5 w-full text-xs text-white font-mono"
               />
             </div>
 
             <button
               type="submit"
-              className="ops-button-primary w-full justify-center"
+              className="ops-button-primary w-full justify-center text-xs py-2.5"
             >
               Submit Registration Request
             </button>
@@ -112,7 +112,7 @@ export default async function SignupPage({
           <div className="border-t border-slate-800 pt-4 text-center">
             <p className="text-xs text-slate-400">
               Already have an approved account?{" "}
-              <Link href="/login" className="text-amber-400 font-semibold hover:underline">
+              <Link href="/login" className="text-blue-400 font-semibold hover:underline">
                 Sign In
               </Link>
             </p>

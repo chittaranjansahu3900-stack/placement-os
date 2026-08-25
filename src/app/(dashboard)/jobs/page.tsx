@@ -27,7 +27,7 @@ export default async function JobsPage({
 
   if (!student) {
     return (
-      <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 text-center max-w-xl mx-auto">
+      <div className="rounded-lg border border-slate-750 bg-slate-900/90 p-8 text-center max-w-xl mx-auto shadow-sm">
         <OpsIcon name="shield" size={28} className="mx-auto mb-2 text-amber-400" />
         <h1 className="text-lg font-bold text-white">Student Profile Required</h1>
         <p className="mt-2 text-xs text-slate-400">
@@ -57,16 +57,16 @@ export default async function JobsPage({
   );
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-3xl space-y-7">
       {/* Header Banner */}
       <div className="border-b border-slate-800/80 pb-5">
-        <div className="flex items-center gap-2 text-xs font-mono text-emerald-400">
+        <div className="flex items-center gap-2 font-mono text-xs text-emerald-400">
           <OpsIcon name="briefcase" size={14} />
           <span>Student Placement Portal</span>
         </div>
         <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
           <span>Active Placement Drives</span>
-          <span className="rounded-md bg-slate-800 px-2 py-0.5 font-mono text-xs font-semibold text-slate-300 border border-slate-700">
+          <span className="rounded bg-slate-800 px-2.5 py-0.5 font-mono text-xs font-semibold text-slate-300 border border-slate-700">
             {rows.length} Drives
           </span>
         </h1>
@@ -76,8 +76,8 @@ export default async function JobsPage({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3.5 text-xs text-red-200">
-          <OpsIcon name="alert-triangle" size={16} className="text-red-400" />
+        <div className="flex items-center gap-2.5 rounded-lg border border-red-800/80 bg-red-950/70 p-3.5 text-xs text-red-200 shadow-sm">
+          <OpsIcon name="alert-triangle" size={15} className="text-red-400 shrink-0" />
           <span>{error}</span>
         </div>
       )}
@@ -92,15 +92,15 @@ export default async function JobsPage({
           return (
             <div
               key={jd.id}
-              className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 hover:border-slate-700 transition-all backdrop-blur-md space-y-3"
+              className="rounded-lg border border-slate-750 bg-slate-900/90 p-5 hover:border-slate-650 transition-all shadow-sm space-y-3.5"
             >
               <div className="flex flex-wrap items-start justify-between gap-4">
-                <div className="flex items-start gap-3">
-                  <div className="flex size-10 items-center justify-center rounded-xl bg-slate-800 border border-slate-700 text-amber-400 font-bold font-mono text-base">
+                <div className="flex items-start gap-3 min-w-0">
+                  <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-amber-400 font-bold font-mono text-base shadow-inner">
                     {(jd.companies?.name ?? "C").charAt(0)}
                   </div>
-                  <div>
-                    <h2 className="font-bold text-white text-base">
+                  <div className="min-w-0">
+                    <h2 className="font-bold text-white text-base truncate">
                       {jd.companies?.name ?? "Company"} — {jd.role_title}
                     </h2>
                     <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 font-mono text-xs text-slate-400">
@@ -120,7 +120,7 @@ export default async function JobsPage({
                   </div>
                 </div>
 
-                <div>
+                <div className="shrink-0">
                   {applied && !applied.withdrawn_at ? (
                     <StatusBadge status={applied.status} size="md" />
                   ) : stillOpen && elig?.eligible ? (
@@ -135,7 +135,7 @@ export default async function JobsPage({
                       </button>
                     </form>
                   ) : (
-                    <span className="rounded-lg border border-slate-800 bg-slate-950 px-3 py-1.5 font-mono text-xs font-medium text-slate-500">
+                    <span className="rounded border border-slate-750 bg-slate-950 px-3 py-1.5 font-mono text-xs font-medium text-slate-400">
                       {stillOpen ? "Criteria Ineligible" : "Applications Closed"}
                     </span>
                   )}
@@ -143,8 +143,8 @@ export default async function JobsPage({
               </div>
 
               {!elig?.eligible && elig?.reasons && elig.reasons.length > 0 && (
-                <div className="rounded-xl border border-amber-900/50 bg-amber-950/20 p-3 text-xs text-amber-300">
-                  <p className="font-mono text-[10px] uppercase font-bold tracking-wider text-amber-400">Eligibility Ineligibility Breakdown:</p>
+                <div className="rounded-md border border-amber-800/70 bg-amber-950/40 p-3 text-xs text-amber-200 shadow-inner">
+                  <p className="font-mono text-[10px] uppercase font-bold tracking-wider text-amber-300">Eligibility Status Detail:</p>
                   <ul className="mt-1 list-disc pl-4 space-y-0.5 text-slate-300">
                     {elig.reasons.map((r, idx) => (
                       <li key={idx}>{r}</li>
@@ -156,9 +156,9 @@ export default async function JobsPage({
           );
         })}
         {rows.length === 0 && (
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/40 p-12 text-center text-slate-500">
-            <OpsIcon name="briefcase" size={28} className="mx-auto mb-2 opacity-40" />
-            <p className="text-sm font-medium text-slate-400">No open placement opportunities active for your cohort right now.</p>
+          <div className="rounded-lg border border-slate-750 bg-slate-900/60 p-12 text-center text-slate-400">
+            <OpsIcon name="briefcase" size={28} className="mx-auto mb-2 opacity-40 text-slate-400" />
+            <p className="text-sm font-medium text-slate-300">No open placement opportunities active for your cohort right now.</p>
           </div>
         )}
       </div>

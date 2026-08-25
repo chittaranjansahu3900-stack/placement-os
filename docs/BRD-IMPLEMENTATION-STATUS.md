@@ -4,8 +4,11 @@
 against real Postgres on 21 August 2026 — see Section 6.
 **Requirements source:** `docs/PlacementOS_BRD_v3.pdf`  
 **Code assessed:** current PlacementOS workspace through migration
-`0023_spc_jd_release_gate.sql` (`0019`–`0022` applied to hosted Supabase 21 August 2026; `0023`
-applied 22 August 2026, verified via `npm run test:rls` — both pgTAP suites pass, 16/16); **all
+`0024_masked_applicant_directory_rpc.sql` (`0019`–`0023` applied to hosted Supabase across
+21–22 August 2026; `0024` applied 22 August 2026 — `get_applicant_directory()`, the database-side
+fix for Section 3 Finding #10). `npm run test:rls` is **fully green, 41/41**: test 002
+(JD-release gate) 19/19, test 001 (applicant masking, rewritten to test the new RPC instead of
+the old view) 22/22. **All
 original release-blocking findings below were
 independently re-verified against the actual policies/functions, then fixed, in
 `0011_students_self_update_guard.sql` (already in place before this audit landed) and
@@ -34,16 +37,19 @@ not execution instructions.
 | Status | Count | Share |
 |---|---:|---:|
 | Implemented in code | 39 | 66% |
-| Partial | 18 | 31% |
-| Missing | 2 | 3% |
+| Partial | 19 | 32% |
+| Missing | 1 | 2% |
 | **Total functional requirements** | **59** | **100%** |
 
-(The rollup counts the explicitly confirmation-blocked FR-8.10 as Partial. Counts describe code
-coverage, not hosted configuration or pilot acceptance; see each row's "Remaining work" for those
-distinctions.)
+(FR-8.10 remains Partial with its behavior now approved for implementation. FR-8.11 moved from
+Missing to Partial 22 August 2026 and now has an authorized user-facing monitoring screen, but still
+needs live provider/DNS pilot validation. FR-4.2 and FR-4.4 returned to Implemented after migration
+`0024` and both page consumers switched to the masked RPC, closing Section 3 Finding #10.
+Counts describe code coverage, not hosted configuration or pilot acceptance; see each row's
+"Remaining work" for those distinctions.)
 
 All ten Section 4 modules now have at least a baseline surface. The largest remaining code gaps are
-institute SSO (FR-9.4), deliverability monitoring (FR-8.11), the confirmation-blocked FR-8.10
+institute SSO (FR-9.4), live deliverability validation (FR-8.11), the approved-but-unbuilt FR-8.10
 supervision behavior, and residual Partial requirements. Notification, storage, outreach-season, and
 assignment work still depends on completing provider/role pilots (Resend send-through, real recruiter
 file access, etc.) even though the underlying schema is now live.
@@ -147,6 +153,40 @@ intact and adds the resolution.
    target user to belong to `current_institute_id()`, assignable roles must be global base roles or local
    roles, and role/bundle writes are limited to non-base roles owned by the current institute. Each new
    `USING`/`WITH CHECK` pair was mirrored and re-read after the change.
+10. **`applicant_directory` silently drops pre-shortlist applicant rows for Recruiters instead of
+    masking them — a functional defect, not a data-exposure one.** Found 22 August 2026 during a
+    database-security review of migration `0023`, reproduced directly against the hosted database.
+    The view is `security_invoker = true` and INNER JOINs `students`; `students_select`'s only
+    Recruiter-reachable branch requires the application to already be shortlisted+, so pre-shortlist
+    the join returns nothing and the whole application row vanishes from the view — not just its
+    sensitive columns. Confirmed recruiter-specific: Admin/SPC hold `Student Data - Full`, a
+    `students_select` branch with no shortlist-status condition, so they're unaffected. Confirmed
+    scope: `src/app/(dashboard)/jds/[id]/applicants/page.tsx` (FR-4.2's main list) and
+    `.../applicants/packets/page.tsx` (FR-4.4's merged-packet selector) both source rows from this
+    view directly, so a recruiter's applicant list and merged packets both silently exclude anyone
+    not yet shortlisted — inverting the actual shortlisting workflow. The original
+    `001_applicant_directory_masking.test.sql` didn't catch this because its pre-shortlist assertions
+    were scalar-column checks (`select phone from ... where student_id = ...`); a masked `NULL` and
+    an absent row are indistinguishable through that shape.
+    **✅ Database-side fix applied — `0024_masked_applicant_directory_rpc.sql`, 22 August 2026.**
+    `get_applicant_directory(p_jd_id)`, a `SECURITY DEFINER` RPC modeled on the proven
+    `get_candidate_packets()` pattern (bypasses `students_select` entirely, enforces its own
+    company/institute/permission checks and its own masking `CASE`), replaces the view for
+    Recruiter-scoped listing. Resolves a real discrepancy the original proposal doc had between its
+    SQL sketch (status-only masking) and its own test list (Admin/SPC always unmasked): the shipped
+    unmask condition is status-in-(shortlisted/interview/selected/waitlisted) **or** the caller
+    holding `Student Data - Full` — holding `Shortlist Oversight` alone grants row visibility but
+    not unmasking, verified with a purpose-built custom role holding only that one Permission Set.
+    `anon` EXECUTE explicitly revoked (not just `PUBLIC`, which — per the systemic gap noted after
+    `0023`'s review — Supabase's default ACLs would otherwise still grant). Rewritten
+    `001_applicant_directory_masking.test.sql` (still same filename, now tests the RPC instead of
+    the view; Finding #7's raw-table regression guard preserved) is **22/22 passing** against
+    hosted Postgres, covering every scenario above plus cross-institute isolation for both a
+    Recruiter and an Admin, a deactivated/pending-user check, the `anon`-cannot-execute grant
+    check, and null/non-existent-id edge cases. **Application integration completed 22 August
+    2026:** both the applicant list and merged-packet selector now call the typed RPC, closing the
+    user-visible empty pre-shortlist-list symptom. Full design record:
+    `docs/APPLICANT-MASKING-FIX-PROPOSAL.md`.
 
 ## 4. Functional requirement traceability
 
@@ -156,7 +196,7 @@ intact and adds the resolution.
 |---|---|---|---|
 | FR-1.1 | Partial | Recruiter self-signup creates a Pending user; Admin approve/reject UI exists. | Enforce work-email policy, real verification/activation email, and Active status in every authorization path. Close the self-activation RLS issue above. |
 | FR-1.2 | Partial | JD creation captures all listed structured fields and now accepts an original attachment into the private `placement-files` bucket, storing the object path in the existing `jds.jd_attachment_url` and exposing a short-lived download. | Apply `0020_plain_file_storage.sql` and validate upload/download with recruiter and student roles; retention/replacement cleanup still needs an institute decision. |
-| FR-1.3 | Implemented | The 22 August workflow decision is enforced in code and migration `0023`: Recruiter sets the deadline and submits a student-hidden draft → SPC reviews and may keep or prepone (never postpone) the deadline → SPC releases to the assigned batch → Published → Applications Closed → Shortlisting → Closed. The database locks the submitted payload and blocks direct Recruiter publication. `0023` is applied to hosted Supabase and `002_spc_jd_release_gate.test.sql` passes 9/9 against it (22 August 2026). | A return-for-revision path was deliberately not invented because its behavior has not been specified — flag before building. Still needs a real-role pilot walkthrough. |
+| FR-1.3 | Implemented | The 22 August workflow decision is enforced in code and migration `0023`: Recruiter sets the deadline and submits a student-hidden draft → SPC reviews and may keep or prepone (never postpone) the deadline → SPC releases to the assigned batch → Published → Applications Closed → Shortlisting → Closed. The database locks the submitted payload and blocks direct Recruiter publication. `0023` is applied to hosted Supabase; `002_spc_jd_release_gate.test.sql` was independently security-reviewed (manual `USING`/`WITH CHECK`/trigger-order read plus empirical cross-institute/pending-user/deactivated-user/metadata-forgery probes against the real database) and extended from 9 to 19 assertions, all passing (22 August 2026). Confirmed empirically, not just by code-reading: cross-institute release is blocked (via `jds_select`'s tenant join, which every UPDATE also depends on — `jds_update` itself has no independent tenant check, worth hardening explicitly later), and Pending/deactivated actors cannot submit or release. One separately-tracked, non-blocking finding from the same review: `revoke ... from public` doesn't actually strip `anon`'s EXECUTE on `release_jd_to_batch` (or any of this schema's 33 SECURITY DEFINER functions — a pre-existing, schema-wide Supabase default-ACL pattern, not something `0023` introduced); not exploitable today because the function has its own explicit `current_user_id() is null` guard, but worth a dedicated `ALTER DEFAULT PRIVILEGES` migration rather than a one-off patch. | A return-for-revision path was deliberately not invented because its behavior has not been specified — flag before building. Still needs a real-role pilot walkthrough, and the `anon`-EXECUTE finding above needs its own migration. |
 | FR-1.4 | Implemented | JD detail calls `eligible_student_count_for_jd()` before publish. | Validate against at least three real historical JDs. |
 | FR-1.5 | Implemented | `/jds` now separates active-season work from an inactive-season historical template library. Any RLS-visible JD can be cloned to an active batch as a fresh Draft with a new deadline; structured fields copy, while applications, status, timestamps, notifications, and the attachment (unless explicitly selected) do not. The clone is audit-logged. | Validate cloning with a recruiter-owned company and at least two real seasons; confirm whether template naming/favourites are needed beyond the historical library. |
 | FR-1.6 | Implemented | Multiple users can reference one company; JD RLS scopes recruiters to their own company. | Validate with two recruiter accounts in real Postgres. |
@@ -186,9 +226,9 @@ intact and adds the resolution.
 | ID | Status | What exists | Remaining work |
 |---|---|---|---|
 | FR-4.1 | Implemented | Each application packet combines the complete roster Profile Sheet with the exact CV version captured at apply time. | Validate layout and source-field labels with recruiters; decide whether Profile Sheet values must be immutable snapshots. |
-| FR-4.2 | Implemented | Applicant controls support name/roll search; status, branch, specialization, minimum-CGPA, and minimum-work-ex filters; and CGPA/name/work-ex/applied-date/status sorting in either direction. | Reconcile manual ordering against real applicant data. |
+| FR-4.2 | Implemented | Applicant controls support name/roll search; status, branch, specialization, minimum-CGPA, and minimum-work-ex filters; and CGPA/name/work-ex/applied-date/status sorting in either direction. The page now calls hosted `get_applicant_directory(p_jd_id)` (`0024`), so an own-company Recruiter receives every application row with phone/personal_email/gender masked pre-shortlist and unmasked after; `Student Data - Full` callers remain unmasked. The RPC's active-user, tenant, company, and permission contract passes 22/22 pgTAP assertions. | Reconcile sorting/masking presentation against real applicant volume and refresh the masked/unmasked screenshots. |
 | FR-4.3 | Implemented | Per-candidate actions plus atomic bulk shortlist/waitlist/reject for up to 500 selections, with optional round labels. | Execute migration `0010` and test recruiter-company scoping. |
-| FR-4.4 | Implemented | Recruiters can open an inline Profile Sheet + attached-CV packet per applicant and print all visible packets as one merged PDF. `get_candidate_packets()` returns masked contact/gender/CV contact fields pre-shortlist and full data after shortlist without weakening raw-table RLS. | Execute migration `0014` and verify masking plus merged pagination against real Postgres/browser output. |
+| FR-4.4 | Implemented | Recruiters can open an inline Profile Sheet + attached-CV packet per applicant and print all visible packets as one merged PDF. Applicant selection now uses `get_applicant_directory()` before the existing `get_candidate_packets()` masking layer, so pre-shortlist rows are no longer omitted; the merged view sorts returned rows by candidate name without relying on a PostgREST view transform. | Verify masking, print pagination, and CV rendering in a real Recruiter browser session, then refresh the packet screenshot. |
 | FR-4.5 | Implemented | `application_private_notes` (student-proof RLS, Finding #8) now has a recruiter-facing UI on the applicants page (`src/app/actions/private-notes.ts`, wired into `src/app/(dashboard)/jds/[id]/applicants/page.tsx`) to add and view notes per candidate. | Validate against real Postgres and real applicant volume. |
 | FR-4.6 | Partial | Successful single and bulk application-status changes now queue student and assigned-SPC notifications through the shared helper, after RLS-gated mutations succeed. | Apply `0019`, complete Resend configuration/CDPO sign-off, and pilot single plus bulk delivery. |
 
@@ -232,8 +272,8 @@ intact and adds the resolution.
 | FR-8.7 | Implemented | Timestamped, logged-by call remarks are stored and shown chronologically. | Validate same-session supervisor visibility in real Postgres. |
 | FR-8.8 | Partial | SPC remarks are separate from call remarks. | Restrict SPC remarks to the supervising Senior SPC/Admin and surface JPC remarks separately where required by Appendix B.3. |
 | FR-8.9 | Implemented | Standalone JD Form Received flag exists and is not auto-linked to onboarding. | Add audit logging if required operationally. |
-| FR-8.10 | Partial — confirmation required | Owner/Supervisor reassignment UI and audit event exist; database enforcement restricts changes to Admin or the company's current supervisor, and `0021` validates assignee role lineage. **Proposed behavior (not implemented):** add a Senior-SPC/Admin “Supervision” view containing Prospect/Contacted/Interested companies whose `greatest(companies.updated_at, latest outreach_activities.occurred_at)` is older than the threshold; show Owner → Supervisor, last touch, and days stale; allow only manual Owner reassignment from that row, require a reason, audit old/new owner + reason, and notify old/new JPC plus supervisor. Never auto-reassign. Keep supervisor changes as a separate Admin action. | **Confirm before coding:** (1) reuse `institute_settings.staleness_days` or add a separate outreach threshold; (2) whether Committed should also become stale; (3) whether current Senior SPC may change the supervisor or only the Owner; (4) whether the proposed mandatory reason and three-party notification are desired. |
-| FR-8.11 | Missing | No deliverability monitoring. | Add SPF/DKIM/DMARC checks and provider bounce-rate trends after sender-domain selection. |
+| FR-8.10 | Partial — behavior approved | Owner/Supervisor reassignment UI and audit event exist; database enforcement restricts changes to Admin or the company's current supervisor, and `0021` validates assignee role lineage. **Approved 22 August 2026, not yet implemented:** add a Senior-SPC/Admin “Supervision” view containing Prospect/Contacted/Interested/Committed companies whose `greatest(companies.updated_at, latest outreach_activities.occurred_at)` is older than `institute_settings.staleness_days`; exclude Onboarded; show Owner → Supervisor, last touch, and days stale; allow only manual Owner reassignment by Senior SPC, require a reason, audit old/new owner + reason, and notify old/new JPC plus supervisor. Never auto-reassign. Keep Supervisor changes as a separate Admin-only action. | Build the approved supervision view and manual Owner-reassignment workflow, including reason validation, audit detail, notifications, permission tests, and the separate Admin-only Supervisor action. |
+| FR-8.11 | Partial | Server-only SPF/DKIM/DMARC assessment and daily/summary delivery trends now feed a read-only `/admin/deliverability` screen. Access is restricted to active `Audit Log View` holders (permission-based, not hardcoded Admin), rechecked inside the service-role wrapper; provider rows are institute-filtered before aggregation and recipient/message columns are never selected or returned. The UI reports each DNS mechanism separately, distinguishes resolver/missing/unconfigured states, exposes sample sizes and insufficient-data health, and shows aggregate daily outcomes only. Tests cover the calculation and authorized/pending/deactivated/unrelated-permission cases. Full contract: `docs/DELIVERABILITY-INTEGRATION.md`. | Configure the real Resend DKIM selector, run live DNS assessment, and reconcile a controlled pilot against Resend Metrics before treating production monitoring as validated. |
 | FR-8.12 | Partial | `0020_plain_file_storage.sql` defines one private plain-file bucket and tenant/module RLS plus `committee_vault_files`; company detail has committee upload/list/download UI. JD attachments and student CV uploads reuse the same bucket. CV originals are downloadable to application viewers without a shortlist-status test and are never redacted, per the confirmed decision. | Apply `0020`, regenerate database types, and role-test JD/CV/Vault paths. Confirm retention/version-deletion policy before adding destructive cleanup. |
 | FR-8.13 | Partial | Company Pipeline now includes a season selector and per-JPC funnel of unique Contacted → explicitly Responded → currently Onboarded companies with conversion rates. `0022_outreach_activity_season.sql` snapshots the actor's batch on each activity (and backfills derivable rows) so historical attribution does not change when a JPC moves seasons. | Apply/backfill `0022`, regenerate types, and reconcile activity ownership for rows logged by supervisors/imported only by name; confirm whether “Responded” should remain explicit-only or also infer from Interested/Committed stage. |
 
@@ -269,7 +309,7 @@ these items is signed off.
 
 | Acceptance criterion | Current assessment |
 |---|---|
-| Recruiter self-registers, is Admin-approved, submits a deadline-bearing JD, and SPC releases it to the batch | **Implemented in code; not accepted yet.** Migration `0023` is applied and its pgTAP workflow test passes 9/9 on hosted Supabase (22 August 2026) — still needs a real-role pilot walkthrough before acceptance. |
+| Recruiter self-registers, is Admin-approved, submits a deadline-bearing JD, and SPC releases it to the batch | **Implemented in code; not accepted yet.** Migration `0023` is applied and its pgTAP workflow test — independently reviewed and extended to 19 assertions covering cross-institute release, pending/deactivated actors, metadata forgery, and unrelated-field tampering — passes 19/19 on hosted Supabase (22 August 2026). Still needs a real-role pilot walkthrough before acceptance. |
 | Eligible count matches three real 2024–25 JDs | **Not tested.** |
 | Unplaced-only excludes all 337 historical placed students | **Not tested.** |
 | Notification email matches the real CDPO circular | **Missing.** |
@@ -323,15 +363,63 @@ these items is signed off.
    nine separate times across this codebase's history by two different reviewers, purely through manual
    re-reading. That's not a sustainable verification strategy at this codebase's size.
    **Partial progress:** a Vitest suite now covers pure logic — CSV import parsing, Resume Maker scoring,
-   and the `canViewCandidatePacket()` masking mirror — 43/43 passing (`npm test`). The RLS/masking side
-   is now started: `supabase/tests/database/001_applicant_directory_masking.test.sql` covers Finding #7
-   and is **verified passing (7/7)** against the real hosted project, run via `npm run test:rls`
-   (`scripts/run-pgtap.mjs`, Docker-free — `supabase test db` still needs Docker). Still to write:
-   cross-tenant isolation (`0016`), column-guard triggers (`0007`/`0011`/`0012`/`0013`/`0018`), and the
-   bulk-shortlist RPC's recruiter-company scoping (`0010`).
+   and the `canViewCandidatePacket()` masking mirror. The RLS/masking side is now started:
+   `supabase/tests/database/001_applicant_directory_masking.test.sql` covers Findings #7/#10 and the
+   authenticated-only masked RPC (22/22), while `002_spc_jd_release_gate.test.sql` covers the FR-1.3
+   release gate (19/19),
+   both run via `npm run test:rls` (`scripts/run-pgtap.mjs`, Docker-free — `supabase test db` still
+   needs Docker). Still to write: cross-tenant isolation (`0016`), column-guard triggers
+   (`0007`/`0011`/`0012`/`0013`/`0018`), and the bulk-shortlist RPC's recruiter-company scoping (`0010`).
 4. Complete the JD form/lifecycle fields required by FR-1.2/1.3.
 5. Complete recruiter private notes and validate the new packet masking/sort/filter workflow against real data.
 6. Reconcile eligibility, defaults, and reporting against the actual 2024–25 data.
+7. ~~Section 3 Finding #10: implement and integrate the masked applicant-directory RPC.~~ **Done,
+   22 August 2026.** `get_applicant_directory()` (`0024`) is applied and verified 22/22 against
+   hosted Postgres; both applicant routes now consume it and the complete local suite passes.
+8. ~~`ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM anon`~~ **✅ Applied
+   — `0025_anon_function_execute_lockdown.sql`, applied and verified against the hosted project
+   23 August 2026.** A `DO` block dynamically revoked EXECUTE from both `public` and `anon` on
+   every existing `SECURITY DEFINER` function, excluding the six RLS-predicate helpers
+   (`current_user_id`, `current_institute_id`, `current_company_id`, `current_student_id`,
+   `has_permission`, `has_role`) by name, and explicitly re-granted `authenticated`. The six-function
+   exclusion is deliberate, not a partial fix: Postgres requires the querying role to hold EXECUTE on
+   any function an RLS `USING`/`WITH CHECK` clause references, independent of that function's own
+   `SECURITY DEFINER`/`INVOKER` mode, and these six are referenced by nearly every RLS policy in the
+   schema — revoking `anon` EXECUTE on them wouldn't change what `anon` can see (they already
+   resolve to null/false pre-auth) but would turn a clean empty result into a hard `permission
+   denied for function` error for any future `anon`-role query against an RLS-protected table (no
+   current code path issues one — confirmed no `.from()` call anywhere in `src/app/(auth)/`, only
+   Supabase Auth API calls pre-login). **Revoking from `anon` alone (the first draft of this
+   migration) turned out to be ineffective and had to be corrected during this session's own
+   verification**, before ever being reported as done: Postgres grants EXECUTE to the `PUBLIC`
+   pseudo-role on every function at creation time, and `anon` inherits that like every role — a
+   targeted `revoke ... from anon` never touched it, so 15 functions (including `log_audit_event`,
+   called via `.rpc()` from every audited action in the app) were still `anon`-reachable after the
+   first pass. Fixed by also revoking from `PUBLIC` and explicitly re-granting `authenticated` in
+   the same pass, so real callers weren't broken by removing the implicit grant they'd been relying
+   on. Verified empirically (`pg_proc`/`pg_default_acl` queries against the hosted project, not just
+   re-reading the migration) before and after the fix, in both directions. New pgTAP coverage —
+   `supabase/tests/database/003_anon_function_execute_lockdown.test.sql`, **5/5 passing**: no
+   business `SECURITY DEFINER` function grants `anon` EXECUTE; the six helpers still do (matched by
+   exact signature, not bare name, since pgTAP's own `create extension` transiently installs a
+   same-named `has_role` overload that a bare-name filter would double-count); a real RPC
+   (`release_jd_to_batch`) throws `42501` for `anon`; a helper still resolves cleanly for `anon`; and
+   `authenticated` kept EXECUTE on `log_audit_event` after the `PUBLIC` revoke (proving the re-grant
+   half actually ran, not just the revoke half). Full suite is **46/46** hosted (22 + 19 + 5).
+   **One documented, unresolved limitation:** the migration's `ALTER DEFAULT PRIVILEGES` statements
+   (meant to auto-protect functions created by *future* migrations) do not reliably work in this
+   Supabase-managed Postgres — verified twice, including a single-session before/after check, that a
+   function created immediately after 0025 still carries an implicit `PUBLIC` EXECUTE grant despite
+   a correctly-revoked `pg_default_acl` entry. Root cause not identified (ruled out this project's
+   own `pgrst_ddl_watch`/`grant_pg_graphql_access` event triggers — neither touches function grants);
+   not investigated further to avoid open-ended trial-and-error DDL against the hosted database.
+   **Consequence, stated plainly so it isn't missed later:** 0025 protects every function that
+   existed when it ran. It does **not** automatically protect a `SECURITY DEFINER` function added by
+   any migration after `0025`. Every such future migration must keep doing what
+   `0004`/`0014`/`0017`/`0018`/`0023`/`0024` already do explicitly, per function:
+   `revoke all on function <sig> from public; revoke all on function <sig> from anon; grant execute
+   on function <sig> to authenticated;`. Full reasoning and the exact diagnostics are in `0025`'s own
+   migration-file header comment.
 
 ### P1 — required for BRD MVP feature completeness
 
@@ -342,6 +430,13 @@ these items is signed off.
 5. Outreach mail merge, queues/retries, provider tracking, and funnel reports (target import and real persona content are complete).
 6. Complete full Profile Sheet import mapping, user auto-expiry, the permission UI-gate audit, and the verified CRUD/RLS matrix.
 7. AI-assisted Resume Maker rewrite/diff flow and structured CV import; validate the completed DOCX/PDF/template library with recruiter ATS tools.
+8. **New, 22 August 2026 — from the post-UI-redesign security/UX review** (full detail and
+   evidence in `docs/CLAUDE-FINAL-REVIEW.md`): fix `/admin/users`' role-assignment dropdown, which
+   currently defaults to granting Admin (the most privileged role) on an unmodified click — High
+   severity, not a security-boundary bypass (already gated behind User Management) but a dangerous
+   UI default. Also: the dashboard header's "2024–26 Placement Season" badge is a hardcoded string,
+   not derived from the actual active batch — Medium. Both left unfixed in that review since the
+   files are within the UI redesign's active ownership scope; flagged for integration.
 
 ### P2 — requires product/infrastructure decisions
 
@@ -408,6 +503,46 @@ numbering-preservation rule) to become a real requirement.
   via `set local role authenticated` + `request.jwt.claim.sub` — RLS policy *behavior*, not just
   schema presence, is now covered for this one boundary. The broader RLS suite (cross-tenant
   isolation, column-guard triggers, bulk-shortlist scoping) is still unwritten.
+- **22 August 2026:** independent database-security review of migration `0023` (manual
+  `USING`/`WITH CHECK`/trigger-order/search_path/EXECUTE-grant read, plus empirical probes against
+  the real database, not just static review — one theorized cross-institute bypass was disproven
+  this way before being written up as a finding, and the `anon`-EXECUTE gap was confirmed real this
+  way). `002_spc_jd_release_gate.test.sql` extended from 9 to 19 assertions (cross-institute release,
+  pending/deactivated actors, metadata forgery, unrelated-field tampering during release, second
+  release attempts, past/equal/prepone deadlines, direct-update bypass attempts), all 19 passing
+  against the hosted project. `001_applicant_directory_masking.test.sql` corrected to assert
+  applicant-row existence separately from column masking (Section 3 Finding #10) — 11/12 passing,
+  the one failure documenting the real, newly-found defect rather than concealing it behind a
+  scalar-NULL blind spot. `npm run build`, `npx tsc --noEmit`, `npm run lint`, and `npm test` all
+  still pass clean; `npm run test:rls` now exits non-zero by design (Finding #10's assertion), not
+  because anything regressed.
+- **22 August 2026, later same day:** `get_applicant_directory()` (`0024_masked_applicant_directory_rpc.sql`)
+  applied to the hosted project, closing Section 3 Finding #10 at the database layer. Pre-flight
+  confirmed `0001`–`0023` present and `0024` absent before applying (not assumed). Post-apply
+  confirmed `anon` correctly lacks `EXECUTE` on the new function (unlike the schema-wide gap
+  `0023`'s review found — this one function closes it explicitly via an added `revoke ... from
+  anon`, not just `from public`). `001_applicant_directory_masking.test.sql` rewritten to test the
+  RPC instead of the no-longer-relevant view query, preserving the Finding #7 raw-table regression
+  guard — **22/22 passing**, combined with `002`'s 19/19 for a **fully green 41/41** hosted pgTAP
+  run. `database.types.ts` regenerated. `npm run lint`, `npx tsc --noEmit`, `npm test` (75/75), and
+  `npm run build` all pass clean. Both applicant-facing pages were then switched to the new RPC by
+  the integration track and independently confirmed via direct source read (not just trusted from
+  a status note) — `.../applicants/page.tsx:147` and `.../applicants/packets/page.tsx:15` both now
+  call `supabase.rpc(“get_applicant_directory”, ...)`.
+- **23 August 2026:** `0025_anon_function_execute_lockdown.sql` applied to the hosted project,
+  closing Section 6 P0 #8. Pre-flight confirmed `0001`–`0024` present and `0025` absent before
+  applying. The first version drafted only revoked `anon`'s own grant and was verified — before
+  being reported as done — to leave 15 functions still `anon`-reachable via Postgres's separate
+  implicit `PUBLIC` grant; corrected to also revoke from `PUBLIC` and explicitly re-grant
+  `authenticated`, then re-verified clean (`pg_proc`/`pg_default_acl` queries, not just re-reading
+  the SQL). New coverage in `003_anon_function_execute_lockdown.test.sql`, **5/5 passing** —
+  combined with `001`'s 22/22 and `002`'s 19/19 for a **fully green 46/46** hosted pgTAP run.
+  `npx tsc --noEmit` passes clean; no application code changed, so `database.types.ts` needed no
+  regeneration. One limitation intentionally left unresolved and documented in both `0025`'s own
+  header and Section 6 P0 #8 above: its `ALTER DEFAULT PRIVILEGES` statements don't reliably
+  protect functions created by *migrations after* `0025` in this Supabase-managed Postgres
+  (verified, root cause not identified) — future migrations adding a `SECURITY DEFINER` function
+  must keep using the explicit per-function revoke/grant pattern `0004` onward already established.
 
 ## 8. Definition of “BRD complete” from here
 

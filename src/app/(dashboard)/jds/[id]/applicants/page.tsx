@@ -144,7 +144,7 @@ export default async function ApplicantsPage({
       .select("role_title, company_id, min_cgpa, eligible_branches, eligible_specializations, companies(name)")
       .eq("id", id)
       .single(),
-    supabase.from("applicant_directory").select("*").eq("jd_id", id),
+    supabase.rpc("get_applicant_directory", { p_jd_id: id }),
   ]);
   const typedJd = jd as unknown as ApplicantJdSummary | null;
   const allRows = (applicants ?? []) as ApplicantDirectoryRow[];
@@ -197,20 +197,20 @@ export default async function ApplicantsPage({
       {/* Header Matrix Banner */}
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-            <Link href="/jds" className="hover:text-amber-400 transition-colors">JDs</Link>
+          <div className="flex items-center gap-2 font-mono text-xs text-slate-400">
+            <Link href="/jds" className="hover:text-white transition-colors">JDs</Link>
             <span>/</span>
             <span className="text-slate-200">{typedJd?.companies?.name ?? "Company"}</span>
           </div>
-          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+          <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-2.5">
             <span>{typedJd?.role_title ?? "Job Description"}</span>
-            <span className="rounded-md bg-blue-950/80 border border-blue-800/60 px-2 py-0.5 font-mono text-xs font-semibold text-blue-300">
+            <span className="rounded bg-blue-950 px-2.5 py-0.5 font-mono text-xs font-semibold text-blue-300 border border-blue-800/80">
               {rows.length} Candidates
             </span>
           </h1>
           <p className="mt-1 text-xs text-slate-400 flex items-center gap-2">
             <OpsIcon name="shield" size={13} className="text-amber-400" />
-            <span>Section 7.4 Compliance: Contact telemetry automatically unlocks upon Shortlisting.</span>
+            <span>Section 7.4 Compliance: Contact telemetry automatically unlocks upon candidate shortlisting.</span>
           </p>
         </div>
 
@@ -218,9 +218,9 @@ export default async function ApplicantsPage({
           {packetEligibleCount > 0 && (
             <Link
               href={`/jds/${id}/applicants/packets`}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-800 px-3.5 py-2 text-xs font-semibold text-slate-200 hover:border-slate-600 hover:bg-slate-700 hover:text-white transition-all shadow-sm"
+              className="ops-button-secondary text-xs"
             >
-              <OpsIcon name="download" size={14} />
+              <OpsIcon name="download" size={13} />
               <span>Merged Candidate Packets ({packetEligibleCount})</span>
             </Link>
           )}
@@ -229,14 +229,14 @@ export default async function ApplicantsPage({
 
       {/* Notifications */}
       {search.error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3.5 text-xs text-red-200">
-          <OpsIcon name="alert-triangle" size={16} className="text-red-400 shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-lg border border-red-800/80 bg-red-950/70 p-3.5 text-xs text-red-200 shadow-sm">
+          <OpsIcon name="alert-triangle" size={15} className="text-red-400 shrink-0" />
           <span>{search.error}</span>
         </div>
       )}
       {search.updated && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-800/60 bg-emerald-950/50 p-3.5 text-xs text-emerald-200">
-          <OpsIcon name="check" size={16} className="text-emerald-400 shrink-0" />
+        <div className="flex items-center gap-2.5 rounded-lg border border-emerald-800/80 bg-emerald-950/70 p-3.5 text-xs text-emerald-200 shadow-sm">
+          <OpsIcon name="check" size={15} className="text-emerald-400 shrink-0" />
           <span>
             Updated <strong className="font-mono">{search.updated}</strong> candidate{Number(search.updated) === 1 ? "" : "s"} to{" "}
             <StatusBadge status={search.status || ""} size="sm" />
@@ -245,27 +245,27 @@ export default async function ApplicantsPage({
       )}
 
       {/* Tactical Multi-Criteria Filter Bar */}
-      <form method="get" className="rounded-xl border border-slate-800/90 bg-slate-900/70 p-4 backdrop-blur-md">
+      <form method="get" className="rounded-lg border border-slate-750 bg-slate-900/90 p-4 shadow-sm">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8">
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 xl:col-span-2">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-300 xl:col-span-2">
             Search Candidate / Roll
             <div className="relative mt-1">
-              <OpsIcon name="search" size={14} className="absolute left-3 top-2.5 text-slate-500" />
+              <OpsIcon name="search" size={13} className="absolute left-3 top-2.5 text-slate-500" />
               <input
                 name="q"
                 defaultValue={search.q}
-                placeholder="Name / Roll No..."
-                className="w-full rounded-lg border border-slate-700/80 bg-slate-950/90 pl-9 pr-3 py-1.5 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+                placeholder="Name or Roll No..."
+                className="ops-input w-full pl-8 text-xs text-white placeholder:text-slate-500"
               />
             </div>
           </label>
 
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
             Status
             <select
               name="application_status"
               defaultValue={search.application_status ?? ""}
-              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 text-xs capitalize text-white outline-none focus:border-blue-500"
+              className="ops-select mt-1 block w-full text-xs capitalize text-white"
             >
               <option value="">All Statuses</option>
               {FILTER_STATUSES.map((value) => (
@@ -274,12 +274,12 @@ export default async function ApplicantsPage({
             </select>
           </label>
 
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
             Branch
             <select
               name="branch"
               defaultValue={search.branch ?? ""}
-              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+              className="ops-select mt-1 block w-full text-xs text-white"
             >
               <option value="">All Branches</option>
               {branches.map((branch) => (
@@ -288,21 +288,21 @@ export default async function ApplicantsPage({
             </select>
           </label>
 
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
             Specialization
             <select
               name="specialization"
               defaultValue={search.specialization ?? ""}
-              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+              className="ops-select mt-1 block w-full text-xs text-white"
             >
-              <option value="">All Specializations</option>
+              <option value="">All Specs</option>
               {specializations.map((value) => (
                 <option key={value} value={value}>{value}</option>
               ))}
             </select>
           </label>
 
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
             Min CGPA
             <input
               name="min_cgpa"
@@ -312,11 +312,11 @@ export default async function ApplicantsPage({
               step="0.01"
               defaultValue={search.min_cgpa}
               placeholder="e.g. 8.0"
-              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 font-mono text-xs text-white outline-none focus:border-blue-500"
+              className="ops-input mt-1 block w-full font-mono text-xs text-white"
             />
           </label>
 
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
             Min Work-Ex
             <input
               name="min_work_ex"
@@ -325,18 +325,18 @@ export default async function ApplicantsPage({
               step="1"
               defaultValue={search.min_work_ex}
               placeholder="Months"
-              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 font-mono text-xs text-white outline-none focus:border-blue-500"
+              className="ops-input mt-1 block w-full font-mono text-xs text-white"
             />
           </label>
 
-          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">
-            Sort
+          <label className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+            Sort Order
             <select
               name="sort"
               defaultValue={sort}
-              className="mt-1 block w-full rounded-lg border border-slate-700/80 bg-slate-950/90 px-2.5 py-1.5 text-xs text-white outline-none focus:border-blue-500"
+              className="ops-select mt-1 block w-full text-xs text-white"
             >
-              <option value="cgpa">CGPA</option>
+              <option value="cgpa">CGPA (High to Low)</option>
               <option value="name">Name</option>
               <option value="work_ex">Work Experience</option>
               <option value="applied_at">Applied Date</option>
@@ -345,18 +345,18 @@ export default async function ApplicantsPage({
           </label>
         </div>
 
-        <div className="mt-3.5 flex items-center justify-between border-t border-slate-800/80 pt-3">
+        <div className="mt-3.5 flex items-center justify-between border-t border-slate-800 pt-3">
           <div className="flex gap-2">
             <button
               type="submit"
-              className="inline-flex items-center gap-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 px-3.5 py-1.5 text-xs font-semibold text-white transition-colors"
+              className="ops-button-primary text-xs"
             >
               <OpsIcon name="filter" size={13} />
               <span>Apply Filters</span>
             </button>
             <Link
               href={`/jds/${id}/applicants`}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-700 px-3 py-1.5 text-xs text-slate-300 hover:bg-slate-800 hover:text-white transition-colors"
+              className="ops-button-secondary text-xs"
             >
               <OpsIcon name="refresh" size={13} />
               <span>Reset</span>
@@ -370,18 +370,18 @@ export default async function ApplicantsPage({
 
       {/* Candidate Packet Drawer */}
       {selectedPackets[0] && (
-        <section id="candidate-packet" className="scroll-mt-6 rounded-lg border border-blue-800 bg-blue-950/20 p-5">
-          <div className="mb-4 flex items-center justify-between gap-3 border-b border-blue-900/60 pb-3">
+        <section id="candidate-packet" className="scroll-mt-6 rounded-lg border border-blue-800/80 bg-slate-900/95 p-5 shadow-lg">
+          <div className="mb-4 flex items-center justify-between gap-3 border-b border-slate-800 pb-3">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-7 items-center justify-center rounded-lg bg-blue-900/60 text-blue-300">
-                <OpsIcon name="file-text" size={16} />
+              <div className="flex size-7 items-center justify-center rounded bg-blue-950 text-blue-300 border border-blue-800">
+                <OpsIcon name="file-text" size={15} />
               </div>
               <div>
                 <h2 className="font-bold text-white text-sm">Verified Candidate Profile Sheet &amp; CV Packet</h2>
-                <p className="text-[11px] text-slate-400">Immutable profile verified by CDPO and applicant at submission.</p>
+                <p className="font-mono text-[11px] text-slate-400">Profile verified by CDPO and applicant at submission.</p>
               </div>
             </div>
-            <Link href={listHref(id, search)} className="rounded-lg border border-slate-700 px-2.5 py-1 text-xs text-slate-400 hover:text-white hover:bg-slate-800 transition-colors">
+            <Link href={listHref(id, search)} className="ops-button-secondary text-xs py-1 px-2.5 min-h-0">
               Close Preview ×
             </Link>
           </div>
@@ -394,27 +394,27 @@ export default async function ApplicantsPage({
       )}
 
       {/* Core Tabular Matrix */}
-      <div className="overflow-x-auto rounded-xl border border-slate-800 bg-[#0a0f1b]">
+      <div className="overflow-x-auto rounded-lg border border-slate-750 bg-slate-900/90 shadow-sm">
         <table className="w-full text-left text-xs">
-          <thead className="bg-[#0e1626] text-[11px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800">
+          <thead className="bg-slate-950 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800 font-mono">
             <tr>
-              <th className="py-3 pl-4 pr-2 font-medium w-10">
+              <th className="py-3 pl-4 pr-2 w-10">
                 <span className="sr-only">Select</span>
               </th>
-              <th className="py-3 pr-4 font-medium">Candidate Profile</th>
-              <th className="py-3 pr-3 font-medium font-mono text-center">CGPA</th>
-              <th className="py-3 pr-3 font-medium font-mono text-center">Work-Ex</th>
-              <th className="py-3 pr-4 font-medium">Branch / Specialization</th>
-              <th className="py-3 pr-4 font-medium">Eligibility Signal</th>
-              <th className="py-3 pr-4 font-medium">Contact Telemetry</th>
-              <th className="py-3 pr-4 font-medium">Stage Status</th>
-              <th className="py-3 pr-4 font-medium">Interview Round</th>
-              <th className="py-3 pr-4 font-medium">Placement Status</th>
-              {canSeePrivateNotes && <th className="py-3 pr-3 font-medium">Recruiter Notes</th>}
-              <th className="py-3 pr-4 font-medium text-right">Actions</th>
+              <th className="py-3 pr-4">Candidate Profile</th>
+              <th className="py-3 pr-3 text-center">CGPA</th>
+              <th className="py-3 pr-3 text-center">Work-Ex</th>
+              <th className="py-3 pr-4">Branch / Specialization</th>
+              <th className="py-3 pr-4">Eligibility Signal</th>
+              <th className="py-3 pr-4">Contact Telemetry</th>
+              <th className="py-3 pr-4">Stage Status</th>
+              <th className="py-3 pr-4">Interview Round</th>
+              <th className="py-3 pr-4">Placement Status</th>
+              {canSeePrivateNotes && <th className="py-3 pr-3">Recruiter Notes</th>}
+              <th className="py-3 pr-4 text-right">Actions</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-800/70 font-sans">
+          <tbody className="divide-y divide-slate-800 bg-slate-900/40">
             {rows.map((row) => {
               const latestRound = row.round_history[row.round_history.length - 1];
               const canSchedule = SCHEDULABLE_STATUSES.includes(row.status);
@@ -426,8 +426,8 @@ export default async function ApplicantsPage({
               return (
                 <tr
                   key={row.application_id}
-                  className={`hover:bg-slate-800/40 transition-colors ${
-                    isShortlistedOrAbove ? "bg-emerald-950/10" : ""
+                  className={`hover:bg-slate-850/60 transition-colors ${
+                    isShortlistedOrAbove ? "bg-emerald-950/20" : ""
                   }`}
                 >
                   {/* Checkbox */}
@@ -438,14 +438,14 @@ export default async function ApplicantsPage({
                       value={row.application_id}
                       form="bulk-applicant-actions"
                       aria-label={`Select ${row.name}`}
-                      className="size-4 rounded border-slate-700 bg-slate-900 text-blue-600 accent-blue-600 focus:ring-blue-500/20"
+                      className="size-4 rounded border-slate-700 bg-slate-950 text-blue-600 accent-blue-600 focus:ring-blue-500/20"
                     />
                   </td>
 
                   {/* Candidate Identity */}
                   <td className="py-3 pr-4 align-top">
                     <div className="flex items-start gap-2.5">
-                      <div className="mt-0.5 flex size-7 items-center justify-center rounded-md bg-slate-800 text-[11px] font-bold text-amber-400 font-mono border border-slate-700">
+                      <div className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded bg-slate-800 text-[11px] font-bold text-amber-400 font-mono border border-slate-700 shadow-inner">
                         {row.name.charAt(0)}
                       </div>
                       <div>
@@ -456,7 +456,7 @@ export default async function ApplicantsPage({
                         <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-[11px]">
                           <Link
                             href={listHref(id, search, row.application_id)}
-                            className="text-blue-400 hover:text-blue-300 hover:underline flex items-center gap-1 font-medium"
+                            className="text-blue-400 hover:text-blue-300 flex items-center gap-1 font-medium"
                           >
                             <OpsIcon name="file-text" size={11} />
                             <span>View Packet</span>
@@ -464,7 +464,7 @@ export default async function ApplicantsPage({
                           {cvId && (
                             <a
                               href={`/api/files/application-cv?application=${encodeURIComponent(row.application_id)}`}
-                              className="text-slate-400 hover:text-white hover:underline flex items-center gap-1"
+                              className="text-slate-400 hover:text-white flex items-center gap-1"
                             >
                               <OpsIcon name="download" size={11} />
                               <span>Original CV</span>
@@ -488,7 +488,7 @@ export default async function ApplicantsPage({
                   {/* Branch & Specialization */}
                   <td className="py-3 pr-4 align-top">
                     <p className="text-slate-200 font-medium">{row.branch ?? "—"}</p>
-                    <p className="text-[11px] text-slate-500">{row.specialization ?? "General Management"}</p>
+                    <p className="text-[11px] text-slate-400">{row.specialization ?? "General Management"}</p>
                   </td>
 
                   <td className="py-3 pr-4 align-top">
@@ -502,18 +502,18 @@ export default async function ApplicantsPage({
                   {/* Contact Telemetry — Signature Fair Hiring Unmasking */}
                   <td className="py-3 pr-4 align-top">
                     {row.phone || row.personal_email ? (
-                      <div className="inline-flex flex-col gap-0.5 rounded-lg border border-emerald-800/60 bg-emerald-950/40 p-1.5 font-mono text-[11px] text-emerald-200">
-                        <div className="flex items-center gap-1.5">
-                          <OpsIcon name="unlock" size={12} className="text-emerald-400" />
+                      <div className="inline-flex flex-col gap-0.5 rounded border border-emerald-800/80 bg-emerald-950/80 p-1.5 font-mono text-[11px] text-emerald-200 shadow-sm">
+                        <div className="flex items-center gap-1.5 font-semibold">
+                          <OpsIcon name="unlock" size={11} className="text-emerald-400" />
                           <span>{row.phone}</span>
                         </div>
                         {row.personal_email && (
-                          <span className="text-[10px] text-emerald-300/80 truncate max-w-[160px]">{row.personal_email}</span>
+                          <span className="text-[10px] text-emerald-300/90 truncate max-w-[160px]">{row.personal_email}</span>
                         )}
                       </div>
                     ) : (
-                      <div className="inline-flex items-center gap-1.5 rounded-lg border border-slate-800 bg-slate-900/60 px-2 py-1 font-mono text-[11px] text-slate-500">
-                        <OpsIcon name="lock" size={12} className="text-slate-500" />
+                      <div className="inline-flex items-center gap-1.5 rounded border border-slate-750 bg-slate-950 px-2 py-1 font-mono text-[11px] text-slate-500">
+                        <OpsIcon name="lock" size={11} className="text-slate-500" />
                         <span className="tracking-widest">••••••••••</span>
                       </div>
                     )}
@@ -527,10 +527,10 @@ export default async function ApplicantsPage({
                   {/* Next Round Telemetry */}
                   <td className="py-3 pr-4 align-top">
                     {latestRound ? (
-                      <div className="rounded-lg border border-blue-900/50 bg-blue-950/30 p-2 font-mono text-[11px] text-blue-200">
+                      <div className="rounded border border-blue-850 bg-blue-950/50 p-2 font-mono text-[11px] text-blue-200">
                         <p className="font-semibold text-white">{latestRound.round}</p>
                         {latestRound.scheduled_at && (
-                          <p className="text-[10px] text-blue-300/80 mt-0.5">
+                          <p className="text-[10px] text-blue-300/90 mt-0.5">
                             {new Date(latestRound.scheduled_at).toLocaleDateString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
                           </p>
                         )}
@@ -542,16 +542,16 @@ export default async function ApplicantsPage({
                       <form action={assignInterviewRound.bind(null, id, row.application_id)} className="space-y-1 w-36">
                         <input
                           name="round"
-                          placeholder="Round (GD/PI/Final)"
+                          placeholder="Round (e.g. Round 1)"
                           required
-                          className="w-full rounded border border-slate-700 bg-slate-950 px-2 py-1 text-[11px] text-white outline-none focus:border-blue-500"
+                          className="ops-input w-full py-0.5 px-1.5 text-[11px] text-white"
                         />
-                        <button type="submit" className="w-full rounded border border-blue-700 bg-blue-950/80 px-2 py-0.5 text-[10px] font-semibold text-blue-300 hover:bg-blue-900 transition-colors">
+                        <button type="submit" className="ops-button-secondary w-full py-0.5 text-[10px] justify-center">
                           + Schedule
                         </button>
                       </form>
                     ) : (
-                      <span className="text-slate-600 font-mono">—</span>
+                      <span className="text-slate-500 font-mono">—</span>
                     )}
                   </td>
 
@@ -570,14 +570,14 @@ export default async function ApplicantsPage({
                           step="0.01"
                           placeholder="CTC LPA"
                           required
-                          className="w-24 rounded border border-amber-800 bg-slate-950 px-2 py-1 text-[11px] text-white outline-none focus:border-amber-500"
+                          className="ops-input w-24 py-0.5 px-1.5 text-[11px] text-white"
                         />
-                        <button type="submit" className="rounded bg-amber-600 px-2 py-0.5 text-[10px] font-bold text-slate-950 hover:bg-amber-500">
+                        <button type="submit" className="ops-button-primary py-0.5 px-2 text-[10px]">
                           Confirm
                         </button>
                       </form>
                     ) : (
-                      <span className="text-slate-600">—</span>
+                      <span className="text-slate-500">—</span>
                     )}
                   </td>
 
@@ -585,24 +585,24 @@ export default async function ApplicantsPage({
                   {canSeePrivateNotes && (
                     <td className="py-3 pr-3 align-top">
                       <details className="group">
-                        <summary className="cursor-pointer font-mono text-[11px] text-slate-400 hover:text-amber-300 transition-colors">
+                        <summary className="cursor-pointer font-mono text-[11px] text-slate-400 hover:text-white transition-colors">
                           {notes.length} note{notes.length === 1 ? "" : "s"}
                         </summary>
-                        <div className="mt-1.5 max-w-[200px] space-y-1.5 rounded-lg border border-slate-800 bg-slate-950 p-2 text-[11px]">
+                        <div className="mt-1.5 max-w-[200px] space-y-1.5 rounded-lg border border-slate-750 bg-slate-950 p-2.5 text-[11px] shadow-lg">
                           {notes.map((note) => (
-                            <p key={note.id} className="text-slate-300 border-b border-slate-850 pb-1 last:border-0">
+                            <p key={note.id} className="text-slate-300 border-b border-slate-800 pb-1 last:border-0">
                               {note.note_text}
                             </p>
                           ))}
-                          <form action={addPrivateNote.bind(null, id, row.application_id)} className="space-y-1 pt-1">
+                          <form action={addPrivateNote.bind(null, id, row.application_id)} className="space-y-1.5 pt-1">
                             <textarea
                               name="note_text"
                               rows={2}
                               placeholder="Add private note..."
                               required
-                              className="w-full rounded border border-slate-700 bg-slate-900 p-1 text-[10px] text-white outline-none focus:border-blue-500"
+                              className="ops-input w-full p-1 text-[10px] text-white"
                             />
-                            <button type="submit" className="rounded bg-slate-800 px-2 py-0.5 text-[10px] text-slate-200 hover:bg-slate-700">
+                            <button type="submit" className="ops-button-secondary text-[10px] py-0.5 px-2">
                               Save
                             </button>
                           </form>
@@ -613,20 +613,20 @@ export default async function ApplicantsPage({
 
                   {/* Actions Column */}
                   <td className="py-3 pr-4 align-top text-right">
-                    <div className="flex flex-wrap justify-end gap-1.5">
+                    <div className="flex flex-wrap justify-end gap-1">
                       {ACTIONS.map((nextStatus) => (
                         <form key={nextStatus} action={updateApplicationStatus.bind(null, id, row.application_id, nextStatus)}>
                           <button
                             type="submit"
                             disabled={row.status === nextStatus}
-                            className={`rounded-md border px-2 py-0.5 text-[10px] font-medium capitalize transition-all disabled:opacity-30 ${
+                            className={`rounded border px-2 py-0.5 text-[10px] font-semibold capitalize transition-all disabled:opacity-30 ${
                               nextStatus === "shortlisted"
-                                ? "border-emerald-800 bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/60"
+                                ? "border-emerald-800/80 bg-emerald-950/60 text-emerald-300 hover:bg-emerald-900"
                                 : nextStatus === "interview"
-                                ? "border-blue-800 bg-blue-950/40 text-blue-300 hover:bg-blue-900/60"
+                                ? "border-blue-800/80 bg-blue-950/60 text-blue-300 hover:bg-blue-900"
                                 : nextStatus === "selected"
-                                ? "border-amber-800 bg-amber-950/40 text-amber-300 hover:bg-amber-900/60"
-                                : "border-slate-700 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
+                                ? "border-amber-800/80 bg-amber-950/60 text-amber-300 hover:bg-amber-900"
+                                : "border-slate-750 bg-slate-800/80 text-slate-300 hover:bg-slate-700 hover:text-white"
                             }`}
                           >
                             {nextStatus}
@@ -640,9 +640,9 @@ export default async function ApplicantsPage({
             })}
             {rows.length === 0 && (
               <tr>
-                <td colSpan={canSeePrivateNotes ? 12 : 11} className="py-12 text-center text-slate-500">
-                  <OpsIcon name="search" size={24} className="mx-auto mb-2 opacity-50" />
-                  <p className="text-sm font-medium text-slate-400">No applicants match active filters.</p>
+                <td colSpan={canSeePrivateNotes ? 12 : 11} className="py-12 text-center text-slate-400 font-mono">
+                  <OpsIcon name="search" size={24} className="mx-auto mb-2 opacity-40 text-slate-400" />
+                  <p className="text-xs font-medium text-slate-400">No applicants match active filters.</p>
                 </td>
               </tr>
             )}

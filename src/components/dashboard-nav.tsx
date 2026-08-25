@@ -29,16 +29,25 @@ function NavLink({ item, compact = false }: { item: DashboardNavItem; compact?: 
     <Link
       href={item.href}
       aria-current={active ? "page" : undefined}
-      className={`flex shrink-0 items-center gap-2 border text-xs font-medium transition-colors ${
-        compact ? "min-h-10 rounded px-3" : "min-h-9 rounded px-2.5"
+      className={`group flex shrink-0 items-center gap-2.5 rounded-md text-xs font-medium transition-all duration-150 ${
+        compact ? "min-h-9 px-3" : "min-h-8 px-2.5"
       } ${
         active
-          ? "border-blue-700 bg-blue-950 text-blue-200"
-          : "border-transparent text-slate-300 hover:border-slate-700 hover:bg-slate-900 hover:text-white"
+          ? "bg-blue-950/80 text-blue-200 shadow-sm border border-blue-800/60 font-semibold"
+          : "text-slate-400 hover:bg-slate-800/60 hover:text-slate-100 border border-transparent"
       }`}
     >
-      <OpsIcon name={item.icon} size={15} className={active ? "text-blue-400" : "text-slate-400"} />
-      <span>{item.label}</span>
+      <OpsIcon
+        name={item.icon}
+        size={14}
+        className={`shrink-0 transition-colors ${
+          active ? "text-blue-400" : "text-slate-500 group-hover:text-slate-300"
+        }`}
+      />
+      <span className="truncate">{item.label}</span>
+      {active && (
+        <span className="ml-auto size-1.5 rounded-full bg-blue-400 shadow-[0_0_6px_rgba(96,165,250,0.8)]" />
+      )}
     </Link>
   );
 }
@@ -48,11 +57,13 @@ export function DashboardNav({ groups }: { groups: DashboardNavGroup[] }) {
 
   return (
     <>
-      <aside className="hidden w-60 shrink-0 flex-col justify-between overflow-y-auto border-r border-slate-800 bg-[#0d1928] p-3.5 lg:flex">
-        <nav aria-label="Primary navigation" className="space-y-5">
+      <aside className="hidden w-64 shrink-0 flex-col justify-between overflow-y-auto border-r border-slate-800/80 bg-[#0b121e] p-3.5 lg:flex">
+        <nav aria-label="Primary navigation" className="space-y-6">
           {groups.map((group) => (
-            <div key={group.label}>
-              <p className="ops-eyebrow px-2 pb-1.5 text-[10px] text-slate-500">{group.label}</p>
+            <div key={group.label} className="space-y-1.5">
+              <p className="px-2.5 font-mono text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                {group.label}
+              </p>
               <div className="space-y-0.5">
                 {group.items.map((item) => (
                   <NavLink key={`${group.label}-${item.href}`} item={item} />
@@ -65,7 +76,7 @@ export function DashboardNav({ groups }: { groups: DashboardNavGroup[] }) {
 
       <nav
         aria-label="Primary navigation"
-        className="flex gap-1 overflow-x-auto border-b border-slate-800 bg-[#0d1928] px-3 py-2 lg:hidden"
+        className="flex gap-1.5 overflow-x-auto border-b border-slate-800/80 bg-[#0b121e] px-3 py-2 lg:hidden"
       >
         {items.map((item) => (
           <NavLink key={item.href} item={item} compact />

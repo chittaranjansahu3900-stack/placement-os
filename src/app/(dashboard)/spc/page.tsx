@@ -66,13 +66,13 @@ export default async function SpcDashboardPage({
       {/* Header with Title & Staleness Configuration */}
       <div className="flex flex-wrap items-start justify-between gap-4 border-b border-slate-800/80 pb-5">
         <div>
-          <div className="flex items-center gap-2 text-xs font-mono text-amber-400">
-            <OpsIcon name="radar" size={14} className="animate-ops-pulse" />
+          <div className="flex items-center gap-2 font-mono text-xs font-semibold text-amber-400">
+            <OpsIcon name="radar" size={14} />
             <span>SPC Operations War Room</span>
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
             <span>Active Placement Drives</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 font-mono text-xs font-semibold text-slate-300 border border-slate-700">
+            <span className="rounded bg-slate-800 px-2.5 py-0.5 font-mono text-xs font-semibold text-slate-300 border border-slate-700">
               {rows.length} Active JDs
             </span>
           </h1>
@@ -82,23 +82,23 @@ export default async function SpcDashboardPage({
         </div>
 
         {isAdmin && (
-          <form action={updateStalenessThreshold} className="flex items-end gap-2 rounded-xl border border-slate-800 bg-slate-900/80 p-2.5">
-            <label className="text-[11px] font-mono text-slate-400">
+          <form action={updateStalenessThreshold} className="flex items-end gap-2.5 rounded-lg border border-slate-750 bg-slate-900/90 p-3 shadow-sm">
+            <label className="text-[11px] font-mono font-medium text-slate-300">
               Staleness Trigger
-              <div className="flex items-center gap-1.5 mt-1">
+              <div className="flex items-center gap-1.5 mt-1.5">
                 <input
                   name="staleness_days"
                   type="number"
                   min={1}
                   defaultValue={settings?.staleness_days ?? 3}
-                  className="w-16 rounded-md border border-slate-700 bg-slate-950 px-2 py-1 font-mono text-xs text-white outline-none focus:border-amber-500"
+                  className="ops-input w-16 py-1 px-2 text-center font-mono text-xs text-white"
                 />
-                <span className="text-slate-500 text-xs">days</span>
+                <span className="text-slate-400 font-mono text-xs">days</span>
               </div>
             </label>
             <button
               type="submit"
-              className="rounded-lg bg-amber-600 hover:bg-amber-500 px-3 py-1.5 font-mono text-xs font-bold text-slate-950 transition-colors"
+              className="ops-button-primary text-xs py-1 px-3 min-h-0 bg-amber-600 hover:bg-amber-500 border-amber-400/80"
             >
               Update
             </button>
@@ -107,69 +107,69 @@ export default async function SpcDashboardPage({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3.5 text-xs text-red-200">
-          <OpsIcon name="alert-triangle" size={16} className="text-red-400" />
+        <div className="flex items-center gap-2.5 rounded-lg border border-red-800/80 bg-red-950/70 p-3.5 text-xs text-red-200 shadow-sm">
+          <OpsIcon name="alert-triangle" size={15} className="text-red-400 shrink-0" />
           <span>{error}</span>
         </div>
       )}
       {notice && (
-        <div className="flex items-center gap-2 rounded-xl border border-emerald-800/60 bg-emerald-950/40 p-3.5 text-xs text-emerald-200">
-          <OpsIcon name="check" size={16} className="text-emerald-400" />
+        <div className="flex items-center gap-2.5 rounded-lg border border-emerald-800/80 bg-emerald-950/70 p-3.5 text-xs text-emerald-200 shadow-sm">
+          <OpsIcon name="check" size={15} className="text-emerald-400 shrink-0" />
           <span>{notice}</span>
         </div>
       )}
 
       {/* Recruiter submissions stay draft/student-hidden until SPC releases them. */}
-      <section className="rounded-2xl border border-amber-800/70 bg-amber-950/20 overflow-hidden">
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-900/70 bg-amber-950/30 px-5 py-3.5">
+      <section className="rounded-xl border border-amber-800/80 bg-slate-900/95 overflow-hidden shadow-lg">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-amber-900/80 bg-amber-950/40 px-5 py-3.5">
           <div>
             <h2 className="flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-wider text-amber-200">
               <OpsIcon name="check-shield" size={15} className="text-amber-400" />
               <span>JD Release Queue ({pendingJds?.length ?? 0})</span>
             </h2>
-            <p className="mt-1 text-[11px] text-amber-200/60">
-              Review the JD and recruiter deadline. You may keep it or move it earlier, then release it to the assigned batch.
+            <p className="mt-0.5 text-xs text-amber-200/80">
+              Review recruiter submissions and deadline. You may keep it or move it earlier, then release it to the assigned batch.
             </p>
           </div>
         </div>
 
-        <div className="divide-y divide-amber-900/50">
+        <div className="divide-y divide-slate-800">
           {((pendingJds ?? []) as unknown as PendingJd[]).map((jd) => (
-            <div key={jd.id} className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(360px,auto)] lg:items-end">
+            <div key={jd.id} className="grid gap-4 p-5 lg:grid-cols-[minmax(0,1fr)_minmax(380px,auto)] lg:items-center hover:bg-slate-850/50 transition-colors">
               <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Link href={`/jds/${jd.id}`} className="font-semibold text-white hover:text-amber-300">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <Link href={`/jds/${jd.id}`} className="font-semibold text-white text-sm hover:text-amber-300 transition-colors">
                     {jd.companies?.name ?? "Company"} — {jd.role_title}
                   </Link>
                   <StatusBadge status="pending_spc_review" size="sm" />
                 </div>
-                <p className="mt-1 font-mono text-xs text-slate-400">
-                  Batch: {jd.batches?.name ?? "Assigned batch"} · Recruiter deadline: {new Date(jd.apply_by_deadline).toLocaleString()}
+                <p className="mt-1 font-mono text-xs text-slate-300">
+                  Target Cohort: <span className="text-white font-medium">{jd.batches?.name ?? "Assigned batch"}</span> · Recruiter deadline: <span className="text-amber-300 font-medium">{new Date(jd.apply_by_deadline).toLocaleString()}</span>
                 </p>
-                <p className="mt-1 text-[11px] text-slate-500">
+                <p className="mt-1 font-mono text-[11px] text-slate-400">
                   Submitted {jd.spc_review_submitted_at ? new Date(jd.spc_review_submitted_at).toLocaleString() : "for review"}
                 </p>
               </div>
 
-              <form action={releaseJdToBatch.bind(null, jd.id)} className="grid gap-2 sm:grid-cols-[minmax(210px,1fr)_auto] sm:items-end">
-                <label className="text-[11px] font-medium text-slate-300">
-                  Earlier deadline (optional)
+              <form action={releaseJdToBatch.bind(null, jd.id)} className="grid gap-2.5 sm:grid-cols-[minmax(210px,1fr)_auto] sm:items-end">
+                <label className="text-[11px] font-mono font-medium text-slate-300">
+                  Earlier Deadline (Optional)
                   <input
                     name="apply_by_deadline"
                     type="datetime-local"
                     max={new Date(jd.apply_by_deadline).toISOString().slice(0, 16)}
-                    className="mt-1 block w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-amber-500"
+                    className="ops-input mt-1 block w-full text-xs font-mono text-white"
                   />
                 </label>
-                <button type="submit" className="ops-button-primary justify-center whitespace-nowrap">
-                  <OpsIcon name="mail" size={13} />
+                <button type="submit" className="ops-button-primary justify-center whitespace-nowrap text-xs bg-emerald-600 hover:bg-emerald-500 border-emerald-400/80">
+                  <OpsIcon name="check" size={13} />
                   <span>Release to Batch</span>
                 </button>
               </form>
             </div>
           ))}
           {(pendingJds?.length ?? 0) === 0 && (
-            <p className="p-6 text-center text-xs text-slate-500">No recruiter JDs are awaiting SPC release.</p>
+            <p className="p-6 text-center text-xs font-mono text-slate-400">No recruiter JDs are currently awaiting SPC release.</p>
           )}
         </div>
       </section>
@@ -207,59 +207,59 @@ export default async function SpcDashboardPage({
       </div>
 
       {/* Main Drive Queue Cards */}
-      <div className="space-y-4">
+      <div className="space-y-3.5">
         <div className="flex items-center justify-between">
-          <h2 className="text-sm font-bold uppercase tracking-wider text-slate-300 flex items-center gap-2 font-mono">
-            <OpsIcon name="layers" size={16} className="text-amber-400" />
+          <h2 className="flex items-center gap-2 font-mono text-xs font-semibold uppercase tracking-wider text-slate-300">
+            <OpsIcon name="layers" size={15} className="text-amber-400" />
             <span>Active Drive Pipelines</span>
           </h2>
-          <span className="font-mono text-xs text-slate-500">Sorted by staleness urgency</span>
+          <span className="font-mono text-xs text-slate-400">Sorted by staleness urgency</span>
         </div>
 
-        <div className="grid gap-3.5">
+        <div className="grid gap-3">
           {rows.map((r) => {
             const currentRound = roundsByJd.get(r.jd_id);
             return (
               <div
                 key={r.jd_id}
-                className={`rounded-xl border p-4 transition-all ${
+                className={`rounded-lg border p-4 transition-all ${
                   r.is_stale
-                    ? "border-orange-800 border-l-2 bg-orange-950/30"
-                    : "border-slate-800/90 bg-slate-900/60 hover:border-slate-700"
+                    ? "border-amber-800/90 bg-amber-950/30 shadow-md"
+                    : "border-slate-750 bg-slate-900/90 hover:border-slate-650 hover:bg-slate-850/90"
                 }`}
               >
                 <div className="grid items-center gap-4 lg:grid-cols-[minmax(0,1.5fr)_minmax(220px,0.8fr)_auto]">
                   {/* Left: Company & Role Identity */}
                   <div className="flex min-w-0 items-start gap-3">
-                    <div className="flex size-9 items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-amber-400 font-bold font-mono text-sm">
+                    <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-800 border border-slate-700 text-amber-400 font-bold font-mono text-sm shadow-inner">
                       {r.company_name.charAt(0)}
                     </div>
                     <div className="min-w-0">
-                      <div className="flex items-center gap-2.5">
+                      <div className="flex items-center gap-2.5 truncate">
                         <Link
                           href={`/jds/${r.jd_id}/applicants`}
-                          className="font-bold text-white text-sm hover:text-amber-300 transition-colors"
+                          className="font-bold text-white text-sm hover:text-blue-300 transition-colors truncate"
                         >
                           {r.company_name} — {r.role_title}
                         </Link>
                         {r.is_stale && (
-                          <span className="inline-flex items-center gap-1 rounded-full border border-amber-700 bg-amber-950 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-200">
+                          <span className="inline-flex items-center gap-1 rounded bg-amber-950 px-2 py-0.5 font-mono text-[10px] font-bold text-amber-200 border border-amber-700/80 shrink-0">
                             <OpsIcon name="clock" size={11} className="text-amber-400" />
                             <span>Stale · &gt;{settings?.staleness_days ?? 3}d</span>
                           </span>
                         )}
                       </div>
-                      <p className="mt-0.5 font-mono text-xs text-slate-400 flex items-center gap-2">
+                      <p className="mt-1 font-mono text-xs text-slate-400 flex items-center gap-2">
                         <span>Status:</span>
                         <StatusBadge status={r.jd_status} size="sm" />
-                        <span>· Last updated {new Date(r.jd_updated_at).toLocaleDateString()}</span>
+                        <span>· Last activity {new Date(r.jd_updated_at).toLocaleDateString()}</span>
                       </p>
                     </div>
                   </div>
 
                   {/* Middle: Active Interview Round Telemetry */}
-                  <div className="rounded-lg border border-slate-800 bg-[#090f1d] px-3.5 py-2 min-w-[220px]">
-                    <p className="font-mono text-[10px] uppercase tracking-wider text-slate-500">Current Round Status</p>
+                  <div className="rounded-md border border-slate-750 bg-slate-950/80 px-3.5 py-2 min-w-[220px]">
+                    <p className="font-mono text-[10px] uppercase tracking-wider text-slate-400 font-semibold">Current Round Status</p>
                     <p className="font-semibold text-white text-xs mt-0.5">
                       {currentRound?.round ?? "No rounds scheduled"}
                     </p>
@@ -280,13 +280,13 @@ export default async function SpcDashboardPage({
                       <p className="text-sm font-bold text-emerald-400">
                         {r.shortlisted_count} <span className="text-xs text-slate-400 font-normal">Shortlisted</span>
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-slate-400">
                         of {r.total_applications} candidates
                       </p>
                     </div>
                     <Link
                       href={`/jds/${r.jd_id}/applicants`}
-                      className="inline-flex items-center gap-1 rounded-lg border border-slate-700 bg-slate-800 px-3 py-2 text-xs font-semibold text-slate-200 hover:border-slate-600 hover:text-white transition-colors"
+                      className="ops-button-secondary text-xs py-1.5 px-3 min-h-0"
                     >
                       <span>Manage</span>
                       <OpsIcon name="arrow-right" size={12} />
@@ -297,9 +297,9 @@ export default async function SpcDashboardPage({
             );
           })}
           {rows.length === 0 && (
-            <div className="rounded-xl border border-slate-800 bg-slate-900/40 p-12 text-center text-slate-500">
-              <OpsIcon name="briefcase" size={28} className="mx-auto mb-2 opacity-40" />
-              <p className="text-sm font-medium text-slate-400">No active job descriptions in the pipeline.</p>
+            <div className="rounded-lg border border-slate-750 bg-slate-900/60 p-12 text-center text-slate-400">
+              <OpsIcon name="briefcase" size={28} className="mx-auto mb-2 opacity-40 text-slate-400" />
+              <p className="text-sm font-medium text-slate-300">No active job descriptions in the pipeline.</p>
             </div>
           )}
         </div>

@@ -1704,6 +1704,26 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_applicant_directory: {
+        Args: { p_jd_id: string }
+        Returns: {
+          application_id: string
+          applied_at: string
+          branch: string
+          cgpa: number
+          gender: string
+          jd_id: string
+          name: string
+          personal_email: string
+          phone: string
+          roll_no: string
+          round_history: Json
+          specialization: string
+          status: Database["public"]["Enums"]["application_status"]
+          student_id: string
+          total_work_ex_months: number
+        }[]
+      }
       get_candidate_packets: {
         Args: { p_application_ids: string[] }
         Returns: {

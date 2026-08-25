@@ -30,7 +30,7 @@ export default async function CvViewerPage({ params }: { params: Promise<{ id: s
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-5 print:hidden">
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-            <Link href="/resume" className="hover:text-amber-400 flex items-center gap-1 transition-colors">
+            <Link href="/resume" className="hover:text-white flex items-center gap-1 transition-colors">
               <OpsIcon name="file-text" size={13} />
               <span>Resume Studio</span>
             </Link>
@@ -39,12 +39,12 @@ export default async function CvViewerPage({ params }: { params: Promise<{ id: s
           </div>
           <h1 className="mt-1 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
             <span>{document.students?.name ?? content.personalInfo.name}</span>
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 font-mono text-xs font-semibold text-amber-300 border border-slate-700">
+            <span className="rounded bg-slate-800 px-2.5 py-0.5 font-mono text-xs font-semibold text-amber-300 border border-slate-700">
               {document.students?.roll_no}
             </span>
           </h1>
           <p className="mt-1 font-mono text-xs text-slate-400">
-            Persona: <strong className="text-slate-200">{document.company_type_personas?.category_name ?? "General Placement"}</strong> · Version {document.version_no}
+            Persona: <strong className="text-slate-200 font-medium">{document.company_type_personas?.category_name ?? "General Placement"}</strong> · Version {document.version_no}
           </p>
         </div>
 
@@ -57,7 +57,7 @@ export default async function CvViewerPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      <div className="overflow-hidden rounded-2xl border border-slate-800 bg-[#0c121e] p-6">
+      <div className="overflow-hidden rounded-lg border border-slate-750 bg-[#090d16] p-6 shadow-xl">
         <ResumePreview content={content} templateId={document.template_id} />
       </div>
     </div>

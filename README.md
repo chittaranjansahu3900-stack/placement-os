@@ -258,7 +258,10 @@ before changing `NOTIFICATIONS_SEND_ENABLED` to `true`.
 
 1. Verify `mail.iitiimcareers.in` in Resend and configure
    `PlacementOS Notifications <notifications@mail.iitiimcareers.in>` as `RESEND_FROM_EMAIL`.
-   The later IIM Raipur sender change is an environment-value swap, not a code change.
+   Set `RESEND_SENDING_DOMAIN` to that public sending domain and
+   `RESEND_DKIM_SELECTOR` to the selector Resend asks you to publish; FR-8.11's
+   server-only health check uses them for SPF/DKIM/DMARC assessment. The later
+   IIM Raipur sender change is an environment-value swap, not a code change.
 2. Create server-only Firebase secrets for `RESEND_API_KEY`, `RESEND_WEBHOOK_SECRET`,
    `NOTIFICATION_CRON_SECRET`, and `SUPABASE_SERVICE_ROLE_KEY`. Never prefix these with
    `NEXT_PUBLIC_`.

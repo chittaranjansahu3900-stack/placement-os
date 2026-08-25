@@ -1,13 +1,16 @@
 "use client";
 
+import { OpsIcon } from "@/components/ops-icon";
+
 export function PacketPrintButton() {
   return (
     <button
       type="button"
       onClick={() => window.print()}
-      className="rounded-md bg-white px-3 py-2 text-xs font-medium text-neutral-950 hover:bg-neutral-200"
+      className="ops-button-primary text-xs"
     >
-      Print / Save merged PDF
+      <OpsIcon name="printer" size={13} />
+      Print / Save Merged PDF
     </button>
   );
 }

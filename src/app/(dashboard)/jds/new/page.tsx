@@ -21,11 +21,11 @@ export default async function NewJdPage({
   const batchRows = (batches ?? []) as Batch[];
 
   return (
-    <div className="max-w-3xl space-y-8">
+    <div className="max-w-3xl space-y-7">
       {/* Header */}
       <div className="border-b border-slate-800/80 pb-5">
-        <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-          <Link href="/jds" className="hover:text-amber-400 flex items-center gap-1 transition-colors">
+        <div className="flex items-center gap-2 font-mono text-xs text-slate-400">
+          <Link href="/jds" className="hover:text-white flex items-center gap-1 transition-colors">
             <OpsIcon name="briefcase" size={13} />
             <span>Job Descriptions</span>
           </Link>
@@ -34,8 +34,8 @@ export default async function NewJdPage({
         </div>
         <h1 className="mt-2 text-2xl font-bold tracking-tight text-white flex items-center gap-3">
           <span>Create Job Description</span>
-          <span className="rounded-md bg-amber-950 px-2 py-0.5 font-mono text-xs font-semibold text-amber-300 border border-amber-800/60">
-            Draft Mode
+          <span className="rounded bg-amber-950/80 px-2 py-0.5 font-mono text-xs font-semibold text-amber-300 border border-amber-800/80">
+            Draft Lifecycle
           </span>
         </h1>
         <p className="mt-1 text-xs text-slate-400">
@@ -44,20 +44,20 @@ export default async function NewJdPage({
       </div>
 
       {error && (
-        <div className="flex items-center gap-2 rounded-xl border border-red-800/60 bg-red-950/50 p-3.5 text-xs text-red-200">
-          <OpsIcon name="alert-triangle" size={16} className="text-red-400" />
+        <div className="flex items-center gap-2.5 rounded-lg border border-red-800/80 bg-red-950/70 p-3.5 text-xs text-red-200 shadow-sm">
+          <OpsIcon name="alert-triangle" size={15} className="text-red-400 shrink-0" />
           <span>{error}</span>
         </div>
       )}
 
       {companyRows.length === 0 ? (
-        <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-8 text-center">
-          <p className="text-sm text-slate-400">
+        <div className="rounded-lg border border-slate-750 bg-slate-900/90 p-8 text-center shadow-sm">
+          <p className="text-sm text-slate-300">
             No corporate partners registered on file yet.
           </p>
           <Link
             href="/companies"
-            className="mt-3 inline-flex items-center gap-1.5 rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white"
+            className="ops-button-primary mt-4"
           >
             <OpsIcon name="plus" size={13} />
             <span>Add Company to CRM</span>
@@ -66,8 +66,8 @@ export default async function NewJdPage({
       ) : (
         <form action={createJd} className="space-y-6">
           {/* Section 1: Partner & Season */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 backdrop-blur-md">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+          <div className="rounded-lg border border-slate-750 bg-slate-900/90 p-5 space-y-4 shadow-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-200 font-mono flex items-center gap-2">
               <OpsIcon name="building" size={14} className="text-blue-400" />
               <span>Partner &amp; Batch Alignment</span>
             </h2>
@@ -80,7 +80,7 @@ export default async function NewJdPage({
                   id="company_id"
                   name="company_id"
                   required
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                  className="ops-select mt-1.5 w-full text-xs font-medium text-white"
                 >
                   {companyRows.map((c) => (
                     <option key={c.id} value={c.id}>{c.name}</option>
@@ -95,7 +95,7 @@ export default async function NewJdPage({
                   id="batch_id"
                   name="batch_id"
                   required
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white outline-none focus:border-blue-500"
+                  className="ops-select mt-1.5 w-full text-xs font-medium text-white"
                 >
                   {batchRows.map((b) => (
                     <option key={b.id} value={b.id}>{b.name} (Active Season)</option>
@@ -106,8 +106,8 @@ export default async function NewJdPage({
           </div>
 
           {/* Section 2: Role Details & Compensation */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 backdrop-blur-md">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+          <div className="rounded-lg border border-slate-750 bg-slate-900/90 p-5 space-y-4 shadow-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-200 font-mono flex items-center gap-2">
               <OpsIcon name="briefcase" size={14} className="text-amber-400" />
               <span>Role Title &amp; CTC Structure</span>
             </h2>
@@ -121,7 +121,7 @@ export default async function NewJdPage({
                   name="role_title"
                   required
                   placeholder="e.g. Management Trainee / Product Manager"
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full text-xs text-white"
                 />
               </div>
               <div>
@@ -132,12 +132,12 @@ export default async function NewJdPage({
                   id="grade"
                   name="grade"
                   placeholder="e.g. Associate Director / Band 4"
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full text-xs text-white"
                 />
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-4 pt-2">
+            <div className="grid sm:grid-cols-3 gap-4 pt-1">
               <div>
                 <label htmlFor="ctc_fixed" className="block text-xs font-medium text-slate-300 font-mono">
                   Fixed CTC (LPA)
@@ -148,7 +148,7 @@ export default async function NewJdPage({
                   type="number"
                   step="0.01"
                   placeholder="e.g. 26.0"
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full font-mono text-xs text-white"
                 />
               </div>
               <div>
@@ -161,7 +161,7 @@ export default async function NewJdPage({
                   type="number"
                   step="0.01"
                   placeholder="e.g. 8.0"
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full font-mono text-xs text-white"
                 />
               </div>
               <div>
@@ -174,7 +174,7 @@ export default async function NewJdPage({
                   type="number"
                   step="0.01"
                   placeholder="Auto-calculated if blank"
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full font-mono text-xs text-white"
                 />
               </div>
             </div>
@@ -187,14 +187,14 @@ export default async function NewJdPage({
                 id="locations"
                 name="locations"
                 placeholder="e.g. Mumbai, Bangalore, Gurgaon"
-                className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                className="ops-input mt-1.5 w-full text-xs text-white"
               />
             </div>
           </div>
 
           {/* Section 3: Batch Eligibility Criteria */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 backdrop-blur-md">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
+          <div className="rounded-lg border border-slate-750 bg-slate-900/90 p-5 space-y-4 shadow-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-200 font-mono flex items-center gap-2">
               <OpsIcon name="shield" size={14} className="text-emerald-400" />
               <span>Eligibility Engine Criteria</span>
             </h2>
@@ -207,7 +207,7 @@ export default async function NewJdPage({
                   id="eligible_branches"
                   name="eligible_branches"
                   placeholder="e.g. Finance, Marketing, Operations"
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full text-xs text-white"
                 />
               </div>
               <div>
@@ -218,12 +218,12 @@ export default async function NewJdPage({
                   id="eligible_specializations"
                   name="eligible_specializations"
                   placeholder="e.g. Consulting, Product Management"
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 text-xs text-white placeholder-slate-500 outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full text-xs text-white"
                 />
               </div>
             </div>
 
-            <div className="grid sm:grid-cols-3 gap-4 pt-2">
+            <div className="grid sm:grid-cols-3 gap-4 pt-1">
               <div>
                 <label htmlFor="min_cgpa" className="block text-xs font-medium text-slate-300 font-mono">
                   Minimum CGPA Cutoff
@@ -234,7 +234,7 @@ export default async function NewJdPage({
                   type="number"
                   step="0.01"
                   placeholder="e.g. 7.50"
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full font-mono text-xs text-white"
                 />
               </div>
               <div>
@@ -247,7 +247,7 @@ export default async function NewJdPage({
                   type="number"
                   min={0}
                   defaultValue={0}
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full font-mono text-xs text-white"
                 />
               </div>
               <div>
@@ -260,7 +260,7 @@ export default async function NewJdPage({
                   type="number"
                   min={1}
                   placeholder="e.g. 4"
-                  className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                  className="ops-input mt-1.5 w-full font-mono text-xs text-white"
                 />
               </div>
             </div>
@@ -270,17 +270,17 @@ export default async function NewJdPage({
                 <input id="unplaced_only" name="unplaced_only" type="checkbox" defaultChecked className="size-4 rounded accent-blue-600" />
                 <span>Unplaced Candidates Only (One-Offer Policy)</span>
               </label>
-              <span className="inline-flex items-center gap-2 text-xs text-amber-300">
-                <OpsIcon name="check-shield" size={14} />
+              <span className="inline-flex items-center gap-1.5 font-mono text-[11px] text-amber-300 bg-amber-950/60 px-2.5 py-1 rounded border border-amber-800/60">
+                <OpsIcon name="check-shield" size={13} className="text-amber-400" />
                 <span>SPC review and release is mandatory before students can view this JD.</span>
               </span>
             </div>
           </div>
 
           {/* Section 4: Governance Deadline & Document */}
-          <div className="rounded-2xl border border-slate-800 bg-slate-900/60 p-5 space-y-4 backdrop-blur-md">
-            <h2 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono flex items-center gap-2">
-              <OpsIcon name="clock" size={14} className="text-purple-400" />
+          <div className="rounded-lg border border-slate-750 bg-slate-900/90 p-5 space-y-4 shadow-sm">
+            <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-200 font-mono flex items-center gap-2">
+              <OpsIcon name="clock" size={14} className="text-blue-400" />
               <span>Application Timeline &amp; Original PDF</span>
             </h2>
             <div>
@@ -292,7 +292,7 @@ export default async function NewJdPage({
                 name="apply_by_deadline"
                 type="datetime-local"
                 required
-                className="mt-1.5 w-full rounded-lg border border-slate-700 bg-slate-950 px-3 py-2 font-mono text-xs text-white outline-none focus:border-blue-500"
+                className="ops-input mt-1.5 w-full font-mono text-xs text-white"
               />
             </div>
             <div>
@@ -304,7 +304,7 @@ export default async function NewJdPage({
                 name="jd_attachment"
                 type="file"
                 accept=".pdf,.doc,.docx,.txt"
-                className="mt-1.5 block w-full text-xs text-slate-400 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:text-slate-200"
+                className="ops-input mt-1.5 block w-full text-xs text-slate-300 file:mr-3 file:rounded file:border-0 file:bg-slate-800 file:px-3 file:py-1.5 file:text-xs file:font-semibold file:text-slate-200"
               />
             </div>
           </div>
@@ -313,7 +313,7 @@ export default async function NewJdPage({
           <div className="flex items-center justify-end gap-3 pt-2">
             <Link
               href="/jds"
-              className="rounded-lg border border-slate-700 px-4 py-2 text-xs font-semibold text-slate-300 hover:bg-slate-800"
+              className="ops-button-secondary"
             >
               Cancel
             </Link>

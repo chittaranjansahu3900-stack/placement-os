@@ -83,6 +83,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
       items: items(
         canImportRoster && { href: "/admin/roster", label: "Roster & Batches", icon: "upload" },
         canSeeDefaultsAdmin && { href: "/admin/defaults", label: "Defaults Tracker", icon: "alert-triangle" },
+        canManageUsers && { href: "/admin/verifications", label: "User Verification", icon: "user-check" },
         canManageUsers && { href: "/admin/users", label: "User Access", icon: "users" },
         canManageRoles && { href: "/admin/roles", label: "Roles & Permissions", icon: "shield" },
         canViewAuditLog && { href: "/admin/audit-log", label: "Security Audit Trail", icon: "terminal" },
