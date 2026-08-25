@@ -27,6 +27,7 @@ export function ResumeExportButtons({ fileName, content, templateId = "placement
     <div className="flex flex-wrap items-center gap-2.5 print:hidden">
       <button
         type="button"
+        data-cmd="print"
         onClick={() => window.print()}
         className="ops-button-primary text-xs"
       >
@@ -35,6 +36,7 @@ export function ResumeExportButtons({ fileName, content, templateId = "placement
       </button>
       <button
         type="button"
+        data-cmd="export-docx"
         onClick={exportDocx}
         disabled={exporting}
         className="ops-button-secondary text-xs"

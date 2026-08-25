@@ -1,23 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
-import {
-  saveCvDocument,
-  updateCvReviewCommentStatus,
-  cloneCvVersion,
-  createCvDocument,
-  scoreCvForJd,
-  setLatestCvDocument,
-} from "@/app/actions/resume";
-import { uploadCvFile } from "@/app/actions/files";
-import { ResumeExportButtons } from "@/components/resume/resume-export-buttons";
-import { ResumeAiAssistant } from "@/components/resume/resume-ai-assistant";
-import { ResumePreview, resumeFieldKey, type ResumeFieldSpec } from "@/components/shared/resume-preview";
-import { TopbarDropdown } from "@/components/resume/topbar-dropdown";
+import dynamic from "next/dynamic";
+import { resumeFieldKey, type ResumeFieldSpec } from "@/components/shared/resume-preview";
 import { normalizeCvContent } from "@/lib/resume";
-import { CV_TEMPLATES, normalizeCvTemplateId } from "@/lib/resume-templates";
+import { normalizeCvTemplateId } from "@/lib/resume-templates";
 import { OpsIcon } from "@/components/shared/ops-icon";
+import { TopbarDropdown } from "@/components/resume/topbar-dropdown";
+import { ResumeTopbar } from "./editor/topbar";
+import { IconRail } from "./editor/icon-rail";
+import { ResizablePanel } from "./editor/resizable-panel";
+import { PreviewCanvas } from "./editor/preview-canvas";
+import { RightDrawer } from "./editor/right-drawer";
 import { SectionHeader } from "./editor/section-header";
 import { StringListEditor } from "./editor/string-list-editor";
 import { PersonalSection } from "./editor/sections/personal-section";
@@ -29,13 +23,12 @@ import { PublicationsSection } from "./editor/sections/publications-section";
 import { CustomSectionsSection } from "./editor/sections/custom-sections-section";
 import { AchievementBuilderSection } from "./editor/sections/achievement-builder-section";
 import {
-  RAIL_SECTIONS,
   addButtonClass,
   cardClass,
   inputClass,
   moveArrayItem,
   newId,
-  urgency,
+  topbarBtnClass,
   type CvVersionRow,
   type ReviewCommentWithAuthor,
   type UpcomingJd,
@@ -50,6 +43,15 @@ import type {
   CvProjectEntry,
   CvPublicationEntry,
 } from "@/types/domain";
+
+const ResumeAiAssistant = dynamic(() => import("./resume-ai-assistant").then((m) => m.ResumeAiAssistant), { ssr: false });
+const CommandPalette = dynamic(() => import("./editor/command-palette").then((m) => m.CommandPalette), { ssr: false });
+const CvHealthPanel = dynamic(() => import("./editor/panels/cv-health-panel").then((m) => m.CvHealthPanel), { ssr: false });
+const FindReplacePanel = dynamic(() => import("./editor/panels/find-replace-panel").then((m) => m.FindReplacePanel), { ssr: false });
+const VersionDiffPanel = dynamic(() => import("./editor/panels/version-diff-panel").then((m) => m.VersionDiffPanel), { ssr: false });
+const FocusMode = dynamic(() => import("./editor/panels/focus-mode").then((m) => m.FocusMode), { ssr: false });
+
+type ToolsDrawer = "health" | "find-replace" | "diff" | null;
 
 export function ResumeEditor({
   documentId,
@@ -75,11 +77,29 @@ export function ResumeEditor({
   const [sectionFilter, setSectionFilter] = useState("");
   const [zoom, setZoom] = useState(100);
 
+  const [activeRailKey, setActiveRailKey] = useState<string | null>(null);
+  const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
+  const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
+  const [toolsDrawer, setToolsDrawer] = useState<ToolsDrawer>(null);
+  const [focusModeOn, setFocusModeOn] = useState(false);
+
   const sectionRefs = useRef(new Map<string, HTMLElement>());
   const detailsRefs = useRef(new Map<string, HTMLDetailsElement>());
   const canvasWrapperRef = useRef<HTMLDivElement>(null);
 
+  useEffect(() => {
+    function onKeyDown(event: KeyboardEvent) {
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
+        event.preventDefault();
+        setCommandPaletteOpen(true);
+      }
+    }
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
+  }, []);
+
   function scrollToSection(key: string) {
+    setActiveRailKey(key);
     sectionRefs.current.get(key)?.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
@@ -228,429 +248,35 @@ export function ResumeEditor({
     setBuilder({ action: "", outcome: "", metric: "" });
   }
 
-  const currentVersion = versions.find((v) => v.id === documentId);
-  const nearestDeadline = upcomingJds[0] ? urgency(upcomingJds[0].apply_by_deadline) : null;
-
-  const pillTriggerClass = (open: boolean, activeTone = "border-[#334155] text-slate-300 hover:border-slate-600") =>
-    `flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${open ? "border-[#4f46e5] bg-[#1e293b] text-white" : `bg-[#1e293b] ${activeTone}`}`;
-
   return (
     <div className="space-y-4">
-      {/* Unified Topbar — Row 1: identity+switcher / tool pills / export. Row 2: template gallery / zoom. */}
-      <div className="space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#334155] bg-[#0f172a] p-3 shadow-sm">
-        <div className="flex min-w-0 flex-wrap items-center gap-3">
-          <div className="hidden items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-amber-400 sm:flex">
-            <OpsIcon name="file-text" size={12} />
-            <span>Placement CV Studio</span>
-          </div>
-
-          {/* CV Switcher */}
-          <TopbarDropdown
-            panelClassName="w-72 p-3"
-            trigger={(open) => (
-              <span
-                className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium text-white transition-colors ${open ? "border-[#6366f1] bg-[#1e293b]" : "border-[#334155] bg-[#1e293b] hover:border-[#4f46e5]"}`}
-              >
-                <span className="max-w-40 truncate">{content.title || "My CV"}</span>
-                {currentVersion && (
-                  <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-amber-400">
-                    v{currentVersion.version_no}
-                  </span>
-                )}
-                <OpsIcon name="chevron-down" size={12} className={`text-slate-400 transition-transform ${open ? "rotate-180" : ""}`} />
-              </span>
-            )}
-          >
-            <p className="mb-2 px-1 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              My CV Versions ({versions.length})
-            </p>
-            <div className="max-h-56 space-y-1.5 overflow-y-auto">
-              {versions.map((v) => (
-                <Link
-                  key={v.id}
-                  href={`/resume?cv=${v.id}`}
-                  className={`block rounded-md border p-2.5 text-xs transition-colors ${
-                    v.id === documentId
-                      ? "border-amber-700/80 bg-amber-950/40 text-amber-200"
-                      : "border-[#334155] bg-[#1e293b] text-slate-300 hover:border-slate-600"
-                  }`}
-                >
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="truncate font-semibold text-white">{normalizeCvContent(v.content).title}</span>
-                    <span className="shrink-0 font-mono text-[10px] text-amber-400">v{v.version_no}</span>
-                  </div>
-                  <div className="mt-0.5 flex items-center justify-between font-mono text-[10px] text-slate-500">
-                    <span>{v.company_type_personas?.category_name ?? "General"}</span>
-                    {v.is_latest && (
-                      <span className="rounded border border-emerald-700/80 bg-emerald-950 px-1.5 py-0.2 text-[9px] font-bold text-emerald-300">
-                        PRIMARY
-                      </span>
-                    )}
-                  </div>
-                </Link>
-              ))}
-            </div>
-
-            <div className="mt-3 flex items-center gap-2 border-t border-[#334155] pt-3">
-              <form action={cloneCvVersion} className="flex-1">
-                <input type="hidden" name="cv_document_id" value={documentId} />
-                <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#334155] px-2 py-1.5 text-[11px] text-slate-300 hover:border-slate-600">
-                  <OpsIcon name="copy" size={11} />
-                  <span>Clone</span>
-                </button>
-              </form>
-              {currentVersion && !currentVersion.is_latest && (
-                <form action={setLatestCvDocument} className="flex-1">
-                  <input type="hidden" name="cv_document_id" value={documentId} />
-                  <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-700/70 bg-emerald-950/40 px-2 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-900/40">
-                    <OpsIcon name="check" size={11} />
-                    <span>Set Primary</span>
-                  </button>
-                </form>
-              )}
-            </div>
-
-            <form action={createCvDocument} className="mt-3 space-y-2 border-t border-[#334155] pt-3">
-              <select name="persona_id" className="w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-xs text-white">
-                <option value="">General Placement CV</option>
-                {personas.map((persona) => (
-                  <option key={persona.id} value={persona.id}>{persona.category_name}</option>
-                ))}
-              </select>
-              <button className="w-full rounded-lg border border-dashed border-[#334155] px-2 py-1.5 text-xs text-[#94a3b8] hover:border-[#4f46e5]">
-                + Create Pre-filled CV
-              </button>
-            </form>
-          </TopbarDropdown>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Upload */}
-          <TopbarDropdown
-            align="right"
-            panelClassName="w-72 space-y-2.5 p-3.5"
-            trigger={(open) => (
-              <span className={pillTriggerClass(open)}>
-                <OpsIcon name="upload" size={13} />
-                <span>Upload</span>
-              </span>
-            )}
-          >
-            <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-              <OpsIcon name="upload" size={13} className="text-blue-400" />
-              <span>Original CV File</span>
-            </h2>
-            <p className="text-[11px] leading-relaxed text-slate-500">
-              Stored and downloaded in full without contact-detail redaction or shortlist gating.
-            </p>
-            {currentVersion?.file_url && (
-              <a
-                href={`/api/files/download?path=${encodeURIComponent(currentVersion.file_url)}&name=${encodeURIComponent(`${content.title}.pdf`)}`}
-                className="inline-flex items-center gap-1.5 font-mono text-xs text-blue-400 hover:text-blue-300"
-              >
-                <OpsIcon name="download" size={12} />
-                Download uploaded file
-              </a>
-            )}
-            <form action={uploadCvFile} className="space-y-2">
-              <input type="hidden" name="cv_document_id" value={documentId} />
-              <input
-                type="file"
-                name="file"
-                accept=".pdf,.doc,.docx,.txt"
-                required
-                className={`${inputClass} file:mr-2 file:rounded file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-xs file:text-slate-200`}
-              />
-              <button className="w-full rounded-lg border border-[#334155] px-2 py-1.5 text-xs text-slate-300 hover:border-slate-600">
-                Upload or Replace File
-              </button>
-            </form>
-          </TopbarDropdown>
-
-          {/* JD Keyword Fit */}
-          {upcomingJds.length > 0 && (
-            <TopbarDropdown
-              align="right"
-              panelClassName="w-80 space-y-2.5 p-3.5"
-              trigger={(open) => (
-                <span className={pillTriggerClass(open)}>
-                  <OpsIcon name="sparkles" size={13} />
-                  <span>JD Fit{content.jdFit ? ` · ${content.jdFit.score}%` : ""}</span>
-                </span>
-              )}
-            >
-              <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">JD Keyword Fit Score</h2>
-              {content.jdFit && (
-                <div className="space-y-2 rounded-md border border-blue-900/60 bg-blue-950/30 p-3">
-                  <div className="flex items-baseline justify-between">
-                    <span className="font-mono text-2xl font-bold text-blue-200">{content.jdFit.score}%</span>
-                    <span className="font-mono text-[10px] font-bold uppercase text-blue-400">ATS Match</span>
-                  </div>
-                  <div className="space-y-1.5 font-mono text-[11px]">
-                    {Object.entries(content.jdFit.sectionCoverage).map(([section, score]) => (
-                      <div key={section} className="space-y-0.5">
-                        <div className="flex justify-between text-slate-400">
-                          <span className="capitalize">{section}</span>
-                          <span>{score}%</span>
-                        </div>
-                        <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
-                          <div className="h-full rounded-full bg-blue-500" style={{ width: `${score}%` }} />
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {content.jdFit.missingKeywords.length > 0 && (
-                    <p className="border-t border-blue-900/40 pt-2 font-mono text-[11px] text-amber-300">
-                      Missing: {content.jdFit.missingKeywords.join(", ")}
-                    </p>
-                  )}
-                </div>
-              )}
-              <form action={scoreCvForJd} className="space-y-2">
-                <input type="hidden" name="cv_document_id" value={documentId} />
-                <select name="jd_id" required className="w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-xs text-white">
-                  <option value="">Select Target JD...</option>
-                  {upcomingJds.map((jd) => (
-                    <option key={jd.id} value={jd.id}>{jd.companies?.name} — {jd.role_title}</option>
-                  ))}
-                </select>
-                <textarea
-                  name="job_description"
-                  placeholder="Paste JD requirements to calculate section match..."
-                  className={`${inputClass} min-h-20`}
-                />
-                <button className="w-full rounded-lg border border-[#334155] px-2 py-1.5 text-xs text-slate-300 hover:border-slate-600">
-                  Calculate ATS Fit
-                </button>
-              </form>
-            </TopbarDropdown>
-          )}
-
-          {/* Deadlines */}
-          <TopbarDropdown
-            align="right"
-            panelClassName="w-72 space-y-2.5 p-3.5"
-            trigger={(open) => (
-              <span className={pillTriggerClass(open)}>
-                <OpsIcon name="clock" size={13} />
-                <span>Deadlines</span>
-                {nearestDeadline && <span className="size-1.5 rounded-full bg-amber-400" />}
-              </span>
-            )}
-          >
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Application Deadlines</h2>
-            <div className="space-y-2">
-              {upcomingJds.map((jd) => {
-                const itemUrgency = urgency(jd.apply_by_deadline);
-                return (
-                  <div key={jd.id} className="rounded-md border border-[#334155] bg-[#1e293b] p-2.5">
-                    <p className="text-xs font-bold text-white">{jd.companies?.name ?? "Company"}</p>
-                    <p className="truncate text-[11px] text-slate-400">{jd.role_title}</p>
-                    <span className={`mt-1.5 inline-block rounded border px-2 py-0.5 font-mono text-[10px] font-semibold ${itemUrgency.className}`}>
-                      {itemUrgency.label}
-                    </span>
-                  </div>
-                );
-              })}
-              {upcomingJds.length === 0 && <p className="font-mono text-xs text-slate-400">No active deadlines.</p>}
-            </div>
-          </TopbarDropdown>
-
-          {/* Review Remarks */}
-          {comments.length > 0 && (
-            <TopbarDropdown
-              align="right"
-              panelClassName="w-80 space-y-2.5 p-3.5"
-              trigger={(open) => (
-                <span className={pillTriggerClass(open, "border-amber-700 text-amber-400 hover:text-amber-300")}>
-                  <OpsIcon name="message-square" size={13} />
-                  <span>Remarks · {comments.length}</span>
-                </span>
-              )}
-            >
-              <h2 className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-amber-300">
-                <OpsIcon name="message-square" size={13} className="text-amber-400" />
-                <span>SPC Committee Review Remarks ({comments.length})</span>
-              </h2>
-              <div className="space-y-2">
-                {comments.map((comment) => (
-                  <div key={comment.id} className="rounded-md border border-[#334155] bg-[#080f21] p-3 text-xs">
-                    <div className="flex items-center justify-between font-mono text-[10px] uppercase text-slate-400">
-                      <span>
-                        {comment.anchor_section}
-                        {comment.anchor_bullet_id ? ` · ${comment.anchor_bullet_id}` : ""}
-                      </span>
-                      <span className={comment.status === "applied" ? "font-bold text-emerald-400" : "text-amber-400"}>
-                        {comment.status}
-                      </span>
-                    </div>
-                    <p className="mt-1 text-slate-200">{comment.comment_text}</p>
-                    <div className="mt-2 flex gap-2">
-                      {(["open", "applied", "dismissed"] as const).map((status) => (
-                        <form key={status} action={updateCvReviewCommentStatus}>
-                          <input type="hidden" name="comment_id" value={comment.id} />
-                          <input type="hidden" name="cv_document_id" value={documentId} />
-                          <input type="hidden" name="status" value={status} />
-                          <button
-                            type="submit"
-                            disabled={comment.status === status}
-                            className="rounded border border-[#334155] bg-[#1e293b] px-2 py-0.5 font-mono text-[10px] text-slate-300 hover:bg-slate-700 disabled:opacity-40"
-                          >
-                            Mark {status}
-                          </button>
-                        </form>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </TopbarDropdown>
-          )}
-
-          {/* AI Resume Assistant */}
-          <TopbarDropdown
-            align="right"
-            panelClassName="w-96 p-3.5"
-            trigger={(open) => (
-              <span className={pillTriggerClass(open, "border-[#4f46e5] text-[#a5b4fc] hover:text-white")}>
-                <OpsIcon name="sparkles" size={13} />
-                <span>AI Assistant</span>
-              </span>
-            )}
-          >
-            <ResumeAiAssistant
-              documentId={documentId}
-              content={content}
-              onApplyBullet={(bullet) => {
-                setContent((current) => ({
-                  ...current,
-                  experience: current.experience.length
-                    ? current.experience.map((entry, index) =>
-                        index === 0
-                          ? {
-                              ...entry,
-                              bullets: [...entry.bullets, { id: newId("ai"), text: bullet }],
-                            }
-                          : entry,
-                      )
-                    : [
-                        {
-                          id: newId("exp"),
-                          company: "Experience",
-                          role: "Role",
-                          period: "",
-                          bullets: [{ id: newId("ai"), text: bullet }],
-                        },
-                      ],
-                }));
-              }}
-              onApplyImported={(imported) => setContent(imported)}
-            />
-          </TopbarDropdown>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Full View / Export */}
-          <Link
-            href={`/resume/${documentId}`}
-            title="Full View / Export"
-            className="flex size-8 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
-          >
-            <OpsIcon name="eye" size={14} />
-          </Link>
-
-          <ResumeExportButtons fileName={content.personalInfo.name || content.title} content={content} templateId={templateId} />
-          <form action={saveCvDocument}>
-            <input type="hidden" name="cv_document_id" value={documentId} />
-            <input type="hidden" name="template_id" value={templateId} />
-            <input type="hidden" name="content_json" value={JSON.stringify(content)} />
-            <button
-              type="submit"
-              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-[#4338ca] via-[#4f46e5] to-[#6366f1] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_2px_12px_rgba(99,102,241,0.45),inset_0_1px_0_rgba(255,255,255,0.15)] transition-transform hover:-translate-y-px"
-            >
-              <OpsIcon name="check" size={13} />
-              <span>Save CV Document</span>
-            </button>
-          </form>
-        </div>
-      </div>
-
-      {/* Row 2 — Template gallery + zoom controls */}
-      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-[#334155] bg-[#0f172a] px-3 py-2 shadow-sm">
-        <div className="flex items-center gap-1 rounded-full bg-[#1e293b] p-1">
-          {CV_TEMPLATES.map((template, i) => {
-            const dotColors = ["#6366f1", "#3b82f6", "#f59e0b"];
-            const selected = template.id === templateId;
-            return (
-              <button
-                key={template.id}
-                type="button"
-                onClick={() => setTemplateId(template.id)}
-                className={`flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${selected ? "bg-[#6366f1] text-white" : "text-slate-300 hover:bg-[rgba(255,255,255,0.06)]"}`}
-              >
-                <span className="size-1.5 shrink-0 rounded-full" style={{ background: selected ? "white" : dotColors[i % dotColors.length] }} />
-                {template.name}
-              </button>
-            );
-          })}
-          <span title="More templates coming soon" className="flex shrink-0 cursor-not-allowed items-center gap-1 whitespace-nowrap px-2.5 py-1.5 text-xs text-slate-600">
-            <OpsIcon name="plus" size={11} />
-            Browse
-          </span>
-        </div>
-
-        <div className="flex items-center gap-1.5">
-          <button
-            type="button"
-            onClick={() => setZoom((z) => Math.max(40, z - 10))}
-            className="flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
-          >
-            <OpsIcon name="minus" size={12} />
-          </button>
-          <span className="w-12 text-center font-mono text-xs text-slate-400">{zoom}%</span>
-          <button
-            type="button"
-            onClick={() => setZoom((z) => Math.min(150, z + 10))}
-            className="flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
-          >
-            <OpsIcon name="plus" size={12} />
-          </button>
-          <button
-            type="button"
-            onClick={fitZoom}
-            className="rounded-lg border border-[#334155] px-2.5 py-1 text-xs text-slate-400 hover:text-slate-200"
-          >
-            Fit
-          </button>
-        </div>
-      </div>
-      </div>
+      <ResumeTopbar
+        documentId={documentId}
+        content={content}
+        templateId={templateId}
+        comments={comments}
+        versions={versions}
+        personas={personas}
+        upcomingJds={upcomingJds}
+        onOpenAiAssistant={() => setAiDrawerOpen(true)}
+        onOpenCommandPalette={() => setCommandPaletteOpen(true)}
+      />
 
       {/* Editor + Live Canvas */}
       <div className="overflow-hidden rounded-lg border border-[#334155] bg-[#080f21] lg:flex lg:items-stretch">
-        {/* Icon rail */}
-        <div className="flex shrink-0 flex-row gap-1 border-b border-[#1e293b] bg-[#030507] p-2 lg:w-[46px] lg:flex-col lg:border-b-0 lg:border-r lg:py-4">
-          {RAIL_SECTIONS.map((section) => {
-            const matchesFilter = !sectionFilter.trim() || section.label.toLowerCase().includes(sectionFilter.trim().toLowerCase());
-            const isHidden = section.toggleable && content.hiddenSections.includes(section.key);
-            return (
-              <button
-                key={section.key}
-                type="button"
-                title={section.label}
-                onClick={() => scrollToSection(section.key)}
-                className={`relative flex size-[38px] items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-[#94a3b8] ${matchesFilter ? "text-[#4e6280]" : "text-[#2a3648] opacity-40"} ${isHidden ? "opacity-40" : ""}`}
-              >
-                <OpsIcon name={section.icon} size={17} />
-              </button>
-            );
-          })}
-        </div>
+        <IconRail
+          content={content}
+          sectionFilter={sectionFilter}
+          activeKey={activeRailKey}
+          onScrollToSection={scrollToSection}
+        />
 
-        {/* Form column */}
-        <div className="min-w-0 flex-1 space-y-4 p-4 lg:max-h-[calc(100vh-180px)] lg:max-w-[420px] lg:flex-none lg:overflow-y-auto lg:border-r lg:border-[#1e293b] lg:p-5">
-          {/* Search + expand/collapse */}
+        <ResizablePanel>
+          {focusModeOn && activeRailKey && (
+            <FocusMode activeKey={activeRailKey} sectionRefs={sectionRefs} onExit={() => setFocusModeOn(false)} />
+          )}
+
+          {/* Search + expand/collapse + tools */}
           <div className="space-y-2">
             <div className="relative">
               <OpsIcon name="search" size={13} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-500" />
@@ -661,10 +287,43 @@ export function ResumeEditor({
                 className={`${inputClass} pl-8`}
               />
             </div>
-            <div className="flex items-center gap-2 text-[11px] text-slate-400">
-              <button type="button" onClick={expandAll} className="hover:text-slate-200">Expand all</button>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+              <button type="button" data-cmd="expand-all" onClick={expandAll} className="hover:text-slate-200">Expand all</button>
               <span className="text-slate-700">·</span>
-              <button type="button" onClick={collapseAll} className="hover:text-slate-200">Collapse all</button>
+              <button type="button" data-cmd="collapse-all" onClick={collapseAll} className="hover:text-slate-200">Collapse all</button>
+              <span className="text-slate-700">·</span>
+              <button
+                type="button"
+                onClick={() => setFocusModeOn((v) => !v)}
+                className={focusModeOn ? "text-[#a5b4fc]" : "hover:text-slate-200"}
+              >
+                {focusModeOn ? "Exit focus mode" : "Focus mode"}
+              </button>
+              <span className="ml-auto">
+                <TopbarDropdown
+                  align="right"
+                  panelClassName="w-56 p-1.5"
+                  trigger={(open) => (
+                    <span className={`${topbarBtnClass} ${open ? "border-[#4f46e5]" : ""}`}>
+                      <OpsIcon name="layers" size={12} />
+                      More tools
+                    </span>
+                  )}
+                >
+                  <button type="button" onClick={() => setToolsDrawer("health")} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-slate-300 hover:bg-white/5">
+                    <OpsIcon name="activity" size={13} />
+                    CV Health Check
+                  </button>
+                  <button type="button" onClick={() => setToolsDrawer("find-replace")} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-slate-300 hover:bg-white/5">
+                    <OpsIcon name="search" size={13} />
+                    Find &amp; Replace
+                  </button>
+                  <button type="button" onClick={() => setToolsDrawer("diff")} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-slate-300 hover:bg-white/5">
+                    <OpsIcon name="refresh" size={13} />
+                    Version Diff
+                  </button>
+                </TopbarDropdown>
+              </span>
             </div>
           </div>
 
@@ -883,21 +542,70 @@ export function ResumeEditor({
             onFieldChange={(field, value) => setBuilder((b) => ({ ...b, [field]: value }))}
             onSubmit={addAchievement}
           />
-        </div>
+        </ResizablePanel>
 
-        {/* Live Preview Canvas */}
-        <div
-          ref={canvasWrapperRef}
-          className="flex-1 bg-[radial-gradient(circle_at_20%_20%,#151e36_0%,#0c1020_100%)] p-6 lg:max-h-[calc(100vh-180px)] lg:overflow-y-auto lg:p-8"
-        >
-          <div
-            style={{ transform: `scale(${zoom / 100})`, transformOrigin: "top center" }}
-            className="mx-auto max-w-[820px] overflow-hidden rounded shadow-[0_20px_48px_-10px_rgba(0,0,0,0.12),0_10px_20px_-5px_rgba(0,0,0,0.08)]"
-          >
-            <ResumePreview content={content} templateId={templateId} onFieldClick={handleFieldClick} />
-          </div>
-        </div>
+        <PreviewCanvas
+          content={content}
+          templateId={templateId}
+          onTemplateChange={(id) => setTemplateId(normalizeCvTemplateId(id))}
+          zoom={zoom}
+          onZoomChange={setZoom}
+          onFitZoom={fitZoom}
+          canvasWrapperRef={canvasWrapperRef}
+          onFieldClick={handleFieldClick}
+        />
       </div>
+
+      {commandPaletteOpen && <CommandPalette open={commandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />}
+
+      {aiDrawerOpen && (
+        <RightDrawer open={aiDrawerOpen} onClose={() => setAiDrawerOpen(false)} title="AI Resume Assistant">
+          <ResumeAiAssistant
+            documentId={documentId}
+            content={content}
+            onApplyBullet={(bullet) => {
+              setContent((current) => ({
+                ...current,
+                experience: current.experience.length
+                  ? current.experience.map((entry, index) =>
+                      index === 0
+                        ? {
+                            ...entry,
+                            bullets: [...entry.bullets, { id: newId("ai"), text: bullet }],
+                          }
+                        : entry,
+                    )
+                  : [
+                      {
+                        id: newId("exp"),
+                        company: "Experience",
+                        role: "Role",
+                        period: "",
+                        bullets: [{ id: newId("ai"), text: bullet }],
+                      },
+                    ],
+              }));
+            }}
+            onApplyImported={(imported) => setContent(imported)}
+          />
+        </RightDrawer>
+      )}
+
+      {toolsDrawer === "health" && (
+        <RightDrawer open onClose={() => setToolsDrawer(null)} title="CV Health Check">
+          <CvHealthPanel content={content} />
+        </RightDrawer>
+      )}
+      {toolsDrawer === "find-replace" && (
+        <RightDrawer open onClose={() => setToolsDrawer(null)} title="Find & Replace">
+          <FindReplacePanel content={content} onApply={setContent} />
+        </RightDrawer>
+      )}
+      {toolsDrawer === "diff" && (
+        <RightDrawer open onClose={() => setToolsDrawer(null)} title="Version Diff">
+          <VersionDiffPanel versions={versions} currentDocumentId={documentId} />
+        </RightDrawer>
+      )}
     </div>
   );
 }

@@ -1,5 +1,5 @@
 import type { OpsIconName } from "@/components/shared/ops-icon";
-import type { CvDocument, CvReviewComment } from "@/types/domain";
+import type { CvContent, CvDocument, CvReviewComment } from "@/types/domain";
 
 export type CvVersionRow = CvDocument & { company_type_personas: { category_name: string } | null };
 export type UpcomingJd = {
@@ -28,7 +28,7 @@ export function moveArrayItem<T>(array: T[], index: number, direction: -1 | 1): 
 }
 
 export const inputClass =
-  "w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2.5 py-1.5 text-[13px] text-slate-200 outline-none transition-colors focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]";
+  "w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2.5 py-1.5 text-[13px] text-slate-200 outline-none transition-colors focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]";
 export const labelClass = "block text-[11px] font-medium uppercase tracking-[0.05em] text-slate-500";
 export const addButtonClass =
   "shrink-0 rounded-lg border border-dashed border-[#334155] px-2.5 py-1 text-xs text-[#64748b] transition-colors hover:border-[#4f46e5] hover:text-[#94a3b8]";
@@ -36,8 +36,61 @@ export const cardClass = "rounded-lg border border-[#334155] bg-[#0f172a] p-4 sh
 export const entryCardClass =
   "group mb-2 overflow-hidden rounded-lg border border-[#334155] bg-[#1e293b] open:border-l-[3px] open:border-l-[#6366f1] open:shadow-[0_6px_20px_rgba(0,0,0,0.3)]";
 
+// Cursivo-matching chrome primitives (CVEditorStyles.jsx) — topbar/rail/pill/palette classes.
+export const topbarBtnClass =
+  "topbar-btn flex items-center gap-1.5 rounded-full border border-white/[0.18] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 transition-all";
+export const topbarBtnPrimaryClass =
+  "topbar-btn-primary flex items-center gap-1.5 rounded-lg bg-[#4f46e5] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_2px_12px_rgba(99,102,241,0.45),inset_0_1px_0_rgba(255,255,255,0.15)] transition-transform";
+export const tplPillClass =
+  "tpl-pill flex items-center gap-1.5 whitespace-nowrap rounded-full border border-transparent px-3 py-1.5 text-xs font-medium text-slate-300 transition-all";
+export const tplPillActiveClass =
+  "tpl-pill flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#4f46e5] bg-[#4f46e5] px-3 py-1.5 text-xs font-medium text-white transition-all";
+export const zoomBtnClass =
+  "zoom-btn flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 transition-colors hover:text-slate-200";
+export const navRailBtnClass =
+  "nav-rail-btn relative flex size-[38px] items-center justify-center rounded-lg text-[#4e6280] transition-colors hover:text-[#94a3b8]";
+export const navRailBtnActiveClass =
+  "nav-rail-btn active relative flex size-[38px] items-center justify-center rounded-lg bg-[rgba(99,102,241,0.14)] text-[#a5b4fc] transition-colors";
+export const cmdItemClass =
+  "cmd-item flex items-center gap-3 rounded-[9px] border border-transparent px-3 py-2.5 text-[13.5px] text-[#94a3b8] transition-all";
+
 export function newId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;
+}
+
+// Whether a rail section currently has any user-entered content — drives the
+// icon rail's filled/empty status dot (Cursivo's nav-rail convention).
+export function isSectionFilled(content: CvContent, key: string): boolean {
+  switch (key) {
+    case "personal":
+      return Boolean(content.personalInfo.name.trim() || content.personalInfo.email.trim());
+    case "academics":
+      return content.academics.length > 0;
+    case "skills":
+      return content.skills.length > 0;
+    case "experience":
+      return content.experience.length > 0;
+    case "positions":
+      return content.positions.length > 0;
+    case "projects":
+      return content.projects.length > 0;
+    case "languages":
+      return content.languages.length > 0;
+    case "certifications":
+      return content.certifications.length > 0;
+    case "awards":
+      return content.awards.length > 0;
+    case "activities":
+      return content.activities.length > 0;
+    case "hobbies":
+      return content.hobbies.length > 0;
+    case "publications":
+      return content.publications.length > 0;
+    case "customSections":
+      return content.customSections.length > 0;
+    default:
+      return false;
+  }
 }
 
 export const BULLET_MAX = 220;

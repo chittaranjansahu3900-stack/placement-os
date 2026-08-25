@@ -445,6 +445,99 @@ export function cvContentToPlainText(content: CvContent): string {
   return groups.join("\n");
 }
 
+export type CvHealthCheck = { id: string; label: string; status: "pass" | "warn" | "fail"; note: string };
+export type CvHealthReport = { score: number; checks: CvHealthCheck[] };
+
+const WEAK_VERBS = ["helped", "worked on", "responsible for", "assisted", "involved in"];
+
+export function computeCvHealth(content: CvContent): CvHealthReport {
+  const bullets = [
+    ...content.experience.flatMap((e) => e.bullets),
+    ...content.positions.flatMap((e) => e.bullets),
+    ...content.projects.flatMap((e) => e.bullets),
+  ];
+
+  const checks: CvHealthCheck[] = [];
+
+  checks.push(
+    content.personalInfo.name.trim() && content.personalInfo.email.trim()
+      ? { id: "contact", label: "Contact details", status: "pass", note: "Name and email present." }
+      : { id: "contact", label: "Contact details", status: "fail", note: "Add your name and institute email." },
+  );
+
+  checks.push(
+    content.personalInfo.summary.trim().length >= 40
+      ? { id: "summary", label: "Executive summary", status: "pass", note: "Summary looks substantial." }
+      : { id: "summary", label: "Executive summary", status: "warn", note: "Add a 1-2 line summary (40+ characters)." },
+  );
+
+  checks.push(
+    content.experience.length + content.positions.length + content.projects.length > 0
+      ? { id: "experience", label: "Experience / Projects", status: "pass", note: "At least one entry present." }
+      : { id: "experience", label: "Experience / Projects", status: "fail", note: "Add at least one experience, position, or project." },
+  );
+
+  const shortBullets = bullets.filter((b) => b.text.trim().length > 0 && b.text.trim().length < 40).length;
+  checks.push(
+    bullets.length === 0
+      ? { id: "bullets", label: "Achievement bullets", status: "fail", note: "No bullets yet — add quantified achievements." }
+      : shortBullets > bullets.length / 2
+        ? { id: "bullets", label: "Achievement bullets", status: "warn", note: `${shortBullets} of ${bullets.length} bullets look too short.` }
+        : { id: "bullets", label: "Achievement bullets", status: "pass", note: `${bullets.length} bullets across your CV.` },
+  );
+
+  const weakCount = bullets.filter((b) => WEAK_VERBS.some((verb) => b.text.toLowerCase().includes(verb))).length;
+  checks.push(
+    weakCount === 0
+      ? { id: "verbs", label: "Action verbs", status: "pass", note: "No weak filler phrases detected." }
+      : { id: "verbs", label: "Action verbs", status: "warn", note: `${weakCount} bullet(s) use weak phrasing like "helped" or "responsible for".` },
+  );
+
+  checks.push(
+    content.skills.length >= 5
+      ? { id: "skills", label: "Skills", status: "pass", note: `${content.skills.length} skills listed.` }
+      : { id: "skills", label: "Skills", status: "warn", note: "List at least 5 relevant skills." },
+  );
+
+  const passWeight = checks.filter((c) => c.status === "pass").length;
+  const warnWeight = checks.filter((c) => c.status === "warn").length;
+  const score = Math.round(((passWeight + warnWeight * 0.5) / checks.length) * 100);
+
+  return { score, checks };
+}
+
+export function replaceInContent(content: CvContent, search: string, replacement: string): { next: CvContent; count: number } {
+  if (!search) return { next: content, count: 0 };
+  let count = 0;
+  const pattern = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+
+  function walk<T>(value: T): T {
+    if (typeof value === "string") {
+      const matches = value.match(pattern);
+      if (matches) count += matches.length;
+      return value.replace(pattern, replacement) as unknown as T;
+    }
+    if (Array.isArray(value)) return value.map(walk) as unknown as T;
+    if (value && typeof value === "object") {
+      const out: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(value as Record<string, unknown>)) out[key] = walk(val);
+      return out as T;
+    }
+    return value;
+  }
+
+  const next = walk(content);
+  return { next, count };
+}
+
+export function listCvBullets(content: CvContent): string[] {
+  return [
+    ...content.experience.flatMap((e) => e.bullets.map((b) => `${e.company} — ${b.text}`)),
+    ...content.positions.flatMap((e) => e.bullets.map((b) => `${e.company} — ${b.text}`)),
+    ...content.projects.flatMap((e) => e.bullets.map((b) => `${e.name} — ${b.text}`)),
+  ];
+}
+
 export function scoreCvAgainstJd(content: CvContent, jdText: string, jdId: string): CvJdFitAnalysis {
   const keywords = [...keywordSet(jdText)].slice(0, 60);
   const sectionText: Record<string, string> = {
