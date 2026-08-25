@@ -17,325 +17,39 @@ import { ResumePreview, resumeFieldKey, type ResumeFieldSpec } from "@/component
 import { TopbarDropdown } from "@/components/resume/topbar-dropdown";
 import { normalizeCvContent } from "@/lib/resume";
 import { CV_TEMPLATES, normalizeCvTemplateId } from "@/lib/resume-templates";
-import { OpsIcon, type OpsIconName } from "@/components/shared/ops-icon";
+import { OpsIcon } from "@/components/shared/ops-icon";
+import { SectionHeader } from "./editor/section-header";
+import { StringListEditor } from "./editor/string-list-editor";
+import { PersonalSection } from "./editor/sections/personal-section";
+import { AcademicsSection } from "./editor/sections/academics-section";
+import { ExperienceSection } from "./editor/sections/experience-section";
+import { ProjectsSection } from "./editor/sections/projects-section";
+import { LanguagesSection } from "./editor/sections/languages-section";
+import { PublicationsSection } from "./editor/sections/publications-section";
+import { CustomSectionsSection } from "./editor/sections/custom-sections-section";
+import { AchievementBuilderSection } from "./editor/sections/achievement-builder-section";
+import {
+  RAIL_SECTIONS,
+  addButtonClass,
+  cardClass,
+  inputClass,
+  moveArrayItem,
+  newId,
+  urgency,
+  type CvVersionRow,
+  type ReviewCommentWithAuthor,
+  type UpcomingJd,
+} from "./editor/shared";
 import type {
   CompanyTypePersona,
   CvAcademicEntry,
-  CvBullet,
   CvContent,
   CvCustomSection,
-  CvDocument,
   CvExperienceEntry,
   CvLanguageEntry,
   CvProjectEntry,
   CvPublicationEntry,
-  CvReviewComment,
 } from "@/types/domain";
-
-type CvVersionRow = CvDocument & { company_type_personas: { category_name: string } | null };
-type UpcomingJd = {
-  id: string;
-  role_title: string;
-  apply_by_deadline: string;
-  companies: { name: string } | null;
-};
-
-function urgency(deadline: string) {
-  const hours = Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / 3_600_000));
-  if (hours < 24) return { label: `${hours}h left`, className: "text-red-300 border-red-800 bg-red-950/80" };
-  const days = Math.ceil(hours / 24);
-  if (days <= 3) return { label: `${days}d left`, className: "text-amber-300 border-amber-800 bg-amber-950/80" };
-  return { label: `${days}d left`, className: "text-slate-300 border-slate-700 bg-slate-900" };
-}
-
-function moveArrayItem<T>(array: T[], index: number, direction: -1 | 1): T[] {
-  const target = index + direction;
-  if (target < 0 || target >= array.length) return array;
-  const copy = [...array];
-  [copy[index], copy[target]] = [copy[target], copy[index]];
-  return copy;
-}
-
-const inputClass =
-  "w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2.5 py-1.5 text-[13px] text-slate-200 outline-none transition-colors focus:border-[#6366f1] focus:ring-1 focus:ring-[#6366f1]";
-const labelClass = "block text-[11px] font-medium uppercase tracking-[0.05em] text-slate-500";
-const addButtonClass =
-  "shrink-0 rounded-lg border border-dashed border-[#334155] px-2.5 py-1 text-xs text-[#64748b] transition-colors hover:border-[#4f46e5] hover:text-[#94a3b8]";
-const cardClass = "rounded-lg border border-[#334155] bg-[#0f172a] p-4 shadow-sm";
-const entryCardClass =
-  "group mb-2 overflow-hidden rounded-lg border border-[#334155] bg-[#1e293b] open:border-l-[3px] open:border-l-[#6366f1] open:shadow-[0_6px_20px_rgba(0,0,0,0.3)]";
-
-type ReviewCommentWithAuthor = CvReviewComment & { users?: { name: string } | null };
-
-function newId(prefix: string) {
-  return `${prefix}-${crypto.randomUUID()}`;
-}
-
-const BULLET_MAX = 220;
-
-// Wraps the current selection in a bullet <input> with markdown-lite markers
-// — shared syntax with renderFormattedText() in resume-preview.tsx.
-function wrapSelection(input: HTMLInputElement, value: string, marker: string) {
-  const start = input.selectionStart ?? value.length;
-  const end = input.selectionEnd ?? value.length;
-  const selected = value.slice(start, end) || "text";
-  const next = value.slice(0, start) + marker + selected + marker + value.slice(end);
-  return { next, selStart: start + marker.length, selEnd: start + marker.length + selected.length };
-}
-
-function BulletRow({
-  bullet, onChange, onRemove, dataField, documentId,
-}: {
-  bullet: CvBullet;
-  onChange: (text: string) => void;
-  onRemove: () => void;
-  dataField?: string;
-  documentId: string;
-}) {
-  const inputRef = useRef<HTMLInputElement>(null);
-  const [improving, setImproving] = useState(false);
-
-  function applyMarker(marker: string) {
-    const input = inputRef.current;
-    if (!input) return;
-    const { next, selStart, selEnd } = wrapSelection(input, bullet.text, marker);
-    onChange(next.slice(0, BULLET_MAX));
-    requestAnimationFrame(() => {
-      input.focus();
-      input.setSelectionRange(selStart, selEnd);
-    });
-  }
-
-  async function improve() {
-    if (!bullet.text.trim() || improving) return;
-    setImproving(true);
-    try {
-      const response = await fetch("/api/resume/ai", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ purpose: "writing_assist", input: bullet.text, cvDocumentId: documentId }),
-      });
-      const payload = (await response.json()) as { output?: string };
-      if (response.ok && payload.output) onChange(payload.output.slice(0, BULLET_MAX));
-    } catch {
-      // Best-effort — matches this app's existing silent-AI-failure convention.
-    } finally {
-      setImproving(false);
-    }
-  }
-
-  return (
-    <div className="rounded-lg border border-[#334155] bg-[#0f172a] p-2">
-      <input
-        ref={inputRef}
-        data-field={dataField}
-        value={bullet.text}
-        onChange={(e) => onChange(e.target.value.slice(0, BULLET_MAX))}
-        maxLength={BULLET_MAX}
-        className={`${inputClass} mb-1.5`}
-      />
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-1">
-          <button type="button" title="Bold" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("**")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] font-bold text-slate-300 hover:border-slate-600">
-            B
-          </button>
-          <button type="button" title="Italic" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("_")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] italic text-slate-300 hover:border-slate-600">
-            I
-          </button>
-          <button type="button" title="Underline" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("++")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] underline text-slate-300 hover:border-slate-600">
-            U
-          </button>
-          <button type="button" title="Strikethrough" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("~~")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] line-through text-slate-300 hover:border-slate-600">
-            S
-          </button>
-          <button
-            type="button"
-            onClick={improve}
-            disabled={improving || !bullet.text.trim()}
-            className="ml-1 flex items-center gap-1 rounded-full border border-emerald-700 bg-emerald-950/40 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-900/40 disabled:opacity-40"
-          >
-            <OpsIcon name="sparkles" size={10} />
-            {improving ? "Improving…" : "Improve"}
-          </button>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          <span className="font-mono text-[10px] text-slate-500">{bullet.text.length}/{BULLET_MAX}</span>
-          <button type="button" onClick={onRemove} className="text-[#ef4444] hover:text-red-300">
-            <OpsIcon name="x" size={12} />
-          </button>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function BulletEditor({
-  bullets, onChange, dataFieldBase, documentId,
-}: {
-  bullets: CvBullet[];
-  onChange: (bullets: CvBullet[]) => void;
-  dataFieldBase?: string;
-  documentId: string;
-}) {
-  return (
-    <div className="space-y-2">
-      {bullets.map((bullet, index) => (
-        <BulletRow
-          key={bullet.id}
-          bullet={bullet}
-          documentId={documentId}
-          dataField={index === 0 ? dataFieldBase : undefined}
-          onChange={(text) => onChange(bullets.map((b, i) => (i === index ? { ...b, text } : b)))}
-          onRemove={() => onChange(bullets.filter((_, i) => i !== index))}
-        />
-      ))}
-      <button
-        type="button"
-        onClick={() => onChange([...bullets, { id: newId("bullet"), text: "" }])}
-        className={addButtonClass}
-      >
-        + Add bullet
-      </button>
-    </div>
-  );
-}
-
-// Matches src/lib/resume.ts's DEFAULT_SECTION_ORDER plus the two fixed
-// (never hideable/reorderable) sections — mirrors Cursivo's own rail exactly.
-const RAIL_SECTIONS: { key: string; label: string; icon: OpsIconName; toggleable: boolean }[] = [
-  { key: "personal", label: "Personal & Contact", icon: "user", toggleable: false },
-  { key: "academics", label: "Academic Records", icon: "graduation-cap", toggleable: false },
-  { key: "skills", label: "Skills", icon: "zap", toggleable: true },
-  { key: "experience", label: "Experience", icon: "briefcase", toggleable: true },
-  { key: "positions", label: "Positions", icon: "star", toggleable: true },
-  { key: "projects", label: "Projects", icon: "layers", toggleable: true },
-  { key: "languages", label: "Languages", icon: "globe", toggleable: true },
-  { key: "certifications", label: "Certifications", icon: "check-shield", toggleable: true },
-  { key: "awards", label: "Awards", icon: "award", toggleable: true },
-  { key: "activities", label: "Activities", icon: "activity", toggleable: true },
-  { key: "hobbies", label: "Hobbies", icon: "heart", toggleable: true },
-  { key: "publications", label: "Publications", icon: "book-open", toggleable: true },
-  { key: "customSections", label: "Custom Sections", icon: "grid", toggleable: true },
-];
-
-function EntryHeader({
-  title, onRemove, onMoveUp, onMoveDown,
-}: {
-  title: string;
-  onRemove: () => void;
-  onMoveUp?: () => void;
-  onMoveDown?: () => void;
-}) {
-  return (
-    <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-[13px] font-medium text-slate-200 hover:text-white">
-      <span className="min-w-0 truncate">{title}</span>
-      <span className="flex shrink-0 items-center gap-1.5">
-        {onMoveUp && (
-          <button
-            type="button"
-            title="Move up"
-            onClick={(event) => { event.preventDefault(); event.stopPropagation(); onMoveUp(); }}
-            className="text-slate-500 hover:text-slate-300"
-          >
-            <OpsIcon name="chevron-up" size={12} />
-          </button>
-        )}
-        {onMoveDown && (
-          <button
-            type="button"
-            title="Move down"
-            onClick={(event) => { event.preventDefault(); event.stopPropagation(); onMoveDown(); }}
-            className="text-slate-500 hover:text-slate-300"
-          >
-            <OpsIcon name="chevron-down" size={12} />
-          </button>
-        )}
-        <button
-          type="button"
-          onClick={(event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            onRemove();
-          }}
-          className="font-mono text-xs text-[#ef4444] hover:text-red-300"
-        >
-          Remove
-        </button>
-        <OpsIcon
-          name="chevron-down"
-          size={14}
-          className="text-slate-500 transition-transform group-open:rotate-180"
-        />
-      </span>
-    </summary>
-  );
-}
-
-function SectionHeader({
-  title, sectionKey, hiddenSections, onToggleHidden, onAdd, addLabel,
-}: {
-  title: string;
-  sectionKey?: string;
-  hiddenSections?: string[];
-  onToggleHidden?: (key: string) => void;
-  onAdd?: () => void;
-  addLabel?: string;
-}) {
-  const isHidden = sectionKey ? (hiddenSections ?? []).includes(sectionKey) : false;
-  return (
-    <div className="mb-2 flex items-center justify-between gap-2">
-      <div className="flex items-center gap-1.5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">{title}</h2>
-        {sectionKey && onToggleHidden && (
-          <button
-            type="button"
-            onClick={() => onToggleHidden(sectionKey)}
-            title={isHidden ? "Hidden from CV — click to show" : "Shown on CV — click to hide"}
-            className={isHidden ? "text-slate-600 hover:text-slate-400" : "text-emerald-500 hover:text-emerald-400"}
-          >
-            <OpsIcon name={isHidden ? "eye-off" : "eye"} size={13} />
-          </button>
-        )}
-      </div>
-      {onAdd && addLabel && (
-        <button type="button" onClick={onAdd} className={addButtonClass}>{addLabel}</button>
-      )}
-    </div>
-  );
-}
-
-function StringListEditor({
-  items, onChange, placeholder,
-}: {
-  items: string[];
-  onChange: (items: string[]) => void;
-  placeholder: string;
-}) {
-  return (
-    <div className="space-y-2">
-      {items.map((item, index) => (
-        <div key={index} className="flex items-center gap-2">
-          <input
-            value={item}
-            onChange={(event) => onChange(items.map((value, i) => (i === index ? event.target.value : value)))}
-            placeholder={placeholder}
-            className={inputClass}
-          />
-          <button
-            type="button"
-            onClick={() => onChange(items.filter((_, i) => i !== index))}
-            className="shrink-0 text-[#ef4444] hover:text-red-300"
-          >
-            <OpsIcon name="x" size={14} />
-          </button>
-        </div>
-      ))}
-      <button type="button" onClick={() => onChange([...items, ""])} className={addButtonClass}>
-        + Add
-      </button>
-    </div>
-  );
-}
 
 export function ResumeEditor({
   documentId,
@@ -367,6 +81,15 @@ export function ResumeEditor({
 
   function scrollToSection(key: string) {
     sectionRefs.current.get(key)?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function registerSectionRef(key: string, el: HTMLElement | null) {
+    if (el) sectionRefs.current.set(key, el);
+  }
+
+  function registerDetailsRef(id: string, el: HTMLDetailsElement | null) {
+    if (el) detailsRefs.current.set(id, el);
+    else detailsRefs.current.delete(id);
   }
 
   function handleFieldClick(spec: ResumeFieldSpec) {
@@ -945,208 +668,31 @@ export function ResumeEditor({
             </div>
           </div>
 
-          {/* Personal Details */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("personal", el);
-            }}
-            className={cardClass}
-          >
-            <h2 className="mb-3 border-b border-[#1e293b] pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-              Personal &amp; Contact Header
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Full Candidate Name</label>
-                <input
-                  data-field={resumeFieldKey({ section: "personal", field: "name" })}
-                  value={content.personalInfo.name}
-                  onChange={(event) => updatePersonal("name", event.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Resume Headline</label>
-                <input
-                  data-field={resumeFieldKey({ section: "personal", field: "headline" })}
-                  value={content.personalInfo.headline}
-                  onChange={(event) => updatePersonal("headline", event.target.value.slice(0, 80))}
-                  placeholder="Senior PM | Fintech · Growth | 0→1 (80 chars max)"
-                  maxLength={80}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Phone Number</label>
-                <input
-                  data-field={resumeFieldKey({ section: "personal", field: "phone" })}
-                  value={content.personalInfo.phone}
-                  onChange={(event) => updatePersonal("phone", event.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Institute Email</label>
-                <input
-                  data-field={resumeFieldKey({ section: "personal", field: "email" })}
-                  value={content.personalInfo.email}
-                  onChange={(event) => updatePersonal("email", event.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>LinkedIn</label>
-                <input
-                  data-field={resumeFieldKey({ section: "personal", field: "linkedin" })}
-                  value={content.personalInfo.linkedin}
-                  onChange={(event) => updatePersonal("linkedin", event.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Website / Portfolio</label>
-                <input
-                  data-field={resumeFieldKey({ section: "personal", field: "website" })}
-                  value={content.personalInfo.website}
-                  onChange={(event) => updatePersonal("website", event.target.value)}
-                  placeholder="github.com/yourname or yourname.dev"
-                  className={inputClass}
-                />
-              </div>
-              <div className="sm:col-span-2">
-                <label className={labelClass}>Location</label>
-                <input
-                  data-field={resumeFieldKey({ section: "personal", field: "location" })}
-                  value={content.personalInfo.location}
-                  onChange={(event) => updatePersonal("location", event.target.value)}
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Total Experience</label>
-                <input
-                  value={content.personalInfo.totalExperience}
-                  onChange={(event) => updatePersonal("totalExperience", event.target.value)}
-                  placeholder="e.g. 6 Years"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Date of Birth (optional)</label>
-                <input
-                  value={content.personalInfo.dateOfBirth}
-                  onChange={(event) => updatePersonal("dateOfBirth", event.target.value)}
-                  placeholder="e.g. 15 Aug 1995"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Gender (optional)</label>
-                <input
-                  value={content.personalInfo.gender}
-                  onChange={(event) => updatePersonal("gender", event.target.value)}
-                  placeholder="e.g. Male / Female"
-                  className={inputClass}
-                />
-              </div>
-            </div>
-            <div className="mt-3">
-              <label className={labelClass}>Executive Summary (optional)</label>
-              <textarea
-                data-field={resumeFieldKey({ section: "personal", field: "summary" })}
-                value={content.personalInfo.summary}
-                onChange={(event) => updatePersonal("summary", event.target.value)}
-                rows={2}
-                className={inputClass}
-              />
-            </div>
-          </section>
+          <PersonalSection
+            personalInfo={content.personalInfo}
+            onChange={updatePersonal}
+            registerRef={(el) => registerSectionRef("personal", el)}
+          />
 
-          {/* Academic Records */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("academics", el);
-            }}
-          >
-            <SectionHeader
-              title="Academic Record Entries"
-              onAdd={() =>
-                setContent((c) => ({
-                  ...c,
-                  academics: [
-                    ...c.academics,
-                    { id: newId("acad"), course: "", institute: "", year: "", result: "" },
-                  ],
-                }))
-              }
-              addLabel="+ Add Row"
-            />
-            {content.academics.map((row, index) => (
-              <details
-                key={row.id}
-                ref={(el) => {
-                  if (el) detailsRefs.current.set(row.id, el);
-                  else detailsRefs.current.delete(row.id);
-                }}
-                className={entryCardClass}
-              >
-                <EntryHeader
-                  title={row.institute || row.course || `Record #${index + 1}`}
-                  onRemove={() =>
-                    setContent((c) => ({
-                      ...c,
-                      academics: c.academics.filter((_, i) => i !== index),
-                    }))
-                  }
-                />
-                <div className="grid gap-3 border-t border-[#334155] p-3 sm:grid-cols-2">
-                  <div>
-                    <label className={labelClass}>Degree / Course</label>
-                    <input
-                      data-field={resumeFieldKey({ section: "academics", entryId: row.id, field: "course" })}
-                      value={row.course}
-                      onChange={(e) => updateAcademic(index, { course: e.target.value })}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Institute</label>
-                    <input
-                      data-field={resumeFieldKey({ section: "academics", entryId: row.id, field: "institute" })}
-                      value={row.institute}
-                      onChange={(e) => updateAcademic(index, { institute: e.target.value })}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Year</label>
-                    <input
-                      data-field={resumeFieldKey({ section: "academics", entryId: row.id, field: "year" })}
-                      value={row.year}
-                      onChange={(e) => updateAcademic(index, { year: e.target.value })}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Score / CGPA</label>
-                    <input
-                      data-field={resumeFieldKey({ section: "academics", entryId: row.id, field: "result" })}
-                      value={row.result}
-                      onChange={(e) => updateAcademic(index, { result: e.target.value })}
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-              </details>
-            ))}
-          </section>
+          <AcademicsSection
+            academics={content.academics}
+            onAdd={() =>
+              setContent((c) => ({
+                ...c,
+                academics: [
+                  ...c.academics,
+                  { id: newId("acad"), course: "", institute: "", year: "", result: "" },
+                ],
+              }))
+            }
+            onRemove={(index) => setContent((c) => ({ ...c, academics: c.academics.filter((_, i) => i !== index) }))}
+            onUpdate={updateAcademic}
+            registerRef={(el) => registerSectionRef("academics", el)}
+            registerDetailsRef={registerDetailsRef}
+          />
 
           {/* Skills */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("skills", el);
-            }}
-          >
+          <section ref={(el) => registerSectionRef("skills", el)}>
             <SectionHeader title="Skills" sectionKey="skills" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
             <div className={cardClass}>
               <div className="mb-2 flex flex-wrap gap-1.5">
@@ -1174,314 +720,93 @@ export function ResumeEditor({
             </div>
           </section>
 
-          {/* Experience & Internships */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("experience", el);
-            }}
-          >
-            <SectionHeader
-              title="Internships & Professional Experience"
-              sectionKey="experience"
-              hiddenSections={content.hiddenSections}
-              onToggleHidden={toggleSectionHidden}
-              onAdd={() =>
-                setContent((c) => ({
-                  ...c,
-                  experience: [
-                    ...c.experience,
-                    { id: newId("exp"), company: "", role: "", period: "", bullets: [] },
-                  ],
-                }))
-              }
-              addLabel="+ Add Experience"
-            />
-            {content.experience.map((entry, index) => (
-              <details
-                key={entry.id}
-                ref={(el) => {
-                  if (el) detailsRefs.current.set(entry.id, el);
-                  else detailsRefs.current.delete(entry.id);
-                }}
-                className={entryCardClass}
-              >
-                <EntryHeader
-                  title={entry.company || `Experience #${index + 1}`}
-                  onMoveUp={index > 0 ? () => setContent((c) => ({ ...c, experience: moveArrayItem(c.experience, index, -1) })) : undefined}
-                  onMoveDown={index < content.experience.length - 1 ? () => setContent((c) => ({ ...c, experience: moveArrayItem(c.experience, index, 1) })) : undefined}
-                  onRemove={() =>
-                    setContent((c) => ({
-                      ...c,
-                      experience: c.experience.filter((_, i) => i !== index),
-                    }))
-                  }
-                />
-                <div className="space-y-3 border-t border-[#334155] p-3">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div>
-                      <label className={labelClass}>Company / Organization</label>
-                      <input
-                        data-field={resumeFieldKey({ section: "experience", entryId: entry.id, field: "company" })}
-                        value={entry.company}
-                        onChange={(e) => updateExperience("experience", index, { company: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Designation / Role</label>
-                      <input
-                        value={entry.role}
-                        onChange={(e) => updateExperience("experience", index, { role: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Duration / Period</label>
-                      <input
-                        data-field={resumeFieldKey({ section: "experience", entryId: entry.id, field: "period" })}
-                        value={entry.period}
-                        onChange={(e) => updateExperience("experience", index, { period: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Achievement Bullets</label>
-                    <BulletEditor
-                      bullets={entry.bullets}
-                      documentId={documentId}
-                      dataFieldBase={resumeFieldKey({ section: "experience", entryId: entry.id, field: "bullets" })}
-                      onChange={(bullets) => updateExperience("experience", index, { bullets })}
-                    />
-                  </div>
-                </div>
-              </details>
-            ))}
-          </section>
+          <ExperienceSection
+            section="experience"
+            title="Internships & Professional Experience"
+            addLabel="+ Add Experience"
+            entryLabel="Experience"
+            companyLabel="Company / Organization"
+            bulletsLabel="Achievement Bullets"
+            entries={content.experience}
+            documentId={documentId}
+            hiddenSections={content.hiddenSections}
+            onToggleHidden={toggleSectionHidden}
+            onAdd={() =>
+              setContent((c) => ({
+                ...c,
+                experience: [
+                  ...c.experience,
+                  { id: newId("exp"), company: "", role: "", period: "", bullets: [] },
+                ],
+              }))
+            }
+            onRemove={(index) => setContent((c) => ({ ...c, experience: c.experience.filter((_, i) => i !== index) }))}
+            onMove={(index, direction) => setContent((c) => ({ ...c, experience: moveArrayItem(c.experience, index, direction) }))}
+            onUpdate={(index, patch) => updateExperience("experience", index, patch)}
+            registerRef={(el) => registerSectionRef("experience", el)}
+            registerDetailsRef={registerDetailsRef}
+          />
 
-          {/* Positions of Responsibility */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("positions", el);
-            }}
-          >
-            <SectionHeader
-              title="Positions of Responsibility"
-              sectionKey="positions"
-              hiddenSections={content.hiddenSections}
-              onToggleHidden={toggleSectionHidden}
-              onAdd={() =>
-                setContent((c) => ({
-                  ...c,
-                  positions: [
-                    ...c.positions,
-                    { id: newId("pos"), company: "", role: "", period: "", bullets: [] },
-                  ],
-                }))
-              }
-              addLabel="+ Add Position"
-            />
-            {content.positions.map((entry, index) => (
-              <details
-                key={entry.id}
-                ref={(el) => {
-                  if (el) detailsRefs.current.set(entry.id, el);
-                  else detailsRefs.current.delete(entry.id);
-                }}
-                className={entryCardClass}
-              >
-                <EntryHeader
-                  title={entry.role || `Position #${index + 1}`}
-                  onMoveUp={index > 0 ? () => setContent((c) => ({ ...c, positions: moveArrayItem(c.positions, index, -1) })) : undefined}
-                  onMoveDown={index < content.positions.length - 1 ? () => setContent((c) => ({ ...c, positions: moveArrayItem(c.positions, index, 1) })) : undefined}
-                  onRemove={() =>
-                    setContent((c) => ({
-                      ...c,
-                      positions: c.positions.filter((_, i) => i !== index),
-                    }))
-                  }
-                />
-                <div className="space-y-3 border-t border-[#334155] p-3">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div>
-                      <label className={labelClass}>Organization / Club</label>
-                      <input
-                        data-field={resumeFieldKey({ section: "positions", entryId: entry.id, field: "company" })}
-                        value={entry.company}
-                        onChange={(e) => updateExperience("positions", index, { company: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Position / Role</label>
-                      <input
-                        value={entry.role}
-                        onChange={(e) => updateExperience("positions", index, { role: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Duration / Period</label>
-                      <input
-                        data-field={resumeFieldKey({ section: "positions", entryId: entry.id, field: "period" })}
-                        value={entry.period}
-                        onChange={(e) => updateExperience("positions", index, { period: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Bullets</label>
-                    <BulletEditor
-                      bullets={entry.bullets}
-                      documentId={documentId}
-                      dataFieldBase={resumeFieldKey({ section: "positions", entryId: entry.id, field: "bullets" })}
-                      onChange={(bullets) => updateExperience("positions", index, { bullets })}
-                    />
-                  </div>
-                </div>
-              </details>
-            ))}
-          </section>
+          <ExperienceSection
+            section="positions"
+            title="Positions of Responsibility"
+            addLabel="+ Add Position"
+            entryLabel="Position"
+            companyLabel="Organization / Club"
+            bulletsLabel="Bullets"
+            entries={content.positions}
+            documentId={documentId}
+            hiddenSections={content.hiddenSections}
+            onToggleHidden={toggleSectionHidden}
+            onAdd={() =>
+              setContent((c) => ({
+                ...c,
+                positions: [
+                  ...c.positions,
+                  { id: newId("pos"), company: "", role: "", period: "", bullets: [] },
+                ],
+              }))
+            }
+            onRemove={(index) => setContent((c) => ({ ...c, positions: c.positions.filter((_, i) => i !== index) }))}
+            onMove={(index, direction) => setContent((c) => ({ ...c, positions: moveArrayItem(c.positions, index, direction) }))}
+            onUpdate={(index, patch) => updateExperience("positions", index, patch)}
+            registerRef={(el) => registerSectionRef("positions", el)}
+            registerDetailsRef={registerDetailsRef}
+          />
 
-          {/* Academic & Live Projects */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("projects", el);
-            }}
-          >
-            <SectionHeader
-              title="Key Academic & Industry Projects"
-              sectionKey="projects"
-              hiddenSections={content.hiddenSections}
-              onToggleHidden={toggleSectionHidden}
-              onAdd={() =>
-                setContent((c) => ({
-                  ...c,
-                  projects: [
-                    ...c.projects,
-                    { id: newId("proj"), name: "", role: "", period: "", link: "", bullets: [] },
-                  ],
-                }))
-              }
-              addLabel="+ Add Project"
-            />
-            {content.projects.map((entry, index) => (
-              <details
-                key={entry.id}
-                ref={(el) => {
-                  if (el) detailsRefs.current.set(entry.id, el);
-                  else detailsRefs.current.delete(entry.id);
-                }}
-                className={entryCardClass}
-              >
-                <EntryHeader
-                  title={entry.name || `Project #${index + 1}`}
-                  onMoveUp={index > 0 ? () => setContent((c) => ({ ...c, projects: moveArrayItem(c.projects, index, -1) })) : undefined}
-                  onMoveDown={index < content.projects.length - 1 ? () => setContent((c) => ({ ...c, projects: moveArrayItem(c.projects, index, 1) })) : undefined}
-                  onRemove={() =>
-                    setContent((c) => ({
-                      ...c,
-                      projects: c.projects.filter((_, i) => i !== index),
-                    }))
-                  }
-                />
-                <div className="space-y-3 border-t border-[#334155] p-3">
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div>
-                      <label className={labelClass}>Project Name</label>
-                      <input
-                        data-field={resumeFieldKey({ section: "projects", entryId: entry.id, field: "name" })}
-                        value={entry.name}
-                        onChange={(e) => updateProject(index, { name: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Role / Scope</label>
-                      <input
-                        value={entry.role}
-                        onChange={(e) => updateProject(index, { role: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                    <div>
-                      <label className={labelClass}>Duration / Period</label>
-                      <input
-                        data-field={resumeFieldKey({ section: "projects", entryId: entry.id, field: "period" })}
-                        value={entry.period}
-                        onChange={(e) => updateProject(index, { period: e.target.value })}
-                        className={inputClass}
-                      />
-                    </div>
-                  </div>
-                  <div>
-                    <label className={labelClass}>Project Bullets</label>
-                    <BulletEditor
-                      bullets={entry.bullets}
-                      documentId={documentId}
-                      dataFieldBase={resumeFieldKey({ section: "projects", entryId: entry.id, field: "bullets" })}
-                      onChange={(bullets) => updateProject(index, { bullets })}
-                    />
-                  </div>
-                </div>
-              </details>
-            ))}
-          </section>
+          <ProjectsSection
+            projects={content.projects}
+            documentId={documentId}
+            hiddenSections={content.hiddenSections}
+            onToggleHidden={toggleSectionHidden}
+            onAdd={() =>
+              setContent((c) => ({
+                ...c,
+                projects: [
+                  ...c.projects,
+                  { id: newId("proj"), name: "", role: "", period: "", link: "", bullets: [] },
+                ],
+              }))
+            }
+            onRemove={(index) => setContent((c) => ({ ...c, projects: c.projects.filter((_, i) => i !== index) }))}
+            onMove={(index, direction) => setContent((c) => ({ ...c, projects: moveArrayItem(c.projects, index, direction) }))}
+            onUpdate={updateProject}
+            registerRef={(el) => registerSectionRef("projects", el)}
+            registerDetailsRef={registerDetailsRef}
+          />
 
-          {/* Languages */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("languages", el);
-            }}
-          >
-            <SectionHeader
-              title="Languages"
-              sectionKey="languages"
-              hiddenSections={content.hiddenSections}
-              onToggleHidden={toggleSectionHidden}
-              onAdd={() => setContent((c) => ({ ...c, languages: [...c.languages, { id: newId("lang"), name: "", level: "" }] }))}
-              addLabel="+ Add"
-            />
-            <div className="space-y-2">
-              {content.languages.map((row, index) => (
-                <div key={row.id} className="flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1e293b] p-2.5">
-                  <input
-                    data-field={index === 0 ? resumeFieldKey({ section: "languages", field: "languages" }) : undefined}
-                    value={row.name}
-                    onChange={(e) => updateLanguage(index, { name: e.target.value })}
-                    placeholder="Language"
-                    className={inputClass}
-                  />
-                  <select
-                    value={row.level}
-                    onChange={(e) => updateLanguage(index, { level: e.target.value })}
-                    className="w-36 shrink-0 rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-[13px] text-slate-200"
-                  >
-                    <option value="">Level</option>
-                    <option>Basic</option>
-                    <option>Conversational</option>
-                    <option>Fluent</option>
-                    <option>Native</option>
-                  </select>
-                  <button
-                    type="button"
-                    onClick={() => setContent((c) => ({ ...c, languages: c.languages.filter((_, i) => i !== index) }))}
-                    className="shrink-0 text-[#ef4444] hover:text-red-300"
-                  >
-                    <OpsIcon name="x" size={14} />
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
+          <LanguagesSection
+            languages={content.languages}
+            hiddenSections={content.hiddenSections}
+            onToggleHidden={toggleSectionHidden}
+            onAdd={() => setContent((c) => ({ ...c, languages: [...c.languages, { id: newId("lang"), name: "", level: "" }] }))}
+            onRemove={(index) => setContent((c) => ({ ...c, languages: c.languages.filter((_, i) => i !== index) }))}
+            onUpdate={updateLanguage}
+            registerRef={(el) => registerSectionRef("languages", el)}
+          />
 
           {/* Certifications */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("certifications", el);
-            }}
-          >
+          <section ref={(el) => registerSectionRef("certifications", el)}>
             <SectionHeader title="Certifications" sectionKey="certifications" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
             <StringListEditor
               items={content.certifications}
@@ -1491,11 +816,7 @@ export function ResumeEditor({
           </section>
 
           {/* Awards */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("awards", el);
-            }}
-          >
+          <section ref={(el) => registerSectionRef("awards", el)}>
             <SectionHeader title="Awards & Achievements" sectionKey="awards" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
             <StringListEditor
               items={content.awards}
@@ -1505,11 +826,7 @@ export function ResumeEditor({
           </section>
 
           {/* Activities */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("activities", el);
-            }}
-          >
+          <section ref={(el) => registerSectionRef("activities", el)}>
             <SectionHeader title="Extracurricular Activities" sectionKey="activities" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
             <StringListEditor
               items={content.activities}
@@ -1519,11 +836,7 @@ export function ResumeEditor({
           </section>
 
           {/* Hobbies */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("hobbies", el);
-            }}
-          >
+          <section ref={(el) => registerSectionRef("hobbies", el)}>
             <SectionHeader title="Hobbies & Interests" sectionKey="hobbies" hiddenSections={content.hiddenSections} onToggleHidden={toggleSectionHidden} />
             <StringListEditor
               items={content.hobbies}
@@ -1532,165 +845,44 @@ export function ResumeEditor({
             />
           </section>
 
-          {/* Publications */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("publications", el);
-            }}
-          >
-            <SectionHeader
-              title="Publications"
-              sectionKey="publications"
-              hiddenSections={content.hiddenSections}
-              onToggleHidden={toggleSectionHidden}
-              onAdd={() =>
-                setContent((c) => ({
-                  ...c,
-                  publications: [...c.publications, { id: newId("pub"), title: "", publisher: "", date: "", link: "" }],
-                }))
-              }
-              addLabel="+ Add"
-            />
-            {content.publications.map((row, index) => (
-              <details
-                key={row.id}
-                ref={(el) => {
-                  if (el) detailsRefs.current.set(row.id, el);
-                  else detailsRefs.current.delete(row.id);
-                }}
-                className={entryCardClass}
-              >
-                <EntryHeader
-                  title={row.title || `Publication #${index + 1}`}
-                  onRemove={() => setContent((c) => ({ ...c, publications: c.publications.filter((_, i) => i !== index) }))}
-                />
-                <div className="grid gap-3 border-t border-[#334155] p-3 sm:grid-cols-2">
-                  <div className="sm:col-span-2">
-                    <label className={labelClass}>Title</label>
-                    <input
-                      data-field={resumeFieldKey({ section: "publications", entryId: row.id, field: "title" })}
-                      value={row.title}
-                      onChange={(e) => updatePublication(index, { title: e.target.value })}
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Publisher / Journal</label>
-                    <input value={row.publisher} onChange={(e) => updatePublication(index, { publisher: e.target.value })} className={inputClass} />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Date</label>
-                    <input value={row.date} onChange={(e) => updatePublication(index, { date: e.target.value })} className={inputClass} />
-                  </div>
-                  <div className="sm:col-span-2">
-                    <label className={labelClass}>Link (optional)</label>
-                    <input value={row.link} onChange={(e) => updatePublication(index, { link: e.target.value })} className={inputClass} />
-                  </div>
-                </div>
-              </details>
-            ))}
-          </section>
+          <PublicationsSection
+            publications={content.publications}
+            hiddenSections={content.hiddenSections}
+            onToggleHidden={toggleSectionHidden}
+            onAdd={() =>
+              setContent((c) => ({
+                ...c,
+                publications: [...c.publications, { id: newId("pub"), title: "", publisher: "", date: "", link: "" }],
+              }))
+            }
+            onRemove={(index) => setContent((c) => ({ ...c, publications: c.publications.filter((_, i) => i !== index) }))}
+            onUpdate={updatePublication}
+            registerRef={(el) => registerSectionRef("publications", el)}
+            registerDetailsRef={registerDetailsRef}
+          />
 
-          {/* Custom Sections */}
-          <section
-            ref={(el) => {
-              if (el) sectionRefs.current.set("customSections", el);
-            }}
-          >
-            <SectionHeader
-              title="Custom Sections"
-              sectionKey="customSections"
-              hiddenSections={content.hiddenSections}
-              onToggleHidden={toggleSectionHidden}
-              onAdd={() =>
-                setContent((c) => ({
-                  ...c,
-                  customSections: [...c.customSections, { id: newId("custom"), title: "", items: [] }],
-                }))
-              }
-              addLabel="+ Add Section"
-            />
-            {content.customSections.map((section, index) => (
-              <details
-                key={section.id}
-                ref={(el) => {
-                  if (el) detailsRefs.current.set(section.id, el);
-                  else detailsRefs.current.delete(section.id);
-                }}
-                className={entryCardClass}
-              >
-                <EntryHeader
-                  title={section.title || `Custom Section #${index + 1}`}
-                  onRemove={() => setContent((c) => ({ ...c, customSections: c.customSections.filter((_, i) => i !== index) }))}
-                />
-                <div className="space-y-3 border-t border-[#334155] p-3">
-                  <div>
-                    <label className={labelClass}>Section Title</label>
-                    <input
-                      value={section.title}
-                      onChange={(e) => updateCustomSection(index, { title: e.target.value })}
-                      placeholder="e.g. Volunteering"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div>
-                    <label className={labelClass}>Items</label>
-                    <BulletEditor
-                      bullets={section.items}
-                      documentId={documentId}
-                      dataFieldBase={resumeFieldKey({ section: "customSections", entryId: section.id, field: "items" })}
-                      onChange={(items) => updateCustomSection(index, { items })}
-                    />
-                  </div>
-                </div>
-              </details>
-            ))}
-          </section>
+          <CustomSectionsSection
+            customSections={content.customSections}
+            documentId={documentId}
+            hiddenSections={content.hiddenSections}
+            onToggleHidden={toggleSectionHidden}
+            onAdd={() =>
+              setContent((c) => ({
+                ...c,
+                customSections: [...c.customSections, { id: newId("custom"), title: "", items: [] }],
+              }))
+            }
+            onRemove={(index) => setContent((c) => ({ ...c, customSections: c.customSections.filter((_, i) => i !== index) }))}
+            onUpdate={updateCustomSection}
+            registerRef={(el) => registerSectionRef("customSections", el)}
+            registerDetailsRef={registerDetailsRef}
+          />
 
-          {/* Action-Outcome-Metric Builder */}
-          <section className={`${cardClass} space-y-3`}>
-            <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[#a5b4fc]">
-              <OpsIcon name="sparkles" size={14} />
-              <span>Structured Achievement Builder</span>
-            </h2>
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div>
-                <label className={labelClass}>Action Verb</label>
-                <input
-                  value={builder.action}
-                  onChange={(e) => setBuilder((b) => ({ ...b, action: e.target.value }))}
-                  placeholder="e.g. Spearheaded GTM strategy"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Quantified Metric</label>
-                <input
-                  value={builder.metric}
-                  onChange={(e) => setBuilder((b) => ({ ...b, metric: e.target.value }))}
-                  placeholder="e.g. delivering 34% CAC reduction"
-                  className={inputClass}
-                />
-              </div>
-              <div>
-                <label className={labelClass}>Outcome / Impact</label>
-                <input
-                  value={builder.outcome}
-                  onChange={(e) => setBuilder((b) => ({ ...b, outcome: e.target.value }))}
-                  placeholder="e.g. across 4 regional markets"
-                  className={inputClass}
-                />
-              </div>
-            </div>
-            <button
-              type="button"
-              onClick={addAchievement}
-              className="flex items-center gap-1.5 rounded-lg bg-gradient-to-br from-[#4338ca] via-[#4f46e5] to-[#6366f1] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_2px_12px_rgba(99,102,241,0.45),inset_0_1px_0_rgba(255,255,255,0.15)]"
-            >
-              <OpsIcon name="plus" size={13} />
-              Append Structured Bullet to Experience
-            </button>
-          </section>
+          <AchievementBuilderSection
+            builder={builder}
+            onFieldChange={(field, value) => setBuilder((b) => ({ ...b, [field]: value }))}
+            onSubmit={addAchievement}
+          />
         </div>
 
         {/* Live Preview Canvas */}
