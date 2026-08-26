@@ -124,14 +124,23 @@ export function ResumeEditor({
   }
 
   function handleFieldClick(spec: ResumeFieldSpec) {
+    // The clicked field's section may currently be hidden by section
+    // isolation — switch to it first so it's actually in the layout before
+    // trying to scroll to / focus a field inside it.
+    setActiveRailKey(spec.section);
+    setIsolatedKey(spec.section);
     if (spec.entryId) {
       const details = detailsRefs.current.get(spec.entryId);
       if (details && !details.open) details.open = true;
     }
     const key = resumeFieldKey(spec);
-    const el = document.querySelector<HTMLElement>(`[data-field="${CSS.escape(key)}"]`);
-    el?.scrollIntoView({ behavior: "smooth", block: "center" });
-    el?.focus({ preventScroll: true });
+    // Give the isolation/details-open state above a moment to re-render and
+    // un-hide the target before scrolling to / focusing it.
+    setTimeout(() => {
+      const el = document.querySelector<HTMLElement>(`[data-field="${CSS.escape(key)}"]`);
+      el?.scrollIntoView({ behavior: "smooth", block: "center" });
+      el?.focus({ preventScroll: true });
+    }, 60);
   }
 
   function toggleSectionHidden(key: string) {
