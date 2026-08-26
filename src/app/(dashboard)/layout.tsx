@@ -2,10 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { logout } from "@/app/actions/auth";
 import {
-  DashboardNav,
   type DashboardNavGroup,
   type DashboardNavItem,
 } from "@/components/shared/dashboard-nav";
+import { DashboardShell } from "@/components/shared/dashboard-shell";
 import { OpsIcon } from "@/components/shared/ops-icon";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
 import { getImpersonationStash } from "@/lib/auth/impersonation";
@@ -171,12 +171,7 @@ export default async function DashboardLayout({ children }: { children: React.Re
         </div>
       )}
 
-      <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-        <DashboardNav groups={groups} />
-        <main className="min-w-0 flex-1 overflow-y-auto bg-[#090d16] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          <div className="mx-auto max-w-7xl">{children}</div>
-        </main>
-      </div>
+      <DashboardShell groups={groups}>{children}</DashboardShell>
     </div>
   );
 }
