@@ -24,7 +24,22 @@ export function BulletRow({
   const [improving, setImproving] = useState(false);
 
   useEffect(() => {
-    autoGrow(inputRef.current);
+    const el = inputRef.current;
+    autoGrow(el);
+    if (!el) return;
+
+    // Re-measure once the real webfont swaps in — the fallback font can wrap
+    // this text onto a different number of lines than the final font does,
+    // which would otherwise leave the textarea a stale, clipped height.
+    document.fonts?.ready?.then(() => autoGrow(el));
+
+    // Re-measure when the panel is resized (the resizable form panel changes
+    // this textarea's width, which changes how the text wraps).
+    const container = el.closest(".cv-form-panel") ?? el.parentElement;
+    if (!container) return;
+    const observer = new ResizeObserver(() => autoGrow(el));
+    observer.observe(container);
+    return () => observer.disconnect();
   }, [bullet.text]);
 
   function applyMarker(marker: string) {

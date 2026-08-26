@@ -100,7 +100,14 @@ export function ResumeEditor({
 
   function scrollToSection(key: string) {
     setActiveRailKey(key);
-    sectionRefs.current.get(key)?.scrollIntoView({ behavior: "smooth", block: "start" });
+    const target = sectionRefs.current.get(key);
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+    // A late webfont swap can reflow the panel after the scroll above has
+    // already settled, leaving the section slightly off the top edge — snap
+    // it back once the real font is in.
+    document.fonts?.ready?.then(() => {
+      if (sectionRefs.current.get(key) === target) target?.scrollIntoView({ behavior: "instant" as ScrollBehavior, block: "start" });
+    });
   }
 
   function registerSectionRef(key: string, el: HTMLElement | null) {
