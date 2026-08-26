@@ -30,7 +30,7 @@ export default async function CvViewerPage({ params }: { params: Promise<{ id: s
       <div className="flex flex-wrap items-center justify-between gap-4 border-b border-slate-800/80 pb-5 print:hidden">
         <div>
           <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
-            <Link href="/resume" className="hover:text-white flex items-center gap-1 transition-colors">
+            <Link href={`/resume/studio?cv=${document.id}`} className="hover:text-white flex items-center gap-1 transition-colors">
               <OpsIcon name="file-text" size={13} />
               <span>Resume Studio</span>
             </Link>

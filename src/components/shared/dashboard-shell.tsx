@@ -5,7 +5,8 @@ import { DashboardNav, type DashboardNavGroup } from "./dashboard-nav";
 
 // CV Studio (Cursivo-matching) manages its own full-width chrome and rail —
 // the outer app sidebar would be redundant next to it, so it's hidden here.
-const FULL_BLEED_ROUTES = ["/resume"];
+// /resume itself is just the version list and keeps the normal app shell.
+const FULL_BLEED_ROUTES = ["/resume/studio"];
 
 export function DashboardShell({
   groups,

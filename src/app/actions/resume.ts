@@ -15,7 +15,7 @@ import type { CvDocument, Student } from "@/types/domain";
 function resumeRedirect(message: string, kind: "error" | "saved" = "error", cvId?: string): never {
   const query = new URLSearchParams({ [kind]: message });
   if (cvId) query.set("cv", cvId);
-  redirect(`/resume?${query.toString()}`);
+  redirect(`/resume/studio?${query.toString()}`);
 }
 
 async function getMyStudent() {
@@ -72,7 +72,8 @@ export async function createCvDocument(formData: FormData) {
 
   if (error || !document) resumeRedirect(error?.message ?? "Could not create CV");
   revalidatePath("/resume");
-  redirect(`/resume?cv=${document.id}&saved=${encodeURIComponent("Profile details imported")}`);
+  revalidatePath("/resume/studio");
+  redirect(`/resume/studio?cv=${document.id}&saved=${encodeURIComponent("Profile details imported")}`);
 }
 
 // FR-10.1: clone a CV into a new immutable application-ready version.
@@ -113,7 +114,8 @@ export async function cloneCvVersion(formData: FormData) {
   if (error || !clone) resumeRedirect(error?.message ?? "Could not create a new version", "error", documentId);
 
   revalidatePath("/resume");
-  redirect(`/resume?cv=${clone.id}&saved=${encodeURIComponent("New version created")}`);
+  revalidatePath("/resume/studio");
+  redirect(`/resume/studio?cv=${clone.id}&saved=${encodeURIComponent("New version created")}`);
 }
 
 export async function saveCvDocument(formData: FormData) {
@@ -139,6 +141,7 @@ export async function saveCvDocument(formData: FormData) {
   if (error) resumeRedirect(error.message, "error", documentId);
 
   revalidatePath("/resume");
+  revalidatePath("/resume/studio");
   revalidatePath(`/resume/${documentId}`);
   resumeRedirect("CV saved and set as current", "saved", documentId);
 }
@@ -153,6 +156,7 @@ export async function setLatestCvDocument(formData: FormData) {
     .eq("student_id", student.id);
   if (error) resumeRedirect(error.message, "error", documentId);
   revalidatePath("/resume");
+  revalidatePath("/resume/studio");
   resumeRedirect("Current application CV updated", "saved", documentId);
 }
 
@@ -208,7 +212,8 @@ export async function scoreCvForJd(formData: FormData) {
   if (error) resumeRedirect(error.message, "error", documentId);
 
   revalidatePath("/resume");
-  redirect(`/resume?cv=${documentId}&saved=${encodeURIComponent("JD coverage updated")}`);
+  revalidatePath("/resume/studio");
+  redirect(`/resume/studio?cv=${documentId}&saved=${encodeURIComponent("JD coverage updated")}`);
 }
 
 export async function addCvReviewComment(formData: FormData) {
@@ -235,6 +240,7 @@ export async function addCvReviewComment(formData: FormData) {
   }
   revalidatePath("/resume/review");
   revalidatePath("/resume");
+  revalidatePath("/resume/studio");
   redirect(`/resume/review?cv=${documentId}&saved=${encodeURIComponent("Review comment added")}`);
 }
 
@@ -256,5 +262,6 @@ export async function updateCvReviewCommentStatus(formData: FormData) {
     .eq("cv_document_id", documentId);
   if (error) resumeRedirect(error.message, "error", documentId);
   revalidatePath("/resume");
-  redirect(`/resume?cv=${documentId}&saved=${encodeURIComponent("Review status updated")}`);
+  revalidatePath("/resume/studio");
+  redirect(`/resume/studio?cv=${documentId}&saved=${encodeURIComponent("Review status updated")}`);
 }

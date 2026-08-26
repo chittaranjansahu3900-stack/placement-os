@@ -87,7 +87,7 @@ export function ResumeTopbar({
             {versions.map((v) => (
               <Link
                 key={v.id}
-                href={`/resume?cv=${v.id}`}
+                href={`/resume/studio?cv=${v.id}`}
                 className={`block rounded-md border p-2.5 text-xs transition-colors ${
                   v.id === documentId
                     ? "border-amber-700/80 bg-amber-950/40 text-amber-200"
