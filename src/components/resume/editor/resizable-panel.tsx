@@ -64,7 +64,7 @@ export function ResizablePanel({ children }: { children: ReactNode }) {
   return (
     <>
       <div
-        className="cv-form-panel min-w-0 flex-1 space-y-4 overflow-y-auto p-4 lg:flex-none lg:p-5"
+        className="cv-form-panel @container min-w-0 flex-1 space-y-4 overflow-y-auto p-4 lg:flex-none lg:p-5"
         style={{ ["--panel-width" as string]: `${width}px` }}
       >
         <div className="hidden items-center justify-end lg:flex">

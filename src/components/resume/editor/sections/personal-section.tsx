@@ -18,7 +18,7 @@ export function PersonalSection({
       <h2 className="mb-3 border-b border-[#1e293b] pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
         Personal &amp; Contact Header
       </h2>
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid gap-3 @sm:grid-cols-2">
         <div className="sm:col-span-2">
           <label className={labelClass}>Full Candidate Name</label>
           <input

@@ -18,7 +18,7 @@ export function AchievementBuilderSection({
         <OpsIcon name="sparkles" size={14} />
         <span>Structured Achievement Builder</span>
       </h2>
-      <div className="grid gap-3 sm:grid-cols-3">
+      <div className="grid gap-3 @lg:grid-cols-3">
         <div>
           <label className={labelClass}>Action Verb</label>
           <input

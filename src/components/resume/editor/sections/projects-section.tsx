@@ -49,7 +49,7 @@ export function ProjectsSection({
             onRemove={() => onRemove(index)}
           />
           <div className="space-y-3 border-t border-[#334155] p-3">
-            <div className="grid gap-3 sm:grid-cols-3">
+            <div className="grid gap-3 @lg:grid-cols-3">
               <div>
                 <label className={labelClass}>Project Name</label>
                 <input
