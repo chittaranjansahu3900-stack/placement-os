@@ -293,7 +293,7 @@ export function ResumeEditor({
 
         <ResizablePanel>
           {isolatedKey && (
-            <FocusMode activeKey={isolatedKey} sectionRefs={sectionRefs} onExit={() => setIsolatedKey(null)} />
+            <FocusMode activeKey={isolatedKey} sectionRefs={sectionRefs} />
           )}
 
           {/* Search + expand/collapse + tools */}
