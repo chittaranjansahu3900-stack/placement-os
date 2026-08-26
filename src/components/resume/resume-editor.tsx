@@ -81,7 +81,10 @@ export function ResumeEditor({
   const [commandPaletteOpen, setCommandPaletteOpen] = useState(false);
   const [aiDrawerOpen, setAiDrawerOpen] = useState(false);
   const [toolsDrawer, setToolsDrawer] = useState<ToolsDrawer>(null);
-  const [focusModeOn, setFocusModeOn] = useState(false);
+  // null = the full continuous list (default); a key = only that section is
+  // shown, everything else removed from layout — set whenever a rail icon
+  // is clicked, matching Cursivo's single-section navigation.
+  const [isolatedKey, setIsolatedKey] = useState<string | null>(null);
 
   const sectionRefs = useRef(new Map<string, HTMLElement>());
   const detailsRefs = useRef(new Map<string, HTMLDetailsElement>());
@@ -100,6 +103,7 @@ export function ResumeEditor({
 
   function scrollToSection(key: string) {
     setActiveRailKey(key);
+    setIsolatedKey(key);
     const target = sectionRefs.current.get(key);
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
     // A late webfont swap can reflow the panel after the scroll above has
@@ -279,8 +283,8 @@ export function ResumeEditor({
         />
 
         <ResizablePanel>
-          {focusModeOn && activeRailKey && (
-            <FocusMode activeKey={activeRailKey} sectionRefs={sectionRefs} onExit={() => setFocusModeOn(false)} />
+          {isolatedKey && (
+            <FocusMode activeKey={isolatedKey} sectionRefs={sectionRefs} onExit={() => setIsolatedKey(null)} />
           )}
 
           {/* Search + expand/collapse + tools */}
@@ -298,14 +302,12 @@ export function ResumeEditor({
               <button type="button" data-cmd="expand-all" onClick={expandAll} className="hover:text-slate-200">Expand all</button>
               <span className="text-slate-700">·</span>
               <button type="button" data-cmd="collapse-all" onClick={collapseAll} className="hover:text-slate-200">Collapse all</button>
-              <span className="text-slate-700">·</span>
-              <button
-                type="button"
-                onClick={() => setFocusModeOn((v) => !v)}
-                className={focusModeOn ? "text-[#a5b4fc]" : "hover:text-slate-200"}
-              >
-                {focusModeOn ? "Exit focus mode" : "Focus mode"}
-              </button>
+              {isolatedKey && (
+                <>
+                  <span className="text-slate-700">·</span>
+                  <button type="button" onClick={() => setIsolatedKey(null)} className="hover:text-slate-200">Show all sections</button>
+                </>
+              )}
               <span className="ml-auto">
                 <TopbarDropdown
                   align="right"
@@ -544,11 +546,13 @@ export function ResumeEditor({
             registerDetailsRef={registerDetailsRef}
           />
 
-          <AchievementBuilderSection
-            builder={builder}
-            onFieldChange={(field, value) => setBuilder((b) => ({ ...b, [field]: value }))}
-            onSubmit={addAchievement}
-          />
+          <div ref={(el) => registerSectionRef("achievementBuilder", el)}>
+            <AchievementBuilderSection
+              builder={builder}
+              onFieldChange={(field, value) => setBuilder((b) => ({ ...b, [field]: value }))}
+              onSubmit={addAchievement}
+            />
+          </div>
         </ResizablePanel>
 
         <PreviewCanvas
