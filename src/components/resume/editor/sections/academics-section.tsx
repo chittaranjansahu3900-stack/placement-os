@@ -30,7 +30,7 @@ export function AcademicsSection({
             title={row.institute || row.course || `Record #${index + 1}`}
             onRemove={() => onRemove(index)}
           />
-          <div className="grid gap-3 border-t border-[#334155] p-3 @sm:grid-cols-2">
+          <div className="grid gap-3 border-t border-slate-200 p-3 @sm:grid-cols-2">
             <div>
               <label className={labelClass}>Degree / Course</label>
               <input

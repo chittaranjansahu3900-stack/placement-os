@@ -11,7 +11,7 @@ import {
   removePermissionSet,
 } from "@/app/actions/admin";
 import { impersonateUser } from "@/app/actions/impersonation";
-import { AdminActionButton, SubmitOnChangeSelect } from "@/components/admin/admin-user-controls";
+import { AdminActionButton, SubmitOnChangeSelect, UserAccessAccordion } from "@/components/admin/admin-user-controls";
 import { AdminUserTabs } from "@/components/admin/admin-user-tabs";
 import { OpsIcon } from "@/components/shared/ops-icon";
 import { StatusBadge } from "@/components/shared/status-badge";
@@ -322,50 +322,46 @@ export default async function AdminUsersPage({
                   </div>
                 </div>
 
-                <details className="group/access mt-2 rounded-md border border-transparent open:border-slate-750 open:bg-slate-950/60">
-                  <summary className="flex min-h-8 cursor-pointer list-none items-center gap-2 rounded px-2 font-mono text-[10px] font-semibold text-slate-500 transition-colors hover:bg-slate-800/50 hover:text-slate-300 [&::-webkit-details-marker]:hidden">
-                    <OpsIcon name="chevron-right" size={12} className="transition-transform group-open/access:rotate-90" />
-                    Edit access
-                    <span className="font-normal text-slate-600">{userRoles.length} role{userRoles.length === 1 ? "" : "s"} · {directPermissions.length} direct grant{directPermissions.length === 1 ? "" : "s"}</span>
-                  </summary>
-                  <div className="grid gap-4 border-t border-slate-800 p-3 lg:grid-cols-2">
-                    <div>
-                      <p className="mb-2 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500">Assigned roles</p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {userRoles.map((role) => (
-                          <form key={role.id} action={removeRole.bind(null, user.id, role.id)}>
-                            <AdminActionButton title={`Remove ${role.name} role`} className={`min-h-9 rounded border px-2.5 py-1 font-mono text-[10px] font-semibold hover:border-red-700 hover:text-red-300 ${roleTone(role.name)}`} pendingLabel="Removing" icon="x">{role.name}</AdminActionButton>
-                          </form>
-                        ))}
-                        {availableRoles.length > 0 && (
-                          <form action={assignRole.bind(null, user.id)}>
-                            <SubmitOnChangeSelect name="role_id" label={`Assign a role to ${user.name}`} className="ops-select min-h-9 py-1 text-[11px]">
-                              <option value="">+ Assign role…</option>{availableRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
-                            </SubmitOnChangeSelect>
-                          </form>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="mb-2 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500">Direct permission grants</p>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {directPermissions.map((permission) => (
-                          <form key={permission.id} action={removePermissionSet.bind(null, user.id, permission.id)}>
-                            <AdminActionButton title={`Remove ${permission.name} grant`} className="min-h-9 rounded border border-blue-800 bg-blue-950/70 px-2.5 py-1 font-mono text-[10px] text-blue-200 hover:border-red-700 hover:text-red-300" pendingLabel="Removing" icon="x">{permission.name}</AdminActionButton>
-                          </form>
-                        ))}
-                        {availablePermissions.length > 0 && (
-                          <form action={assignPermissionSet.bind(null, user.id)}>
-                            <SubmitOnChangeSelect name="permission_set_id" label={`Grant a permission set to ${user.name}`} className="ops-select min-h-9 py-1 text-[11px]">
-                              <option value="">+ Add direct grant…</option>{availablePermissions.map((permission) => <option key={permission.id} value={permission.id}>{permission.name}</option>)}
-                            </SubmitOnChangeSelect>
-                          </form>
-                        )}
-                      </div>
-                      <p className="mt-2 text-[10px] text-slate-600">Direct grants remain independent of assigned roles.</p>
+                <UserAccessAccordion
+                  userId={user.id}
+                  summaryLabel={`${userRoles.length} role${userRoles.length === 1 ? "" : "s"} · ${directPermissions.length} direct grant${directPermissions.length === 1 ? "" : "s"}`}
+                >
+                  <div>
+                    <p className="mb-2 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500">Assigned roles</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {userRoles.map((role) => (
+                        <form key={role.id} action={removeRole.bind(null, user.id, role.id)}>
+                          <AdminActionButton title={`Remove ${role.name} role`} className={`min-h-9 rounded border px-2.5 py-1 font-mono text-[10px] font-semibold hover:border-red-700 hover:text-red-300 ${roleTone(role.name)}`} pendingLabel="Removing" icon="x">{role.name}</AdminActionButton>
+                        </form>
+                      ))}
+                      {availableRoles.length > 0 && (
+                        <form action={assignRole.bind(null, user.id)}>
+                          <SubmitOnChangeSelect name="role_id" label={`Assign a role to ${user.name}`} className="ops-select min-h-9 py-1 text-[11px]">
+                            <option value="">+ Assign role…</option>{availableRoles.map((role) => <option key={role.id} value={role.id}>{role.name}</option>)}
+                          </SubmitOnChangeSelect>
+                        </form>
+                      )}
                     </div>
                   </div>
-                </details>
+                  <div>
+                    <p className="mb-2 font-mono text-[9px] font-semibold uppercase tracking-wider text-slate-500">Direct permission grants</p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {directPermissions.map((permission) => (
+                        <form key={permission.id} action={removePermissionSet.bind(null, user.id, permission.id)}>
+                          <AdminActionButton title={`Remove ${permission.name} grant`} className="min-h-9 rounded border border-blue-800 bg-blue-950/70 px-2.5 py-1 font-mono text-[10px] text-blue-200 hover:border-red-700 hover:text-red-300" pendingLabel="Removing" icon="x">{permission.name}</AdminActionButton>
+                        </form>
+                      ))}
+                      {availablePermissions.length > 0 && (
+                        <form action={assignPermissionSet.bind(null, user.id)}>
+                          <SubmitOnChangeSelect name="permission_set_id" label={`Grant a permission set to ${user.name}`} className="ops-select min-h-9 py-1 text-[11px]">
+                            <option value="">+ Add direct grant…</option>{availablePermissions.map((permission) => <option key={permission.id} value={permission.id}>{permission.name}</option>)}
+                          </SubmitOnChangeSelect>
+                        </form>
+                      )}
+                    </div>
+                    <p className="mt-2 text-[10px] text-slate-600">Direct grants remain independent of assigned roles.</p>
+                  </div>
+                </UserAccessAccordion>
               </article>
             );
           })}

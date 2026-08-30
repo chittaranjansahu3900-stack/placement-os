@@ -52,7 +52,7 @@ export function ResizablePanel({ children }: { children: ReactNode }) {
       <button
         type="button"
         onClick={() => setCollapsed(false)}
-        className="hidden shrink-0 flex-col items-center justify-center border-r border-[#1e293b] bg-[#0f172a] px-1 hover:bg-[#111c2e] lg:flex"
+        className="hidden shrink-0 flex-col items-center justify-center border-r border-slate-200 bg-slate-50 px-1 hover:bg-slate-100 lg:flex"
         title="Expand form panel"
       >
         <OpsIcon name="chevron-right" size={12} className="mb-2 text-slate-500" />
@@ -72,7 +72,7 @@ export function ResizablePanel({ children }: { children: ReactNode }) {
             type="button"
             onClick={() => setCollapsed(true)}
             title="Collapse form panel"
-            className="mb-1 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-slate-600 hover:text-slate-400"
+            className="mb-1 flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] text-slate-400 hover:text-slate-600"
           >
             <OpsIcon name="chevron-right" size={11} className="rotate-180" />
             Collapse

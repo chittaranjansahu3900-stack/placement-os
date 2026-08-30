@@ -17,13 +17,13 @@ export function SectionHeader({
   return (
     <div className="mb-2 flex items-center justify-between gap-2">
       <div className="flex items-center gap-1.5">
-        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">{title}</h2>
+        <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-700">{title}</h2>
         {sectionKey && onToggleHidden && (
           <button
             type="button"
             onClick={() => onToggleHidden(sectionKey)}
             title={isHidden ? "Hidden from CV — click to show" : "Shown on CV — click to hide"}
-            className={isHidden ? "text-slate-600 hover:text-slate-400" : "text-emerald-500 hover:text-emerald-400"}
+            className={isHidden ? "text-slate-400 hover:text-slate-600" : "text-emerald-600 hover:text-emerald-500"}
           >
             <OpsIcon name={isHidden ? "eye-off" : "eye"} size={13} />
           </button>

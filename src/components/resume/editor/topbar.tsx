@@ -49,16 +49,16 @@ export function ResumeTopbar({
   const currentVersion = versions.find((v) => v.id === documentId);
   const nearestDeadline = upcomingJds[0] ? urgency(upcomingJds[0].apply_by_deadline) : null;
 
-  const pillTriggerClass = (open: boolean, activeTone = "border-[#334155] text-slate-300 hover:border-slate-600") =>
-    `${topbarBtnClass} ${open ? "border-[#4f46e5] bg-[#1e293b] text-white" : `bg-[#1e293b] ${activeTone}`}`;
+  const pillTriggerClass = (open: boolean, activeTone = "border-slate-200 text-slate-600 hover:border-slate-400") =>
+    `${topbarBtnClass} ${open ? "border-[#4f46e5] bg-indigo-50 text-slate-900" : `bg-slate-50 ${activeTone}`}`;
 
   return (
     <div
-      className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 rounded-lg border-b border-white/[0.09] px-4 py-3 shadow-sm backdrop-blur-xl"
-      style={{ background: "linear-gradient(180deg,#0d1428 0%,#090d1c 100%)" }}
+      className="sticky top-0 z-40 flex flex-wrap items-center justify-between gap-3 rounded-lg border-b border-slate-200 px-4 py-3 shadow-sm backdrop-blur-xl"
+      style={{ background: "linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)" }}
     >
       <div className="flex min-w-0 flex-wrap items-center gap-3">
-        <div className="hidden items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-amber-400 sm:flex">
+        <div className="hidden items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider text-amber-600 sm:flex">
           <OpsIcon name="file-text" size={12} />
           <span>Placement CV Studio</span>
         </div>
@@ -68,11 +68,11 @@ export function ResumeTopbar({
           panelClassName="w-72 p-3"
           trigger={(open) => (
             <span
-              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium text-white transition-colors ${open ? "border-[#6366f1] bg-[#1e293b]" : "border-[#334155] bg-[#1e293b] hover:border-[#4f46e5]"}`}
+              className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-medium text-slate-900 transition-colors ${open ? "border-[#6366f1] bg-indigo-50" : "border-slate-200 bg-slate-50 hover:border-[#4f46e5]"}`}
             >
               <span className="max-w-40 truncate">{content.title || "My CV"}</span>
               {currentVersion && (
-                <span className="rounded bg-slate-800 px-1.5 py-0.5 font-mono text-[10px] text-amber-400">
+                <span className="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] text-amber-700">
                   v{currentVersion.version_no}
                 </span>
               )}
@@ -90,18 +90,18 @@ export function ResumeTopbar({
                 href={`/resume/studio?cv=${v.id}`}
                 className={`block rounded-md border p-2.5 text-xs transition-colors ${
                   v.id === documentId
-                    ? "border-amber-700/80 bg-amber-950/40 text-amber-200"
-                    : "border-[#334155] bg-[#1e293b] text-slate-300 hover:border-slate-600"
+                    ? "border-amber-300 bg-amber-50 text-amber-800"
+                    : "border-slate-200 bg-slate-50 text-slate-600 hover:border-slate-300"
                 }`}
               >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="truncate font-semibold text-white">{normalizeCvContent(v.content).title}</span>
-                  <span className="shrink-0 font-mono text-[10px] text-amber-400">v{v.version_no}</span>
+                  <span className="truncate font-semibold text-slate-900">{normalizeCvContent(v.content).title}</span>
+                  <span className="shrink-0 font-mono text-[10px] text-amber-600">v{v.version_no}</span>
                 </div>
                 <div className="mt-0.5 flex items-center justify-between font-mono text-[10px] text-slate-500">
                   <span>{v.company_type_personas?.category_name ?? "General"}</span>
                   {v.is_latest && (
-                    <span className="rounded border border-emerald-700/80 bg-emerald-950 px-1.5 py-0.2 text-[9px] font-bold text-emerald-300">
+                    <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.2 text-[9px] font-bold text-emerald-700">
                       PRIMARY
                     </span>
                   )}
@@ -110,10 +110,10 @@ export function ResumeTopbar({
             ))}
           </div>
 
-          <div className="mt-3 flex items-center gap-2 border-t border-[#334155] pt-3">
+          <div className="mt-3 flex items-center gap-2 border-t border-slate-200 pt-3">
             <form action={cloneCvVersion} className="flex-1">
               <input type="hidden" name="cv_document_id" value={documentId} />
-              <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-[#334155] px-2 py-1.5 text-[11px] text-slate-300 hover:border-slate-600">
+              <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1.5 text-[11px] text-slate-600 hover:border-slate-300">
                 <OpsIcon name="copy" size={11} />
                 <span>Clone</span>
               </button>
@@ -121,7 +121,7 @@ export function ResumeTopbar({
             {currentVersion && !currentVersion.is_latest && (
               <form action={setLatestCvDocument} className="flex-1">
                 <input type="hidden" name="cv_document_id" value={documentId} />
-                <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-700/70 bg-emerald-950/40 px-2 py-1.5 text-[11px] text-emerald-300 hover:bg-emerald-900/40">
+                <button className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-2 py-1.5 text-[11px] text-emerald-700 hover:bg-emerald-100">
                   <OpsIcon name="check" size={11} />
                   <span>Set Primary</span>
                 </button>
@@ -129,14 +129,14 @@ export function ResumeTopbar({
             )}
           </div>
 
-          <form action={createCvDocument} className="mt-3 space-y-2 border-t border-[#334155] pt-3">
-            <select name="persona_id" className="w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-xs text-white">
+          <form action={createCvDocument} className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+            <select name="persona_id" className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800">
               <option value="">General Placement CV</option>
               {personas.map((persona) => (
                 <option key={persona.id} value={persona.id}>{persona.category_name}</option>
               ))}
             </select>
-            <button className="w-full rounded-lg border border-dashed border-[#334155] px-2 py-1.5 text-xs text-[#94a3b8] hover:border-[#4f46e5]">
+            <button className="w-full rounded-lg border border-dashed border-slate-300 px-2 py-1.5 text-xs text-slate-500 hover:border-[#4f46e5] hover:text-[#4f46e5]">
               + Create Pre-filled CV
             </button>
           </form>
@@ -154,7 +154,7 @@ export function ResumeTopbar({
         >
           <OpsIcon name="search" size={13} />
           <span className="hidden sm:inline">Search</span>
-          <span className="ml-1 hidden rounded border border-white/10 bg-black/30 px-1.5 py-0.5 font-mono text-[10px] text-slate-400 sm:inline">Ctrl K</span>
+          <span className="ml-1 hidden rounded border border-slate-200 bg-slate-100 px-1.5 py-0.5 font-mono text-[10px] text-slate-500 sm:inline">Ctrl K</span>
         </button>
 
         {/* Upload */}
@@ -168,8 +168,8 @@ export function ResumeTopbar({
             </span>
           )}
         >
-          <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
-            <OpsIcon name="upload" size={13} className="text-blue-400" />
+          <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-700">
+            <OpsIcon name="upload" size={13} className="text-blue-600" />
             <span>Original CV File</span>
           </h2>
           <p className="text-[11px] leading-relaxed text-slate-500">
@@ -178,7 +178,7 @@ export function ResumeTopbar({
           {currentVersion?.file_url && (
             <a
               href={`/api/files/download?path=${encodeURIComponent(currentVersion.file_url)}&name=${encodeURIComponent(`${content.title}.pdf`)}`}
-              className="inline-flex items-center gap-1.5 font-mono text-xs text-blue-400 hover:text-blue-300"
+              className="inline-flex items-center gap-1.5 font-mono text-xs text-blue-600 hover:text-blue-700"
             >
               <OpsIcon name="download" size={12} />
               Download uploaded file
@@ -191,9 +191,9 @@ export function ResumeTopbar({
               name="file"
               accept=".pdf,.doc,.docx,.txt"
               required
-              className={`${inputClass} file:mr-2 file:rounded file:border-0 file:bg-slate-800 file:px-2 file:py-1 file:text-xs file:text-slate-200`}
+              className={`${inputClass} file:mr-2 file:rounded file:border-0 file:bg-slate-100 file:px-2 file:py-1 file:text-xs file:text-slate-700`}
             />
-            <button className="w-full rounded-lg border border-[#334155] px-2 py-1.5 text-xs text-slate-300 hover:border-slate-600">
+            <button className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:border-slate-300">
               Upload or Replace File
             </button>
           </form>
@@ -211,28 +211,28 @@ export function ResumeTopbar({
               </span>
             )}
           >
-            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">JD Keyword Fit Score</h2>
+            <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-700">JD Keyword Fit Score</h2>
             {content.jdFit && (
-              <div className="space-y-2 rounded-md border border-blue-900/60 bg-blue-950/30 p-3">
+              <div className="space-y-2 rounded-md border border-blue-200 bg-blue-50 p-3">
                 <div className="flex items-baseline justify-between">
-                  <span className="font-mono text-2xl font-bold text-blue-200">{content.jdFit.score}%</span>
-                  <span className="font-mono text-[10px] font-bold uppercase text-blue-400">ATS Match</span>
+                  <span className="font-mono text-2xl font-bold text-blue-700">{content.jdFit.score}%</span>
+                  <span className="font-mono text-[10px] font-bold uppercase text-blue-600">ATS Match</span>
                 </div>
                 <div className="space-y-1.5 font-mono text-[11px]">
                   {Object.entries(content.jdFit.sectionCoverage).map(([section, score]) => (
                     <div key={section} className="space-y-0.5">
-                      <div className="flex justify-between text-slate-400">
+                      <div className="flex justify-between text-slate-500">
                         <span className="capitalize">{section}</span>
                         <span>{score}%</span>
                       </div>
-                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-800">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
                         <div className="h-full rounded-full bg-blue-500" style={{ width: `${score}%` }} />
                       </div>
                     </div>
                   ))}
                 </div>
                 {content.jdFit.missingKeywords.length > 0 && (
-                  <p className="border-t border-blue-900/40 pt-2 font-mono text-[11px] text-amber-300">
+                  <p className="border-t border-blue-200 pt-2 font-mono text-[11px] text-amber-700">
                     Missing: {content.jdFit.missingKeywords.join(", ")}
                   </p>
                 )}
@@ -240,7 +240,7 @@ export function ResumeTopbar({
             )}
             <form action={scoreCvForJd} className="space-y-2">
               <input type="hidden" name="cv_document_id" value={documentId} />
-              <select name="jd_id" required className="w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-xs text-white">
+              <select name="jd_id" required className="w-full rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs text-slate-800">
                 <option value="">Select Target JD...</option>
                 {upcomingJds.map((jd) => (
                   <option key={jd.id} value={jd.id}>{jd.companies?.name} — {jd.role_title}</option>
@@ -251,7 +251,7 @@ export function ResumeTopbar({
                 placeholder="Paste JD requirements to calculate section match..."
                 className={`${inputClass} min-h-20`}
               />
-              <button className="w-full rounded-lg border border-[#334155] px-2 py-1.5 text-xs text-slate-300 hover:border-slate-600">
+              <button className="w-full rounded-lg border border-slate-200 px-2 py-1.5 text-xs text-slate-600 hover:border-slate-300">
                 Calculate ATS Fit
               </button>
             </form>
@@ -266,25 +266,25 @@ export function ResumeTopbar({
             <span className={pillTriggerClass(open)}>
               <OpsIcon name="clock" size={13} />
               <span>Deadlines</span>
-              {nearestDeadline && <span className="size-1.5 rounded-full bg-amber-400" />}
+              {nearestDeadline && <span className="size-1.5 rounded-full bg-amber-500" />}
             </span>
           )}
         >
-          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-300">Application Deadlines</h2>
+          <h2 className="text-[11px] font-semibold uppercase tracking-wider text-slate-700">Application Deadlines</h2>
           <div className="space-y-2">
             {upcomingJds.map((jd) => {
               const itemUrgency = urgency(jd.apply_by_deadline);
               return (
-                <div key={jd.id} className="rounded-md border border-[#334155] bg-[#1e293b] p-2.5">
-                  <p className="text-xs font-bold text-white">{jd.companies?.name ?? "Company"}</p>
-                  <p className="truncate text-[11px] text-slate-400">{jd.role_title}</p>
+                <div key={jd.id} className="rounded-md border border-slate-200 bg-slate-50 p-2.5">
+                  <p className="text-xs font-bold text-slate-900">{jd.companies?.name ?? "Company"}</p>
+                  <p className="truncate text-[11px] text-slate-500">{jd.role_title}</p>
                   <span className={`mt-1.5 inline-block rounded border px-2 py-0.5 font-mono text-[10px] font-semibold ${itemUrgency.className}`}>
                     {itemUrgency.label}
                   </span>
                 </div>
               );
             })}
-            {upcomingJds.length === 0 && <p className="font-mono text-xs text-slate-400">No active deadlines.</p>}
+            {upcomingJds.length === 0 && <p className="font-mono text-xs text-slate-500">No active deadlines.</p>}
           </div>
         </TopbarDropdown>
 
@@ -294,29 +294,29 @@ export function ResumeTopbar({
             align="right"
             panelClassName="w-80 space-y-2.5 p-3.5"
             trigger={(open) => (
-              <span className={pillTriggerClass(open, "border-amber-700 text-amber-400 hover:text-amber-300")}>
+              <span className={pillTriggerClass(open, "border-amber-300 text-amber-700 hover:text-amber-800")}>
                 <OpsIcon name="message-square" size={13} />
                 <span>Remarks · {comments.length}</span>
               </span>
             )}
           >
-            <h2 className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-amber-300">
-              <OpsIcon name="message-square" size={13} className="text-amber-400" />
+            <h2 className="mb-2 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-amber-700">
+              <OpsIcon name="message-square" size={13} className="text-amber-600" />
               <span>SPC Committee Review Remarks ({comments.length})</span>
             </h2>
             <div className="space-y-2">
               {comments.map((comment) => (
-                <div key={comment.id} className="rounded-md border border-[#334155] bg-[#080f21] p-3 text-xs">
-                  <div className="flex items-center justify-between font-mono text-[10px] uppercase text-slate-400">
+                <div key={comment.id} className="rounded-md border border-slate-200 bg-slate-50 p-3 text-xs">
+                  <div className="flex items-center justify-between font-mono text-[10px] uppercase text-slate-500">
                     <span>
                       {comment.anchor_section}
                       {comment.anchor_bullet_id ? ` · ${comment.anchor_bullet_id}` : ""}
                     </span>
-                    <span className={comment.status === "applied" ? "font-bold text-emerald-400" : "text-amber-400"}>
+                    <span className={comment.status === "applied" ? "font-bold text-emerald-600" : "text-amber-600"}>
                       {comment.status}
                     </span>
                   </div>
-                  <p className="mt-1 text-slate-200">{comment.comment_text}</p>
+                  <p className="mt-1 text-slate-800">{comment.comment_text}</p>
                   <div className="mt-2 flex gap-2">
                     {(["open", "applied", "dismissed"] as const).map((status) => (
                       <form key={status} action={updateCvReviewCommentStatus}>
@@ -326,7 +326,7 @@ export function ResumeTopbar({
                         <button
                           type="submit"
                           disabled={comment.status === status}
-                          className="rounded border border-[#334155] bg-[#1e293b] px-2 py-0.5 font-mono text-[10px] text-slate-300 hover:bg-slate-700 disabled:opacity-40"
+                          className="rounded border border-slate-200 bg-white px-2 py-0.5 font-mono text-[10px] text-slate-600 hover:bg-slate-100 disabled:opacity-40"
                         >
                           Mark {status}
                         </button>
@@ -344,7 +344,7 @@ export function ResumeTopbar({
           type="button"
           data-cmd="open-ai-assistant"
           onClick={onOpenAiAssistant}
-          className={`${topbarBtnClass} border-[#4f46e5] text-[#a5b4fc] hover:text-white`}
+          className={`${topbarBtnClass} border-[#4f46e5] bg-indigo-50 text-[#4f46e5] hover:bg-[#4f46e5] hover:text-white`}
         >
           <OpsIcon name="sparkles" size={13} />
           <span>AI Assistant</span>
@@ -356,7 +356,7 @@ export function ResumeTopbar({
         <Link
           href={`/resume/${documentId}`}
           title="Full View / Export"
-          className="flex size-8 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
+          className="flex size-8 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-slate-800"
         >
           <OpsIcon name="eye" size={14} />
         </Link>

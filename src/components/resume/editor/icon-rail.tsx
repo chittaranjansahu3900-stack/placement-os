@@ -17,8 +17,8 @@ export function IconRail({
 }) {
   return (
     <div
-      className="flex shrink-0 flex-row gap-1 border-b border-[#1e293b] p-2 lg:w-[46px] lg:flex-col lg:border-b-0 lg:border-r lg:py-4"
-      style={{ background: "#070b14" }}
+      className="flex shrink-0 flex-row gap-1 border-b border-slate-200 p-2 lg:w-[46px] lg:flex-col lg:border-b-0 lg:border-r lg:py-4"
+      style={{ background: "#f8fafc" }}
     >
       {RAIL_SECTIONS.map((section) => {
         const matchesFilter = !sectionFilter.trim() || section.label.toLowerCase().includes(sectionFilter.trim().toLowerCase());
@@ -31,13 +31,13 @@ export function IconRail({
               type="button"
               data-rail-section={section.key}
               onClick={() => onScrollToSection(section.key)}
-              className={`nav-rail-btn ${active ? "active" : ""} flex size-[38px] items-center justify-center rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.06)] ${
-                matchesFilter ? (active ? "text-[#a5b4fc]" : "text-[#4e6280] hover:text-[#94a3b8]") : "text-[#2a3648] opacity-40"
+              className={`nav-rail-btn ${active ? "active" : ""} flex size-[38px] items-center justify-center rounded-lg transition-colors hover:bg-[rgba(15,23,42,0.05)] ${
+                matchesFilter ? (active ? "text-[#4f46e5]" : "text-slate-400 hover:text-slate-600") : "text-slate-300 opacity-40"
               } ${isHidden ? "opacity-40" : ""}`}
             >
               <OpsIcon name={section.icon} size={17} />
               <span
-                className={`absolute right-1.5 top-1.5 size-1.5 rounded-full ${filled ? "bg-emerald-400" : "bg-slate-700"}`}
+                className={`absolute right-1.5 top-1.5 size-1.5 rounded-full ${filled ? "bg-emerald-500" : "bg-slate-300"}`}
               />
             </button>
             <span className="nav-rail-tip">{section.label}</span>

@@ -24,7 +24,7 @@ export function CvHealthPanel({ content }: { content: CvContent }) {
           {report.score}
         </div>
         <div>
-          <p className="text-sm font-semibold text-slate-100">CV Health Score</p>
+          <p className="text-sm font-semibold text-slate-900">CV Health Score</p>
           <p className="text-xs text-slate-500">Deterministic completeness &amp; quality checks</p>
         </div>
       </div>

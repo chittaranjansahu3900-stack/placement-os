@@ -29,15 +29,15 @@ export function RightDrawer({
     <>
       <div className="drawer-backdrop" onClick={onClose} />
       <div className="drawer-panel panel-slide-in-right">
-        <div className="flex items-center justify-between border-b border-[#1e293b] px-4 py-3">
-          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#a5b4fc]">
+        <div className="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-[#4f46e5]">
             <OpsIcon name="sparkles" size={13} />
             {title}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 hover:text-slate-200"
+            className="flex size-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 hover:text-slate-800"
           >
             <OpsIcon name="x" size={13} />
           </button>

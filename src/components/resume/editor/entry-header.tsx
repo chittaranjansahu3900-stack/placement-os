@@ -3,7 +3,10 @@
 import { OpsIcon } from "@/components/shared/ops-icon";
 
 export function EntryHeader({
-  title, onRemove, onMoveUp, onMoveDown,
+  title,
+  onRemove,
+  onMoveUp,
+  onMoveDown,
 }: {
   title: string;
   onRemove: () => void;
@@ -11,15 +14,24 @@ export function EntryHeader({
   onMoveDown?: () => void;
 }) {
   return (
-    <summary className="flex cursor-pointer items-center justify-between gap-2 px-3 py-2.5 text-[13px] font-medium text-slate-200 hover:text-white">
+    <summary className="flex cursor-pointer select-none items-center justify-between gap-2 px-3 py-2.5 text-[13px] font-medium text-slate-700 hover:text-slate-900">
       <span className="min-w-0 truncate">{title}</span>
-      <span className="flex shrink-0 items-center gap-1.5">
+      <span
+        className="flex shrink-0 items-center gap-1.5"
+        onClick={(event) => {
+          event.stopPropagation();
+        }}
+      >
         {onMoveUp && (
           <button
             type="button"
             title="Move up"
-            onClick={(event) => { event.preventDefault(); event.stopPropagation(); onMoveUp(); }}
-            className="text-slate-500 hover:text-slate-300"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onMoveUp();
+            }}
+            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
           >
             <OpsIcon name="chevron-up" size={12} />
           </button>
@@ -28,8 +40,12 @@ export function EntryHeader({
           <button
             type="button"
             title="Move down"
-            onClick={(event) => { event.preventDefault(); event.stopPropagation(); onMoveDown(); }}
-            className="text-slate-500 hover:text-slate-300"
+            onClick={(event) => {
+              event.preventDefault();
+              event.stopPropagation();
+              onMoveDown();
+            }}
+            className="rounded p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors"
           >
             <OpsIcon name="chevron-down" size={12} />
           </button>
@@ -41,7 +57,7 @@ export function EntryHeader({
             event.stopPropagation();
             onRemove();
           }}
-          className="font-mono text-xs text-[#ef4444] hover:text-red-300"
+          className="rounded px-1.5 py-0.5 font-mono text-xs text-[#ef4444] hover:bg-red-50 hover:text-red-700 transition-colors"
         >
           Remove
         </button>

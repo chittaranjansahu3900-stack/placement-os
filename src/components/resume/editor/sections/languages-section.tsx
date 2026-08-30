@@ -35,7 +35,7 @@ export function LanguagesSection({
       />
       <div className="space-y-2">
         {languages.map((row, index) => (
-          <div key={row.id} className="flex items-center gap-2 rounded-lg border border-[#334155] bg-[#1e293b] p-2.5">
+          <div key={row.id} className="flex items-center gap-2 rounded-lg border border-slate-200 bg-slate-50 p-2.5">
             <input
               data-field={index === 0 ? resumeFieldKey({ section: "languages", field: "languages" }) : undefined}
               value={row.name}
@@ -46,7 +46,7 @@ export function LanguagesSection({
             <select
               value={row.level}
               onChange={(e) => onUpdate(index, { level: e.target.value })}
-              className="w-36 shrink-0 rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-[13px] text-slate-200"
+              className="w-36 shrink-0 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-[13px] text-slate-800"
             >
               <option value="">Level</option>
               <option>Basic</option>
@@ -57,7 +57,7 @@ export function LanguagesSection({
             <button
               type="button"
               onClick={() => onRemove(index)}
-              className="shrink-0 text-[#ef4444] hover:text-red-300"
+              className="shrink-0 text-[#ef4444] hover:text-red-700"
             >
               <OpsIcon name="x" size={14} />
             </button>

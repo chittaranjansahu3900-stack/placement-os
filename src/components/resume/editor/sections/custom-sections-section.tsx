@@ -44,7 +44,7 @@ export function CustomSectionsSection({
             title={section.title || `Custom Section #${index + 1}`}
             onRemove={() => onRemove(index)}
           />
-          <div className="space-y-3 border-t border-[#334155] p-3">
+          <div className="space-y-3 border-t border-slate-200 p-3">
             <div>
               <label className={labelClass}>Section Title</label>
               <input

@@ -5,6 +5,31 @@ import { OpsIcon } from "@/components/shared/ops-icon";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { approveUser, rejectUser } from "@/app/actions/admin";
 
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(d);
+}
+
+function formatDateTime(dateStr: string) {
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-IN", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+    timeZone: "UTC",
+  }).format(d);
+}
+
 export interface VerificationUser {
   id: string;
   name: string;
@@ -287,7 +312,7 @@ export function VerificationWorkbench({ users }: VerificationWorkbenchProps) {
                       <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-xs text-slate-400">
                         <span>{user.email}</span>
                         <span>·</span>
-                        <span>Registered {new Date(user.created_at).toLocaleDateString()}</span>
+                        <span>Registered {formatDate(user.created_at)}</span>
                         <span>·</span>
                         <span
                           className={`rounded border px-1.5 py-0.5 text-[10px] ${domainCheck.badgeClass}`}
@@ -398,7 +423,7 @@ export function VerificationWorkbench({ users }: VerificationWorkbenchProps) {
                   <div>
                     <span className="text-slate-500 block text-[11px]">Registered Date</span>
                     <span className="text-slate-300">
-                      {new Date(selectedUser.created_at).toLocaleString()}
+                      {formatDateTime(selectedUser.created_at)}
                     </span>
                   </div>
                   <div>

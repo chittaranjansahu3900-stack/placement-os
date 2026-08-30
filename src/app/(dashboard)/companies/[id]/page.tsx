@@ -336,6 +336,7 @@ export default async function CompanyDetailPage({
         <form method="get" className="flex flex-wrap gap-2.5">
           <select
             name="persona_id"
+            key={`persona-${persona_id ?? ""}`}
             defaultValue={persona_id ?? ""}
             className="ops-select text-xs text-white"
           >
@@ -346,6 +347,7 @@ export default async function CompanyDetailPage({
           </select>
           <select
             name="contact_id"
+            key={`contact-${contact_id ?? ""}`}
             defaultValue={contact_id ?? ""}
             className="ops-select text-xs text-white"
           >
@@ -368,6 +370,7 @@ export default async function CompanyDetailPage({
             className="ops-input w-full text-xs text-white"
           />
           <textarea
+            key={`template-${persona_id ?? ""}-${contact_id ?? ""}`}
             name="message_template"
             rows={5}
             defaultValue={rawTemplate}
@@ -388,6 +391,7 @@ export default async function CompanyDetailPage({
               {contactRows.filter((contact) => contact.email).map((contact) => (
                 <label key={contact.id} className="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
                   <input
+                    key={`contact-${contact.id}-${contact_id ?? ""}`}
                     type="checkbox"
                     name="contact_ids"
                     value={contact.id}

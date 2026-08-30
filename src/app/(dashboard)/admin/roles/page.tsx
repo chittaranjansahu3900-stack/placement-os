@@ -156,6 +156,7 @@ export default async function AdminRolesPage({
         <form method="get" className="flex items-center gap-2">
           <select
             name="clone_from_role_id"
+            key={`clone-${clone_from_role_id ?? ""}`}
             defaultValue={clone_from_role_id ?? ""}
             className="ops-select text-xs text-white"
           >
@@ -190,6 +191,7 @@ export default async function AdminRolesPage({
               {permissionSetRows.map((ps) => (
                 <label key={ps.id} className="flex items-center gap-2 rounded border border-slate-800 bg-slate-950 p-2.5 text-xs text-slate-300 cursor-pointer shadow-inner">
                   <input
+                    key={`role-perm-${clone_from_role_id ?? "empty"}-${ps.id}`}
                     type="checkbox"
                     name="permission_set_ids"
                     value={ps.id}

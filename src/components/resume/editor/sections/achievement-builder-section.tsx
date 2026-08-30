@@ -14,7 +14,7 @@ export function AchievementBuilderSection({
 }) {
   return (
     <section className={`${cardClass} space-y-3`}>
-      <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[#a5b4fc]">
+      <h2 className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-[#4f46e5]">
         <OpsIcon name="sparkles" size={14} />
         <span>Structured Achievement Builder</span>
       </h2>

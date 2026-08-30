@@ -5,6 +5,50 @@ import { OpsIcon } from "@/components/shared/ops-icon";
 
 type BulkAction = (formData: FormData) => void | Promise<void>;
 
+export function SelectAllApplicantsCheckbox() {
+  const [checked, setChecked] = useState(false);
+
+  useEffect(() => {
+    const updateMaster = () => {
+      const allCheckboxes = document.querySelectorAll<HTMLInputElement>(
+        'input[name="application_ids"][form="bulk-applicant-actions"]'
+      );
+      const checkedCheckboxes = document.querySelectorAll<HTMLInputElement>(
+        'input[name="application_ids"][form="bulk-applicant-actions"]:checked'
+      );
+      setChecked(allCheckboxes.length > 0 && allCheckboxes.length === checkedCheckboxes.length);
+    };
+
+    document.addEventListener("change", updateMaster);
+    updateMaster();
+    return () => document.removeEventListener("change", updateMaster);
+  }, []);
+
+  function toggleAll(event: React.ChangeEvent<HTMLInputElement>) {
+    const targetChecked = event.target.checked;
+    setChecked(targetChecked);
+    const allCheckboxes = document.querySelectorAll<HTMLInputElement>(
+      'input[name="application_ids"][form="bulk-applicant-actions"]'
+    );
+    allCheckboxes.forEach((checkbox) => {
+      checkbox.checked = targetChecked;
+    });
+    // Dispatch change event to notify BulkApplicantActions
+    document.dispatchEvent(new Event("change"));
+  }
+
+  return (
+    <input
+      type="checkbox"
+      checked={checked}
+      onChange={toggleAll}
+      aria-label="Select all applicants"
+      title="Select all applicants"
+      className="size-4 rounded border-slate-700 bg-slate-950 text-blue-600 accent-blue-600 focus:ring-blue-500/20 cursor-pointer"
+    />
+  );
+}
+
 export function BulkApplicantActions({ action }: { action: BulkAction }) {
   const [selectedCount, setSelectedCount] = useState(0);
 
@@ -27,6 +71,7 @@ export function BulkApplicantActions({ action }: { action: BulkAction }) {
       .forEach((checkbox) => {
         checkbox.checked = false;
       });
+    document.dispatchEvent(new Event("change"));
     setSelectedCount(0);
   }
 

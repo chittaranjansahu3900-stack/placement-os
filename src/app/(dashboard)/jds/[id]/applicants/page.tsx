@@ -9,7 +9,7 @@ import { loadCandidatePackets } from "@/lib/candidate-packets";
 import { createClient } from "@/lib/supabase/server";
 import { OpsIcon } from "@/components/shared/ops-icon";
 import { StatusBadge } from "@/components/shared/status-badge";
-import { BulkApplicantActions } from "@/components/jds/bulk-applicant-actions";
+import { BulkApplicantActions, SelectAllApplicantsCheckbox } from "@/components/jds/bulk-applicant-actions";
 import {
   EligibilitySignalRail,
   type EligibilitySignalItem,
@@ -399,7 +399,7 @@ export default async function ApplicantsPage({
           <thead className="bg-slate-950 text-[10px] font-semibold uppercase tracking-wider text-slate-400 border-b border-slate-800 font-mono">
             <tr>
               <th className="py-3 pl-4 pr-2 w-10">
-                <span className="sr-only">Select</span>
+                <SelectAllApplicantsCheckbox />
               </th>
               <th className="py-3 pr-4">Candidate Profile</th>
               <th className="py-3 pr-3 text-center">CGPA</th>

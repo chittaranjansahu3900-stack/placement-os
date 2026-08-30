@@ -9,7 +9,7 @@ export function TopbarDropdown({
   panelClassName = "",
 }: {
   trigger: (open: boolean) => ReactNode;
-  children: ReactNode;
+  children: ReactNode | ((close: () => void) => ReactNode);
   align?: "left" | "right";
   panelClassName?: string;
 }) {
@@ -19,7 +19,9 @@ export function TopbarDropdown({
   useEffect(() => {
     if (!open) return;
     function onPointerDown(event: MouseEvent) {
-      if (rootRef.current && !rootRef.current.contains(event.target as Node)) setOpen(false);
+      if (rootRef.current && !rootRef.current.contains(event.target as Node)) {
+        setOpen(false);
+      }
     }
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") setOpen(false);
@@ -33,16 +35,33 @@ export function TopbarDropdown({
   }, [open]);
 
   return (
-    <div ref={rootRef} className="relative">
-      <button type="button" onClick={() => setOpen((o) => !o)}>
+    <div ref={rootRef} className="relative inline-block">
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            setOpen((o) => !o);
+          }
+        }}
+        className="cursor-pointer inline-flex items-center"
+      >
         {trigger(open)}
-      </button>
+      </div>
       {open && (
         <div
-          className={`absolute z-30 mt-2 max-h-[70vh] overflow-y-auto rounded-lg border border-[#334155] bg-[#0f172a] shadow-[0_6px_20px_rgba(0,0,0,0.3)] ${align === "right" ? "right-0" : "left-0"} ${panelClassName}`}
-          onClick={(event) => event.stopPropagation()}
+          className={`absolute z-40 mt-2 max-h-[70vh] overflow-y-auto rounded-lg border border-slate-200 bg-white shadow-[0_12px_32px_rgba(15,23,42,0.15)] ${align === "right" ? "right-0" : "left-0"} ${panelClassName}`}
+          onClick={(event) => {
+            // Allow clicks on links to propagate and naturally close or navigate
+            const target = event.target as HTMLElement;
+            if (target.closest("a")) {
+              setOpen(false);
+            }
+          }}
         >
-          {children}
+          {typeof children === "function" ? children(() => setOpen(false)) : children}
         </div>
       )}
     </div>

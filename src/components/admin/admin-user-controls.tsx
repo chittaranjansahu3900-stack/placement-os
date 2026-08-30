@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { OpsIcon, type OpsIconName } from "@/components/shared/ops-icon";
 
@@ -54,6 +55,7 @@ export function SubmitOnChangeSelect({
   return (
     <select
       name={name}
+      key={`${name}-${defaultValue}`}
       defaultValue={defaultValue}
       aria-label={label}
       disabled={pending}
@@ -62,5 +64,63 @@ export function SubmitOnChangeSelect({
     >
       {children}
     </select>
+  );
+}
+
+export function UserAccessAccordion({
+  userId,
+  summaryLabel,
+  children,
+}: {
+  userId: string;
+  summaryLabel: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const storageKey = `user-access-open-${userId}`;
+  const [isOpen, setIsOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      const stored = sessionStorage.getItem(storageKey);
+      if (stored === "true") setIsOpen(true);
+    } catch {
+      // Ignore storage errors
+    }
+  }, [storageKey]);
+
+  const toggle = () => {
+    setIsOpen((prev) => {
+      const next = !prev;
+      try {
+        if (next) sessionStorage.setItem(storageKey, "true");
+        else sessionStorage.removeItem(storageKey);
+      } catch {
+        // Ignore storage errors
+      }
+      return next;
+    });
+  };
+
+  return (
+    <div className={`mt-2 rounded-md border transition-colors ${isOpen ? "border-slate-750 bg-slate-950/60" : "border-transparent"}`}>
+      <button
+        type="button"
+        onClick={toggle}
+        className="flex w-full min-h-8 cursor-pointer items-center gap-2 rounded px-2 font-mono text-[10px] font-semibold text-slate-500 transition-colors hover:bg-slate-800/50 hover:text-slate-300 text-left"
+      >
+        <OpsIcon
+          name="chevron-right"
+          size={12}
+          className={`transition-transform duration-150 ${isOpen ? "rotate-90 text-blue-400" : ""}`}
+        />
+        <span>Edit access</span>
+        <span className="font-normal text-slate-600">{summaryLabel}</span>
+      </button>
+      {isOpen && (
+        <div className="grid gap-4 border-t border-slate-800 p-3 lg:grid-cols-2 animate-fade-in">
+          {children}
+        </div>
+      )}
+    </div>
   );
 }

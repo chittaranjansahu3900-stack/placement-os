@@ -72,7 +72,7 @@ export function BulletRow({
   }
 
   return (
-    <div className="rounded-lg border border-[#334155] bg-[#0f172a] p-2">
+    <div className="rounded-lg border border-slate-200 bg-white p-2">
       <textarea
         ref={inputRef}
         data-field={dataField}
@@ -84,23 +84,23 @@ export function BulletRow({
       />
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-1">
-          <button type="button" title="Bold" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("**")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] font-bold text-slate-300 hover:border-slate-600">
+          <button type="button" title="Bold" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("**")} className="flex size-6 items-center justify-center rounded border border-slate-200 text-[11px] font-bold text-slate-600 hover:border-slate-300">
             B
           </button>
-          <button type="button" title="Italic" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("_")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] italic text-slate-300 hover:border-slate-600">
+          <button type="button" title="Italic" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("_")} className="flex size-6 items-center justify-center rounded border border-slate-200 text-[11px] italic text-slate-600 hover:border-slate-300">
             I
           </button>
-          <button type="button" title="Underline" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("++")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] underline text-slate-300 hover:border-slate-600">
+          <button type="button" title="Underline" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("++")} className="flex size-6 items-center justify-center rounded border border-slate-200 text-[11px] underline text-slate-600 hover:border-slate-300">
             U
           </button>
-          <button type="button" title="Strikethrough" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("~~")} className="flex size-6 items-center justify-center rounded border border-[#334155] text-[11px] line-through text-slate-300 hover:border-slate-600">
+          <button type="button" title="Strikethrough" onMouseDown={(e) => e.preventDefault()} onClick={() => applyMarker("~~")} className="flex size-6 items-center justify-center rounded border border-slate-200 text-[11px] line-through text-slate-600 hover:border-slate-300">
             S
           </button>
           <button
             type="button"
             onClick={improve}
             disabled={improving || !bullet.text.trim()}
-            className="ml-1 flex items-center gap-1 rounded-full border border-emerald-700 bg-emerald-950/40 px-2 py-0.5 text-[10px] font-semibold text-emerald-300 hover:bg-emerald-900/40 disabled:opacity-40"
+            className="ml-1 flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700 hover:bg-emerald-100 disabled:opacity-40"
           >
             <OpsIcon name="sparkles" size={10} />
             {improving ? "Improving…" : "Improve"}
@@ -108,7 +108,7 @@ export function BulletRow({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           <span className="font-mono text-[10px] text-slate-500">{bullet.text.length}/{BULLET_MAX}</span>
-          <button type="button" onClick={onRemove} className="text-[#ef4444] hover:text-red-300">
+          <button type="button" onClick={onRemove} className="text-[#ef4444] hover:text-red-700">
             <OpsIcon name="x" size={12} />
           </button>
         </div>

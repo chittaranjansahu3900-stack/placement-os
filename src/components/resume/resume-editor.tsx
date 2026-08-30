@@ -283,7 +283,7 @@ export function ResumeEditor({
       />
 
       {/* Editor + Live Canvas */}
-      <div className="overflow-hidden rounded-lg border border-[#334155] bg-[#080f21] lg:flex lg:items-stretch">
+      <div className="overflow-hidden rounded-lg border border-slate-200 bg-white lg:flex lg:items-stretch">
         <IconRail
           content={content}
           sectionFilter={sectionFilter}
@@ -307,14 +307,14 @@ export function ResumeEditor({
                 className={`${inputClass} pl-8`}
               />
             </div>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
-              <button type="button" data-cmd="expand-all" onClick={expandAll} className="hover:text-slate-200">Expand all</button>
-              <span className="text-slate-700">·</span>
-              <button type="button" data-cmd="collapse-all" onClick={collapseAll} className="hover:text-slate-200">Collapse all</button>
+            <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+              <button type="button" data-cmd="expand-all" onClick={expandAll} className="hover:text-slate-800">Expand all</button>
+              <span className="text-slate-300">·</span>
+              <button type="button" data-cmd="collapse-all" onClick={collapseAll} className="hover:text-slate-800">Collapse all</button>
               {isolatedKey && (
                 <>
-                  <span className="text-slate-700">·</span>
-                  <button type="button" onClick={() => setIsolatedKey(null)} className="hover:text-slate-200">Show all sections</button>
+                  <span className="text-slate-300">·</span>
+                  <button type="button" onClick={() => setIsolatedKey(null)} className="hover:text-slate-800">Show all sections</button>
                 </>
               )}
               <span className="ml-auto">
@@ -322,21 +322,21 @@ export function ResumeEditor({
                   align="right"
                   panelClassName="w-56 p-1.5"
                   trigger={(open) => (
-                    <span className={`${topbarBtnClass} ${open ? "border-[#4f46e5]" : ""}`}>
+                    <span className={`${topbarBtnClass} ${open ? "border-[#4f46e5] bg-indigo-50" : ""}`}>
                       <OpsIcon name="layers" size={12} />
                       More tools
                     </span>
                   )}
                 >
-                  <button type="button" onClick={() => setToolsDrawer("health")} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-slate-300 hover:bg-white/5">
+                  <button type="button" onClick={() => setToolsDrawer("health")} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-slate-600 hover:bg-slate-50">
                     <OpsIcon name="activity" size={13} />
                     CV Health Check
                   </button>
-                  <button type="button" onClick={() => setToolsDrawer("find-replace")} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-slate-300 hover:bg-white/5">
+                  <button type="button" onClick={() => setToolsDrawer("find-replace")} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-slate-600 hover:bg-slate-50">
                     <OpsIcon name="search" size={13} />
                     Find &amp; Replace
                   </button>
-                  <button type="button" onClick={() => setToolsDrawer("diff")} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-slate-300 hover:bg-white/5">
+                  <button type="button" onClick={() => setToolsDrawer("diff")} className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-left text-xs text-slate-600 hover:bg-slate-50">
                     <OpsIcon name="refresh" size={13} />
                     Version Diff
                   </button>
@@ -374,9 +374,9 @@ export function ResumeEditor({
             <div className={cardClass}>
               <div className="mb-2 flex flex-wrap gap-1.5">
                 {content.skills.map((skill) => (
-                  <span key={skill} className="flex items-center gap-1 rounded-full border border-[#334155] bg-[#1e293b] px-2.5 py-1 text-xs text-slate-200">
+                  <span key={skill} className="flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2.5 py-1 text-xs text-slate-700">
                     {skill}
-                    <button type="button" onClick={() => removeSkill(skill)} className="text-slate-500 hover:text-red-400">
+                    <button type="button" onClick={() => removeSkill(skill)} className="text-slate-500 hover:text-red-600">
                       <OpsIcon name="x" size={10} />
                     </button>
                   </span>

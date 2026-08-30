@@ -38,7 +38,7 @@ export function PublicationsSection({
       {publications.map((row, index) => (
         <details key={row.id} ref={(el) => registerDetailsRef(row.id, el)} className={entryCardClass}>
           <EntryHeader title={row.title || `Publication #${index + 1}`} onRemove={() => onRemove(index)} />
-          <div className="grid gap-3 border-t border-[#334155] p-3 @sm:grid-cols-2">
+          <div className="grid gap-3 border-t border-slate-200 p-3 @sm:grid-cols-2">
             <div className="sm:col-span-2">
               <label className={labelClass}>Title</label>
               <input

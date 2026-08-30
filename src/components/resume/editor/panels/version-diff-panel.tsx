@@ -30,7 +30,7 @@ export function VersionDiffPanel({ versions, currentDocumentId }: { versions: Cv
         <select
           value={fromId}
           onChange={(event) => setFromId(event.target.value)}
-          className="flex-1 rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-slate-200"
+          className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-slate-800"
         >
           {sorted.map((v) => (
             <option key={v.id} value={v.id}>v{v.version_no} — {normalizeCvContent(v.content).title}</option>
@@ -40,7 +40,7 @@ export function VersionDiffPanel({ versions, currentDocumentId }: { versions: Cv
         <select
           value={toId}
           onChange={(event) => setToId(event.target.value)}
-          className="flex-1 rounded-lg border border-[#334155] bg-[#0f172a] px-2 py-1.5 text-slate-200"
+          className="flex-1 rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-slate-800"
         >
           {sorted.map((v) => (
             <option key={v.id} value={v.id}>v{v.version_no} — {normalizeCvContent(v.content).title}</option>
@@ -48,7 +48,7 @@ export function VersionDiffPanel({ versions, currentDocumentId }: { versions: Cv
         </select>
       </div>
 
-      <div className="diff-cols overflow-hidden rounded-lg border border-[#1e293b]">
+      <div className="diff-cols overflow-hidden rounded-lg border border-slate-200">
         <div className="diff-col old">
           <p className="diff-col-label">Removed</p>
           {diff.filter((d) => d.type !== "added").map((d, i) => (

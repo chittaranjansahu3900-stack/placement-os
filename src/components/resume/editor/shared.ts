@@ -13,10 +13,10 @@ export type ReviewCommentWithAuthor = CvReviewComment & { users?: { name: string
 
 export function urgency(deadline: string) {
   const hours = Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / 3_600_000));
-  if (hours < 24) return { label: `${hours}h left`, className: "text-red-300 border-red-800 bg-red-950/80" };
+  if (hours < 24) return { label: `${hours}h left`, className: "text-red-700 border-red-200 bg-red-50" };
   const days = Math.ceil(hours / 24);
-  if (days <= 3) return { label: `${days}d left`, className: "text-amber-300 border-amber-800 bg-amber-950/80" };
-  return { label: `${days}d left`, className: "text-slate-300 border-slate-700 bg-slate-900" };
+  if (days <= 3) return { label: `${days}d left`, className: "text-amber-700 border-amber-200 bg-amber-50" };
+  return { label: `${days}d left`, className: "text-slate-500 border-slate-200 bg-slate-50" };
 }
 
 export function moveArrayItem<T>(array: T[], index: number, direction: -1 | 1): T[] {
@@ -28,31 +28,31 @@ export function moveArrayItem<T>(array: T[], index: number, direction: -1 | 1): 
 }
 
 export const inputClass =
-  "w-full rounded-lg border border-[#334155] bg-[#0f172a] px-2.5 py-1.5 text-[13px] text-slate-200 outline-none transition-colors focus:border-[#3b82f6] focus:ring-1 focus:ring-[#3b82f6]";
+  "w-full rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[13px] text-slate-800 outline-none transition-colors focus:border-[#4f46e5] focus:ring-1 focus:ring-[#4f46e5]";
 export const labelClass = "block text-[11px] font-medium uppercase tracking-[0.05em] text-slate-500";
 export const addButtonClass =
-  "shrink-0 rounded-lg border border-dashed border-[#334155] px-2.5 py-1 text-xs text-[#64748b] transition-colors hover:border-[#4f46e5] hover:text-[#94a3b8]";
-export const cardClass = "rounded-lg border border-[#334155] bg-[#0f172a] p-4 shadow-sm";
+  "shrink-0 rounded-lg border border-dashed border-slate-300 px-2.5 py-1 text-xs text-slate-500 transition-colors hover:border-[#4f46e5] hover:text-[#4f46e5]";
+export const cardClass = "rounded-lg border border-slate-200 bg-white p-4 shadow-sm";
 export const entryCardClass =
-  "group mb-2 overflow-hidden rounded-lg border border-[#334155] bg-[#1e293b] open:border-l-[3px] open:border-l-[#6366f1] open:shadow-[0_6px_20px_rgba(0,0,0,0.3)]";
+  "group mb-2 overflow-hidden rounded-lg border border-slate-200 bg-slate-50 open:border-l-[3px] open:border-l-[#6366f1] open:shadow-[0_6px_20px_rgba(15,23,42,0.08)]";
 
 // Cursivo-matching chrome primitives (CVEditorStyles.jsx) — topbar/rail/pill/palette classes.
 export const topbarBtnClass =
-  "topbar-btn flex items-center gap-1.5 rounded-full border border-white/[0.18] bg-white/[0.04] px-3 py-1.5 text-xs font-medium text-slate-300 transition-all";
+  "topbar-btn flex items-center gap-1.5 rounded-full border border-slate-900/[0.08] bg-slate-900/[0.03] px-3 py-1.5 text-xs font-medium text-slate-600 transition-all";
 export const topbarBtnPrimaryClass =
-  "topbar-btn-primary flex items-center gap-1.5 rounded-lg bg-[#4f46e5] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_2px_12px_rgba(99,102,241,0.45),inset_0_1px_0_rgba(255,255,255,0.15)] transition-transform";
+  "topbar-btn-primary flex items-center gap-1.5 rounded-lg bg-[#4f46e5] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_2px_12px_rgba(79,70,229,0.35),inset_0_1px_0_rgba(255,255,255,0.15)] transition-transform";
 export const tplPillClass =
-  "tpl-pill flex items-center gap-1.5 whitespace-nowrap rounded-full border border-transparent px-3 py-1.5 text-xs font-medium text-slate-300 transition-all";
+  "tpl-pill flex items-center gap-1.5 whitespace-nowrap rounded-full border border-transparent px-3 py-1.5 text-xs font-medium text-slate-600 transition-all";
 export const tplPillActiveClass =
   "tpl-pill flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[#4f46e5] bg-[#4f46e5] px-3 py-1.5 text-xs font-medium text-white transition-all";
 export const zoomBtnClass =
-  "zoom-btn flex size-7 items-center justify-center rounded-lg border border-[#334155] text-slate-400 transition-colors hover:text-slate-200";
+  "zoom-btn flex size-7 items-center justify-center rounded-lg border border-slate-200 text-slate-500 transition-colors hover:text-slate-700";
 export const navRailBtnClass =
-  "nav-rail-btn relative flex size-[38px] items-center justify-center rounded-lg text-[#4e6280] transition-colors hover:text-[#94a3b8]";
+  "nav-rail-btn relative flex size-[38px] items-center justify-center rounded-lg text-slate-400 transition-colors hover:text-slate-600";
 export const navRailBtnActiveClass =
-  "nav-rail-btn active relative flex size-[38px] items-center justify-center rounded-lg bg-[rgba(99,102,241,0.14)] text-[#a5b4fc] transition-colors";
+  "nav-rail-btn active relative flex size-[38px] items-center justify-center rounded-lg bg-[rgba(79,70,229,0.1)] text-[#4f46e5] transition-colors";
 export const cmdItemClass =
-  "cmd-item flex items-center gap-3 rounded-[9px] border border-transparent px-3 py-2.5 text-[13.5px] text-[#94a3b8] transition-all";
+  "cmd-item flex items-center gap-3 rounded-[9px] border border-transparent px-3 py-2.5 text-[13.5px] text-slate-500 transition-all";
 
 export function newId(prefix: string) {
   return `${prefix}-${crypto.randomUUID()}`;

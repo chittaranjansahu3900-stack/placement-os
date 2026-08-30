@@ -23,7 +23,7 @@ export function StringListEditor({
           <button
             type="button"
             onClick={() => onChange(items.filter((_, i) => i !== index))}
-            className="shrink-0 text-[#ef4444] hover:text-red-300"
+            className="shrink-0 text-[#ef4444] hover:text-red-700"
           >
             <OpsIcon name="x" size={14} />
           </button>

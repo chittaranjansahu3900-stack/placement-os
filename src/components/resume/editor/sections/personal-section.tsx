@@ -15,7 +15,7 @@ export function PersonalSection({
 }) {
   return (
     <section ref={registerRef} className={cardClass}>
-      <h2 className="mb-3 border-b border-[#1e293b] pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-300">
+      <h2 className="mb-3 border-b border-slate-200 pb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-700">
         Personal &amp; Contact Header
       </h2>
       <div className="grid gap-3 @sm:grid-cols-2">

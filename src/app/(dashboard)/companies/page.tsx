@@ -141,6 +141,7 @@ export default async function CompaniesPage({
               Season:
               <select
                 name="season"
+                key={selectedSeasonId}
                 defaultValue={selectedSeasonId}
                 className="ops-select ml-2 text-xs text-white"
               >

@@ -48,7 +48,7 @@ export function ProjectsSection({
             onMoveDown={index < projects.length - 1 ? () => onMove(index, 1) : undefined}
             onRemove={() => onRemove(index)}
           />
-          <div className="space-y-3 border-t border-[#334155] p-3">
+          <div className="space-y-3 border-t border-slate-200 p-3">
             <div className="grid gap-3 @lg:grid-cols-3">
               <div>
                 <label className={labelClass}>Project Name</label>

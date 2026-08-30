@@ -4,6 +4,7 @@ import { normalizeCvContent } from "@/lib/resume";
 import { createCvDocument } from "@/app/actions/resume";
 import { ResumeEditor } from "@/components/resume/resume-editor";
 import { OpsIcon } from "@/components/shared/ops-icon";
+import { topbarBtnPrimaryClass } from "@/components/resume/editor/shared";
 import type { CompanyTypePersona, CvDocument, CvReviewComment } from "@/types/domain";
 
 type CvWithPersona = CvDocument & {
@@ -37,10 +38,10 @@ export default async function ResumeStudioPage({
 
   if (!student) {
     return (
-      <div className="rounded-lg border border-slate-750 bg-slate-900/90 p-8 text-center max-w-xl mx-auto shadow-sm">
-        <OpsIcon name="file-text" size={28} className="mx-auto mb-2 text-amber-400" />
-        <h1 className="text-lg font-bold text-white">Student Profile Required</h1>
-        <p className="mt-2 text-xs text-slate-400">
+      <div className="rounded-lg border border-slate-200 bg-white p-8 text-center max-w-xl mx-auto shadow-sm">
+        <OpsIcon name="file-text" size={28} className="mx-auto mb-2 text-amber-600" />
+        <h1 className="text-lg font-bold text-slate-900">Student Profile Required</h1>
+        <p className="mt-2 text-xs text-slate-500">
           No student record is associated with this login. Please reach out to your CDPO coordinator.
         </p>
       </div>
@@ -89,11 +90,11 @@ export default async function ResumeStudioPage({
         <div
           className={`flex items-center gap-2.5 rounded-lg border p-3.5 text-xs print:hidden shadow-sm ${
             error
-              ? "border-red-800/80 bg-red-950/70 text-red-200"
-              : "border-emerald-800/80 bg-emerald-950/70 text-emerald-200"
+              ? "border-red-200 bg-red-50 text-red-700"
+              : "border-emerald-200 bg-emerald-50 text-emerald-700"
           }`}
         >
-          <OpsIcon name={error ? "alert-triangle" : "check"} size={15} className={error ? "text-red-400" : "text-emerald-400"} />
+          <OpsIcon name={error ? "alert-triangle" : "check"} size={15} className={error ? "text-red-500" : "text-emerald-500"} />
           <span>{error ?? saved}</span>
         </div>
       )}
@@ -109,23 +110,23 @@ export default async function ResumeStudioPage({
           upcomingJds={upcomingJds}
         />
       ) : (
-        <div className="rounded-lg border border-dashed border-slate-750 p-12 text-center print:hidden bg-slate-900/40">
-          <OpsIcon name="file-text" size={32} className="mx-auto mb-2 text-slate-500" />
-          <h1 className="text-base font-bold text-white">Start from your verified profile</h1>
-          <p className="mx-auto mt-2 max-w-md text-xs text-slate-400 leading-relaxed">
+        <div className="rounded-lg border border-dashed border-slate-300 p-12 text-center print:hidden bg-slate-50">
+          <OpsIcon name="file-text" size={32} className="mx-auto mb-2 text-slate-400" />
+          <h1 className="text-base font-bold text-slate-900">Start from your verified profile</h1>
+          <p className="mx-auto mt-2 max-w-md text-xs text-slate-500 leading-relaxed">
             Choose a company persona to initialize a placement CV. Your verified academic grades, work experience, projects, and contact info are prefilled automatically.
           </p>
           <form action={createCvDocument} className="mx-auto mt-5 flex max-w-sm items-center gap-2">
             <select
               name="persona_id"
-              className="ops-select flex-1 text-xs text-white"
+              className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800"
             >
               <option value="">General Placement CV</option>
               {personaRows.map((persona) => (
                 <option key={persona.id} value={persona.id}>{persona.category_name}</option>
               ))}
             </select>
-            <button className="ops-button-primary text-xs">
+            <button className={topbarBtnPrimaryClass}>
               + Create Pre-filled CV
             </button>
           </form>
