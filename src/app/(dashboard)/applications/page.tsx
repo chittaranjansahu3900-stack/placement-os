@@ -37,10 +37,10 @@ export default async function ApplicationsPage({
 
   if (!student) {
     return (
-      <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <OpsIcon name="shield" size={28} className="mx-auto mb-2 text-amber-500" />
-        <h1 className="text-lg font-bold text-slate-900">Student account required</h1>
-        <p className="mt-2 text-sm text-slate-500">No student profile is associated with this login. Reach out to your CDPO coordinator.</p>
+      <div className="mx-auto max-w-xl rounded-xl border border-slate-800 bg-slate-900/90 p-8 text-center shadow-sm">
+        <OpsIcon name="shield" size={28} className="mx-auto mb-2 text-amber-400" />
+        <h1 className="text-lg font-bold text-white">Student account required</h1>
+        <p className="mt-2 text-xs text-slate-400">No student profile is associated with this login. Reach out to your CDPO coordinator.</p>
       </div>
     );
   }
@@ -80,49 +80,51 @@ export default async function ApplicationsPage({
 
   return (
     <div className="max-w-4xl space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight text-slate-900">My applications</h1>
-        <p className="mt-1 text-sm text-slate-500">
+      <div className="border-b border-slate-800/80 pb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-white">My applications</h1>
+        <p className="mt-1 text-xs text-slate-400">
           {rows.length} submitted · {(byStatus.get("shortlisted")?.length ?? 0) + (byStatus.get("interview")?.length ?? 0)} advancing to interview rounds
         </p>
       </div>
 
       {error && (
-        <div className="flex items-center gap-2.5 rounded-xl border border-red-200 bg-red-50 p-3.5 text-sm text-red-700 shadow-sm">
-          <OpsIcon name="alert-triangle" size={15} className="shrink-0 text-red-500" />
+        <div className="flex items-center gap-2.5 rounded-xl border border-red-900/60 bg-red-950/40 p-3.5 text-xs text-red-300 shadow-sm">
+          <OpsIcon name="alert-triangle" size={15} className="shrink-0 text-red-400" />
           <span>{error}</span>
         </div>
       )}
 
       {rows.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-12 text-center">
-          <OpsIcon name="file-text" size={28} className="mx-auto mb-2 text-slate-300" />
-          <p className="text-sm font-medium text-slate-500">You haven&apos;t submitted any applications yet.</p>
+        <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-12 text-center">
+          <OpsIcon name="file-text" size={28} className="mx-auto mb-2 text-slate-500" />
+          <p className="text-sm font-medium text-slate-400">You haven&apos;t submitted any applications yet.</p>
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm sm:grid-cols-5">
+          <div className="grid grid-cols-2 gap-3 rounded-xl border border-slate-800 bg-slate-900/90 p-4 shadow-sm sm:grid-cols-5">
             {COLUMNS.map((col) => {
               const items = byStatus.get(col.status) ?? [];
               return (
                 <div key={col.status} className="flex flex-col gap-2">
                   <div className={`flex items-center justify-between border-t-2 pt-1.5 ${col.accent}`}>
-                    <span className="text-xs font-bold text-slate-700">{col.label}</span>
-                    <span className="text-xs font-bold text-slate-400">{items.length}</span>
+                    <span className="text-xs font-bold text-slate-300">{col.label}</span>
+                    <span className="text-xs font-bold text-slate-500">{items.length}</span>
                   </div>
                   {items.length === 0 && (
-                    <p className="rounded-lg border border-dashed border-slate-200 px-2 py-3 text-center text-[11px] text-slate-400">—</p>
+                    <p className="rounded-lg border border-dashed border-slate-800/80 px-2 py-3 text-center text-[11px] text-slate-500">—</p>
                   )}
                   {items.map((item) => (
                     <Link
                       key={item.id}
                       href={`/applications?selected=${item.id}`}
                       className={`rounded-lg border p-2 text-left transition-colors ${
-                        selected?.id === item.id ? "border-emerald-400 bg-emerald-50" : "border-slate-200 bg-slate-50 hover:border-slate-300"
+                        selected?.id === item.id
+                          ? "border-emerald-500/80 bg-emerald-950/40 text-emerald-200"
+                          : "border-slate-800 bg-slate-850 hover:border-slate-700 text-slate-300"
                       }`}
                     >
-                      <p className="truncate text-xs font-bold text-slate-900">{item.jds?.companies?.name ?? "Company"}</p>
-                      <p className="truncate text-[11px] text-slate-500">{item.jds?.role_title ?? "Role"}</p>
+                      <p className="truncate text-xs font-bold text-slate-100">{item.jds?.companies?.name ?? "Company"}</p>
+                      <p className="truncate text-[11px] text-slate-400">{item.jds?.role_title ?? "Role"}</p>
                     </Link>
                   ))}
                 </div>
@@ -131,15 +133,15 @@ export default async function ApplicationsPage({
           </div>
 
           {selected && (
-            <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+            <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <CompanyAvatar name={selected.jds?.companies?.name ?? "Company"} />
                   <div>
-                    <h2 className="font-bold text-slate-900">
+                    <h2 className="font-bold text-white">
                       {selected.jds?.companies?.name ?? "Company"} · {selected.jds?.role_title ?? "Role"}
                     </h2>
-                    <p className="mt-0.5 text-xs text-slate-500">
+                    <p className="mt-0.5 text-xs text-slate-400">
                       Applied {new Date(selected.applied_at).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
                     </p>
                   </div>
@@ -149,7 +151,7 @@ export default async function ApplicationsPage({
                   {canWithdraw && (
                     <form action={withdrawApplication}>
                       <input type="hidden" name="application_id" value={selected.id} />
-                      <button type="submit" className="rounded-lg border border-red-200 bg-white px-3 py-1.5 text-xs font-semibold text-red-600 hover:bg-red-50">
+                      <button type="submit" className="rounded-lg border border-red-800/80 bg-red-950/40 px-3 py-1.5 text-xs font-semibold text-red-300 hover:bg-red-900/60 hover:text-white transition-colors">
                         Withdraw
                       </button>
                     </form>
@@ -157,16 +159,16 @@ export default async function ApplicationsPage({
                 </div>
               </div>
 
-              <div className="mt-5 space-y-0">
+              <div className="mt-6 space-y-0 border-t border-slate-800/80 pt-5">
                 {timeline.map((step, i) => (
                   <div key={i} className="flex gap-3">
                     <div className="flex flex-col items-center">
-                      <span className="size-2 shrink-0 rounded-full bg-emerald-500" />
-                      {i < timeline.length - 1 && <span className="w-px flex-1 bg-slate-200" style={{ minHeight: 22 }} />}
+                      <span className="size-2 shrink-0 rounded-full bg-emerald-400 shadow-[0_0_8px_rgba(52,211,153,0.5)]" />
+                      {i < timeline.length - 1 && <span className="w-px flex-1 bg-slate-800" style={{ minHeight: 24 }} />}
                     </div>
                     <div className={i < timeline.length - 1 ? "pb-4" : ""}>
-                      <p className="text-sm font-semibold text-slate-900 capitalize">{step.label.replaceAll("_", " ")}</p>
-                      <p className="mt-0.5 text-xs text-slate-400">
+                      <p className="text-xs font-semibold text-slate-200 capitalize">{step.label.replaceAll("_", " ")}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">
                         {new Date(step.at).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" })}
                         {step.detail ? ` · ${step.detail}` : ""}
                       </p>
@@ -179,13 +181,13 @@ export default async function ApplicationsPage({
 
           {closed.length > 0 && (
             <div className="space-y-2">
-              <h2 className="text-xs font-bold uppercase tracking-wide text-slate-400">Closed</h2>
+              <h2 className="text-xs font-bold uppercase tracking-wider text-slate-400">Closed Applications</h2>
               {closed.map((a) => (
-                <div key={a.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white/60 p-3 opacity-75">
+                <div key={a.id} className="flex items-center justify-between gap-3 rounded-xl border border-slate-800/80 bg-slate-900/60 p-3 opacity-80 hover:opacity-100 transition-opacity">
                   <div className="flex items-center gap-3">
                     <CompanyAvatar name={a.jds?.companies?.name ?? "Company"} size={32} />
                     <div>
-                      <p className="text-sm font-semibold text-slate-700">{a.jds?.companies?.name ?? "Company"} — {a.jds?.role_title ?? "Role"}</p>
+                      <p className="text-xs font-semibold text-slate-300">{a.jds?.companies?.name ?? "Company"} — {a.jds?.role_title ?? "Role"}</p>
                     </div>
                   </div>
                   <StatusPill status={a.withdrawn_at ? "withdrawn" : a.status} />

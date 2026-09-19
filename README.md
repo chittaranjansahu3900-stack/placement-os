@@ -21,6 +21,14 @@ placement is confirmed → it shows up in the Reports dashboard and CSV export. 
 Maker, and RBAC admin UI (roles, users, audit log) are all in. None of it has run against a real Postgres
 yet — see "Known gaps."
 
+## Fit briefs (new, 19 Sep 2026)
+
+Recruiters write plain-language must-haves per JD; every applicant packet is read against them and
+the applicants list can be ordered by an evidence-anchored verdict (every claim carries a verbatim
+quote validated against the packet; the model never sees name, gender, contacts, defaults or
+placement status — stripped in SQL by `get_fit_input()`, migration `0027`). It orders, it doesn't
+decide. Design record: `docs/FIT-BRIEF-SPEC.md`. Route: `/jds/:id/fit`.
+
 ## Stack (BRD Section 12.1)
 
 - Next.js 16 (App Router, Turbopack). **This is not the Next.js in most training data** —

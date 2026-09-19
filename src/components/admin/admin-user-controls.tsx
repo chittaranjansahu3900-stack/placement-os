@@ -80,8 +80,12 @@ export function UserAccessAccordion({
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
+    // Reading sessionStorage during render would mismatch the server-rendered
+    // closed state, so this intentionally applies the persisted state only
+    // after mount, on the client.
     try {
       const stored = sessionStorage.getItem(storageKey);
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored === "true") setIsOpen(true);
     } catch {
       // Ignore storage errors

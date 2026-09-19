@@ -31,10 +31,10 @@ export default async function StudentCompanyPage({ params }: { params: Promise<{
 
   if (!student) {
     return (
-      <div className="mx-auto max-w-xl rounded-2xl border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <OpsIcon name="shield" size={28} className="mx-auto mb-2 text-amber-500" />
-        <h1 className="text-lg font-bold text-slate-900">Student profile required</h1>
-        <p className="mt-2 text-sm text-slate-500">No student record is linked to your account.</p>
+      <div className="mx-auto max-w-xl rounded-xl border border-slate-800 bg-slate-900/90 p-8 text-center shadow-sm">
+        <OpsIcon name="shield" size={28} className="mx-auto mb-2 text-amber-400" />
+        <h1 className="text-lg font-bold text-white">Student profile required</h1>
+        <p className="mt-2 text-xs text-slate-400">No student record is linked to your account.</p>
       </div>
     );
   }
@@ -73,51 +73,51 @@ export default async function StudentCompanyPage({ params }: { params: Promise<{
   return (
     <div className="max-w-3xl space-y-6">
       <div className="flex items-center gap-1.5 text-xs text-slate-400">
-        <Link href="/jobs" className="hover:text-slate-600">Opportunities</Link>
+        <Link href="/jobs" className="hover:text-slate-200 transition-colors">Opportunities</Link>
         <span>/</span>
-        <span className="font-medium text-slate-600">{typedCompany.name}</span>
+        <span className="font-medium text-slate-300">{typedCompany.name}</span>
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="rounded-xl border border-slate-800 bg-slate-900/90 p-6 shadow-sm">
         <div className="flex items-center gap-4">
           <CompanyAvatar name={typedCompany.name} size={52} />
           <div className="flex-1">
-            <h1 className="text-xl font-bold text-slate-900">{typedCompany.name}</h1>
-            <p className="mt-0.5 text-sm text-slate-500">{typedCompany.sector ?? "General sector"}</p>
+            <h1 className="text-xl font-bold text-white">{typedCompany.name}</h1>
+            <p className="mt-0.5 text-xs text-slate-400">{typedCompany.sector ?? "General sector"}</p>
           </div>
           {openCount > 0 && (
-            <span className="shrink-0 rounded-full bg-emerald-50 px-3 py-1.5 text-xs font-semibold text-emerald-700">Hiring now</span>
+            <span className="shrink-0 rounded-full border border-emerald-700/80 bg-emerald-950/80 px-3 py-1.5 text-xs font-semibold text-emerald-300">Hiring now</span>
           )}
         </div>
 
-        <div className="mt-5 grid grid-cols-3 gap-4 border-t border-slate-100 pt-4">
+        <div className="mt-5 grid grid-cols-3 gap-4 border-t border-slate-800/80 pt-4">
           <div>
-            <p className="text-lg font-bold text-slate-900">{roles.length}</p>
+            <p className="text-lg font-bold text-white">{roles.length}</p>
             <p className="text-xs text-slate-400">Open roles</p>
           </div>
           <div>
-            <p className="text-lg font-bold text-slate-900">{avgCtc ? `${avgCtc} LPA` : "—"}</p>
+            <p className="text-lg font-bold text-white">{avgCtc ? `${avgCtc} LPA` : "—"}</p>
             <p className="text-xs text-slate-400">Avg. CTC this season</p>
           </div>
           <div>
-            <p className="text-lg font-bold text-slate-900">{selectedFromBatch ?? 0}</p>
+            <p className="text-lg font-bold text-white">{selectedFromBatch ?? 0}</p>
             <p className="text-xs text-slate-400">Selected from your batch</p>
           </div>
         </div>
       </div>
 
       <div className="space-y-3">
-        <h2 className="text-sm font-bold text-slate-900">Open roles</h2>
+        <h2 className="text-sm font-bold text-slate-200">Open roles</h2>
         {roles.map((jd, i) => {
           const applied = appliedByJd.get(jd.id);
           const elig = eligibilityChecks[i].data as MyEligibility | null;
           const stillOpen = new Date(jd.apply_by_deadline) > new Date();
 
           return (
-            <div key={jd.id} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <div key={jd.id} className="flex items-center justify-between gap-4 rounded-xl border border-slate-800 bg-slate-900/90 p-4 shadow-sm hover:border-slate-750 transition-colors">
               <div className="min-w-0">
-                <h3 className="truncate font-bold text-slate-900">{jd.role_title}</h3>
-                <p className="mt-0.5 text-xs text-slate-500">
+                <h3 className="truncate font-bold text-white">{jd.role_title}</h3>
+                <p className="mt-0.5 text-xs text-slate-400">
                   {jd.ctc_total != null ? `${jd.ctc_total} LPA · ` : ""}
                   Deadline {new Date(jd.apply_by_deadline).toLocaleDateString([], { month: "short", day: "numeric" })}
                 </p>
@@ -128,7 +128,7 @@ export default async function StudentCompanyPage({ params }: { params: Promise<{
                 ) : stillOpen && elig?.eligible ? (
                   <form action={applyToJd}>
                     <input type="hidden" name="jd_id" value={jd.id} />
-                    <button type="submit" className="rounded-lg bg-slate-900 px-4 py-2 text-xs font-semibold text-white hover:bg-slate-800">
+                    <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-xs font-semibold text-white hover:bg-blue-500 transition-colors cursor-pointer">
                       Apply
                     </button>
                   </form>
@@ -142,8 +142,8 @@ export default async function StudentCompanyPage({ params }: { params: Promise<{
           );
         })}
         {roles.length === 0 && (
-          <div className="rounded-2xl border border-dashed border-slate-200 bg-white p-8 text-center">
-            <p className="text-sm text-slate-500">No open roles from {typedCompany.name} for your batch right now.</p>
+          <div className="rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-8 text-center">
+            <p className="text-sm text-slate-400">No open roles from {typedCompany.name} for your batch right now.</p>
           </div>
         )}
       </div>

@@ -1,11 +1,10 @@
 import React from "react";
 import { OpsIcon, OpsIconName } from "@/components/shared/ops-icon";
 
-// Light-theme companion to StatusBadge (components/shared/status-badge.tsx).
-// StatusBadge's dark-chip-on-dark-page colors read as illegible or "ops
-// tooling" on the light student pages, so this reuses the same status
-// semantics with light backgrounds instead. StatusBadge itself stays
-// untouched — it's shared with 50+ admin/recruiter dark-themed screens.
+// Student-facing companion to StatusBadge (components/shared/status-badge.tsx):
+// same dark theme and status semantics, rounder and slightly larger so it
+// reads as a status on a card rather than a cell in an ops table. The whole
+// app is one dark theme; there is no light variant.
 export type StudentStatus =
   | "applied"
   | "under_review"
@@ -19,16 +18,16 @@ export type StudentStatus =
   | "not_eligible";
 
 const STYLES: Record<StudentStatus, { icon: OpsIconName; classes: string; label?: string }> = {
-  applied: { icon: "check", classes: "bg-blue-50 text-blue-700" },
-  under_review: { icon: "clock", classes: "bg-amber-50 text-amber-700" },
-  shortlisted: { icon: "star", classes: "bg-emerald-50 text-emerald-700" },
-  interview: { icon: "calendar", classes: "bg-blue-50 text-blue-700" },
-  selected: { icon: "award", classes: "bg-emerald-100 text-emerald-800" },
-  rejected: { icon: "x", classes: "bg-red-50 text-red-700" },
-  waitlisted: { icon: "clock", classes: "bg-amber-50 text-amber-700" },
-  withdrawn: { icon: "x", classes: "bg-slate-100 text-slate-500" },
-  applications_closed: { icon: "layers", classes: "bg-slate-100 text-slate-500", label: "Closed" },
-  not_eligible: { icon: "alert-triangle", classes: "bg-slate-100 text-slate-500", label: "Not eligible" },
+  applied: { icon: "check", classes: "bg-blue-950/80 text-blue-300 border border-blue-800/60" },
+  under_review: { icon: "clock", classes: "bg-amber-950/80 text-amber-300 border border-amber-800/60" },
+  shortlisted: { icon: "star", classes: "bg-emerald-950/80 text-emerald-300 border border-emerald-800/60" },
+  interview: { icon: "calendar", classes: "bg-blue-950/80 text-blue-300 border border-blue-800/60" },
+  selected: { icon: "award", classes: "bg-emerald-900/90 text-emerald-200 border border-emerald-600" },
+  rejected: { icon: "x", classes: "bg-red-950/80 text-red-300 border border-red-800/60" },
+  waitlisted: { icon: "clock", classes: "bg-amber-950/80 text-amber-300 border border-amber-800/60" },
+  withdrawn: { icon: "x", classes: "bg-slate-800/80 text-slate-400 border border-slate-700/60" },
+  applications_closed: { icon: "layers", classes: "bg-slate-800/80 text-slate-400 border border-slate-700/60", label: "Closed" },
+  not_eligible: { icon: "alert-triangle", classes: "bg-slate-800/80 text-slate-400 border border-slate-700/60", label: "Not eligible" },
 };
 
 export function StatusPill({ status, className = "" }: { status: string; className?: string }) {

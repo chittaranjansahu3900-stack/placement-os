@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentUserContext } from "@/lib/auth/current-user";
@@ -103,6 +104,10 @@ export default async function ReportsPage({
             Section 4.10: Live CTC telemetry, audited accreditation export templates, and batch delta analysis.
           </p>
         </div>
+        <Link href="/reports/profile" className="ops-button-secondary text-xs">
+          <OpsIcon name="sparkles" size={13} />
+          <span>Batch profile &amp; posters</span>
+        </Link>
       </div>
 
       {/* Primary Metric Gauges */}

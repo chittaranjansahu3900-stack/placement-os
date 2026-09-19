@@ -28,10 +28,10 @@ export default async function ResumeListPage() {
 
   if (!student) {
     return (
-      <div className="mx-auto max-w-xl rounded-lg border border-slate-200 bg-white p-8 text-center shadow-sm">
-        <OpsIcon name="file-text" size={28} className="mx-auto mb-2 text-amber-600" />
-        <h1 className="text-lg font-bold text-slate-900">Student Profile Required</h1>
-        <p className="mt-2 text-xs text-slate-500">
+      <div className="mx-auto max-w-xl rounded-xl border border-slate-800 bg-slate-900/90 p-8 text-center shadow-sm">
+        <OpsIcon name="file-text" size={28} className="mx-auto mb-2 text-amber-400" />
+        <h1 className="text-lg font-bold text-white">Student Profile Required</h1>
+        <p className="mt-2 text-xs text-slate-400">
           No student record is associated with this login. Please reach out to your CDPO coordinator.
         </p>
       </div>
@@ -51,10 +51,10 @@ export default async function ResumeListPage() {
   const personaRows = (personas ?? []) as CompanyTypePersona[];
 
   return (
-    <div className="mx-auto max-w-4xl space-y-5">
-      <div>
-        <h1 className="text-xl font-bold text-slate-900">My Placement CV</h1>
-        <p className="mt-1 text-xs text-slate-500">
+    <div className="mx-auto max-w-4xl space-y-6">
+      <div className="border-b border-slate-800/80 pb-5">
+        <h1 className="text-2xl font-bold tracking-tight text-white">My Placement CV</h1>
+        <p className="mt-1 text-xs text-slate-400">
           Every version of your placement CV, prefilled from your verified profile and tailored per persona.
         </p>
       </div>
@@ -66,28 +66,28 @@ export default async function ResumeListPage() {
             return (
               <div
                 key={doc.id}
-                className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 bg-white p-4 shadow-sm"
+                className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-800 bg-slate-900/90 p-4 shadow-sm hover:border-slate-750 transition-colors"
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
-                    <span className="truncate text-sm font-semibold text-slate-900">{content.title || "My CV"}</span>
-                    <span className="rounded bg-amber-50 px-1.5 py-0.5 font-mono text-[10px] text-amber-700">
+                    <span className="truncate text-sm font-semibold text-white">{content.title || "My CV"}</span>
+                    <span className="rounded bg-amber-950/80 border border-amber-800/60 px-1.5 py-0.5 font-mono text-[10px] text-amber-300">
                       v{doc.version_no}
                     </span>
                     {doc.is_latest && (
-                      <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[9px] font-bold text-emerald-700">
+                      <span className="rounded border border-emerald-700/80 bg-emerald-950/80 px-1.5 py-0.5 text-[9px] font-bold text-emerald-300">
                         PRIMARY
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 font-mono text-[11px] text-slate-500">
+                  <p className="mt-1 font-mono text-[11px] text-slate-400">
                     {doc.company_type_personas?.category_name ?? "General Placement"} · Updated {formatDate(doc.updated_at)}
-                    {doc.jd_coverage_score != null && <> · JD Fit {doc.jd_coverage_score}%</>}
+                    {doc.jd_coverage_score != null && <> · JD Fit <span className="text-emerald-400 font-semibold">{doc.jd_coverage_score}%</span></>}
                   </p>
                 </div>
                 <Link
                   href={`/resume/studio?cv=${doc.id}`}
-                  className="flex shrink-0 items-center gap-1.5 rounded-lg bg-[#4f46e5] px-3.5 py-2 text-xs font-semibold text-white shadow-[0_2px_12px_rgba(79,70,229,0.3)] transition-transform hover:-translate-y-px"
+                  className="flex shrink-0 items-center gap-1.5 rounded-lg bg-indigo-600 px-3.5 py-2 text-xs font-semibold text-white shadow-[0_0_12px_rgba(79,70,229,0.3)] hover:bg-indigo-500 transition-all hover:-translate-y-px"
                 >
                   <OpsIcon name="sparkles" size={13} />
                   Open Resume Studio
@@ -98,24 +98,24 @@ export default async function ResumeListPage() {
         </div>
       )}
 
-      <div className={rows.length > 0 ? "rounded-lg border border-dashed border-slate-300 bg-slate-50 p-6" : "rounded-lg border border-dashed border-slate-300 p-12 text-center bg-slate-50"}>
+      <div className={rows.length > 0 ? "rounded-xl border border-dashed border-slate-800 bg-slate-900/40 p-6" : "rounded-xl border border-dashed border-slate-800 p-12 text-center bg-slate-900/40"}>
         {rows.length === 0 && (
           <>
-            <OpsIcon name="file-text" size={32} className="mx-auto mb-2 text-slate-400" />
-            <h2 className="text-base font-bold text-slate-900">Start from your verified profile</h2>
-            <p className="mx-auto mt-2 max-w-md text-xs text-slate-500 leading-relaxed">
+            <OpsIcon name="file-text" size={32} className="mx-auto mb-2 text-slate-500" />
+            <h2 className="text-base font-bold text-white">Start from your verified profile</h2>
+            <p className="mx-auto mt-2 max-w-md text-xs text-slate-400 leading-relaxed">
               Choose a company persona to initialize a placement CV. Your verified academic grades, work experience, projects, and contact info are prefilled automatically.
             </p>
           </>
         )}
         <form action={createCvDocument} className={rows.length > 0 ? "flex max-w-sm items-center gap-2" : "mx-auto mt-5 flex max-w-sm items-center gap-2"}>
-          <select name="persona_id" className="flex-1 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs text-slate-800">
+          <select name="persona_id" className="flex-1 rounded-lg border border-slate-750 bg-slate-850 px-2.5 py-1.5 text-xs text-slate-200 focus:border-blue-500 focus:outline-none">
             <option value="">General Placement CV</option>
             {personaRows.map((persona) => (
               <option key={persona.id} value={persona.id}>{persona.category_name}</option>
             ))}
           </select>
-          <button className={`${topbarBtnPrimaryClass} shrink-0`}>
+          <button className={`${topbarBtnPrimaryClass} shrink-0 cursor-pointer`}>
             + {rows.length > 0 ? "New CV Version" : "Create Pre-filled CV"}
           </button>
         </form>

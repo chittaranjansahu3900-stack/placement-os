@@ -28,7 +28,7 @@
 
   --text-primary: #f1f5f9;
   --text-secondary: #94a3b8;
-  --text-muted: #64748b;
+  --text-muted: #8a95ab; /* was #64748b — fails 4.5:1 on --surface-card */
   --text-dim: #475569;
 
   --background: var(--night);
@@ -65,7 +65,7 @@
   --color-slate-700: #223652;
   --color-slate-650: #2b4366;
   --color-slate-600: #475569;
-  --color-slate-500: #64748b;
+  --color-slate-500: #8a95ab; /* readable caption grey on #131f33 */
   --color-slate-400: #94a3b8;
   --color-slate-300: #cbd5e1;
   --color-slate-200: #e2e8f0;

@@ -9,7 +9,6 @@ import {
   Header,
   ImageRun,
   Packer,
-  PageBreak,
   Paragraph,
   ShadingType,
   Table,
@@ -307,17 +306,17 @@ async function build() {
     ]),
   ];
 
-  for (const module of modules) {
-    children.push(paragraph(module.title, { heading: HeadingLevel.HEADING_1, color: colors.teal, pageBreakBefore: true }));
-    children.push(paragraph([text("Purpose: ", { bold: true }), text(module.purpose)]));
+  for (const featureModule of modules) {
+    children.push(paragraph(featureModule.title, { heading: HeadingLevel.HEADING_1, color: colors.teal, pageBreakBefore: true }));
+    children.push(paragraph([text("Purpose: ", { bold: true }), text(featureModule.purpose)]));
     children.push(paragraph("Capabilities", { heading: HeadingLevel.HEADING_2, color: colors.teal }));
-    children.push(...module.capabilities.map(bullet));
+    children.push(...featureModule.capabilities.map(bullet));
     children.push(paragraph("Primary workflow", { heading: HeadingLevel.HEADING_2, color: colors.teal }));
-    children.push(paragraph(module.workflow));
+    children.push(paragraph(featureModule.workflow));
     children.push(paragraph("Implementation status", { heading: HeadingLevel.HEADING_2, color: colors.teal }));
-    children.push(paragraph(module.status, { after: 200 }));
+    children.push(paragraph(featureModule.status, { after: 200 }));
     children.push(paragraph("Actual screens", { heading: HeadingLevel.HEADING_2, color: colors.teal }));
-    children.push(...await screenSection(module.screens));
+    children.push(...await screenSection(featureModule.screens));
   }
 
   children.push(

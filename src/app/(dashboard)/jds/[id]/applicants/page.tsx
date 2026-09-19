@@ -210,11 +210,15 @@ export default async function ApplicantsPage({
           </h1>
           <p className="mt-1 text-xs text-slate-400 flex items-center gap-2">
             <OpsIcon name="shield" size={13} className="text-amber-400" />
-            <span>Section 7.4 Compliance: Contact telemetry automatically unlocks upon candidate shortlisting.</span>
+            <span>Phone and personal email unlock only after a candidate is shortlisted.</span>
           </p>
         </div>
 
         <div className="flex items-center gap-3">
+          <Link href={`/jds/${id}/fit`} className="ops-button-secondary text-xs">
+            <OpsIcon name="sparkles" size={13} />
+            <span>Applicants by fit</span>
+          </Link>
           {packetEligibleCount > 0 && (
             <Link
               href={`/jds/${id}/applicants/packets`}
